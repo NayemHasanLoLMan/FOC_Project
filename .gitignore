@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Caches and temporary files
+.cache/
+project/.cache/
+*.tmp
+*.log
+
+# Environment variables & secrets
+.env
+*.env
+!.env.example
+
+# Generated outputs and reports
+project/output/
+project/reports/
+
+# IDE / Editor folders
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store

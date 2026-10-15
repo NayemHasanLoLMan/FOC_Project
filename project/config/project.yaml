@@ -1,0 +1,5 @@
+project_name: FOC PDF to Excel Extraction
+model_id: prebuilt-layout
+confidence_review_threshold: 0.75
+keep_raw_json: true
+output_suffix: _generated
