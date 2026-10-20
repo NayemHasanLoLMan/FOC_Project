@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">PDF TO EXCEL</p><h1>Pipeline overview</h1><p>Arrivals, processing and the evidence behind each invoice.</p></div><a class="button secondary" href="{{ url_for('jobs') }}">View all jobs ↗</a></div>
+<section class="stats" aria-label="Queue counts">
+  {% for name,label in [('queued','Queued'),('running','Running'),('waiting_to_save','Waiting to save'),('completed','Completed'),('failed','Failed')] %}
+  <article class="stat"><span>{{ label }}</span><strong data-count="{{ name }}">{{ status.counts[name] }}</strong><small>{% if name=='completed' %}Latest job state{% elif name=='running' %}Persisted queue state{% elif name=='waiting_to_save' %}Prepared invoice retained{% else %}Jobs{% endif %}</small></article>
+  {% endfor %}
+  <article class="stat"><span>Files settling</span><strong data-intake="waiting_for_file">{{ status.intake_counts.waiting_for_file }}</strong><small>Before PDF intake</small></article>
+</section>
+<div class="columns">
+<section class="panel"><div class="section-heading"><h2>Component health</h2><span class="muted">Checked separately</span></div>
+  <div class="health-grid">
+  {% for name,label in [('scanner','Folder scanner'),('worker','Invoice worker'),('ollama','Local vision / Ollama')] %}
+  <article class="health"><span>{{ label }}</span><strong data-health="{{ name }}">{% if name=='ollama' %}Checking…{% else %}{{ status[name].state }}{% endif %}</strong><small data-heartbeat="{{ name }}">{% if name!='ollama' %}Last heartbeat: {{ status[name].heartbeat_at or 'not recorded' }}{% else %}Model availability; no inference requested{% endif %}</small><small data-component-error="{{ name }}">{% if name!='ollama' %}{{ status[name].get('error') or '' }}{% endif %}</small></article>
+  {% endfor %}
+  </div><p class="hint">A recent heartbeat reports liveness, not extraction progress. Stale telemetry is unknown. Opening this page does not start processing.</p>
+</section>
+<section class="panel"><p class="eyebrow">CURRENT ACTIVITY</p><h2 id="activity-title">{% if status.active %}Job #{{ status.active.job_id }}{% else %}No active conversion{% endif %}</h2><p id="activity-detail">{% if status.active %}{{ status.active.stage }}{% else %}The worker will claim the next queued PDF when running.{% endif %}</p><p class="hint" id="activity-time">Stage elapsed time is shown during processing. Completion ETA is not estimated.</p></section>
+</div>
+<section class="summary-strip" aria-label="History summary">
+  <div><strong data-summary="received">{{ status.today.received }}</strong><span>Received today</span></div>
+  <div><strong data-summary="completed">{{ status.today.completed }}</strong><span>Completed today</span></div>
+  <div><strong data-summary="attempts">{{ status.attempts }}</strong><span>Attempts, all time</span></div>
+  <div><strong data-summary="issues">{{ status.completed_with_issues }}</strong><span>Completed with recorded issues</span></div>
+  <p class="hint">Today uses this PC's local date. Missing optional fields count as issues, not failed invoices.</p>
+</section>
+<section class="panel"><div class="section-heading"><h2>Latest jobs</h2><span class="muted">Newest arrivals first</span></div><div id="job-list" data-refresh-url="{{ url_for('jobs',partial=1) }}">{% include 'job_table.html' %}</div></section>
+<section class="panel"><div class="section-heading"><h2>Intake attention</h2><span class="muted">Rejected or unreadable arrivals</span></div><ul id="intake-issues">{% for issue in status.intake_issues %}<li>{{ issue.filename }} — {{ issue.state }}: {{ issue.error }}</li>{% else %}<li class="muted">No intake errors recorded.</li>{% endfor %}</ul></section>
+{% endblock %}

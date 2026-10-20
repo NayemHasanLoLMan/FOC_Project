@@ -18,6 +18,7 @@ project/output/
 project/reports/
 project/runtime/
 project/incoming/
+project/dist/
 
 # IDE / Editor folders
 .vscode/

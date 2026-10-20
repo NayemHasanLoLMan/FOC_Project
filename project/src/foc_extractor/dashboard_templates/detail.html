@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}{{ job.filename }}{% endblock %}
+{% block breadcrumb %}INVOICE DETAILS{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div><p class="eyebrow">INVOICE DETAILS</p><h1>{{ job.filename }}</h1>
+    {% set displayed_state=attempt.state if attempt else job.state %}
+    <span class="badge state-{{ displayed_state }}">{{ displayed_state|status_label }}</span>
+  </div>
+  <div class="actions">
+    <a class="button secondary" href="{{ url_for('source',job_id=job.id) }}">Download original PDF ↓</a>
+    {% if attempt and attempt.state=='completed' %}<a class="button" href="{{ url_for('invoice',attempt_id=attempt.id) }}">Download invoice ↓</a>{% endif %}
+  </div>
+</div>
+<p id="detail-refresh" class="hint" data-job="{{ job.id }}">Latest file status: <span id="detail-state">{{ job.state|status_label }}</span>.
+  <a href="{{ url_for('detail',job_id=job.id,attempt=attempt.id) if attempt else url_for('detail',job_id=job.id) }}">Refresh details</a>
+</p>
+{% if attempts|length>1 %}
+<details class="panel"><summary>Previous processing runs · {{ attempts|length }} runs</summary>
+  <div class="attempts">{% for item in attempts %}<a class="button {% if attempt and item.id==attempt.id %}selected{% else %}secondary{% endif %}" href="{{ url_for('detail',job_id=job.id,attempt=item.id) }}">Run {{ loop.index }} · {{ item.state|status_label }}</a>{% endfor %}</div>
+</details>
+{% endif %}
+<section class="panel result-summary">
+  <h2>What happened</h2>
+  <p class="result-message">{{ user_summary.result }}</p>
+  <p>{{ user_summary.how }}</p>
+  {% if attempt %}<p class="hint">Started {{ attempt.started_at|readable_time }}{% if attempt.finished_at %} · Finished {{ attempt.finished_at|readable_time }}{% endif %} (this PC's local time)</p>{% endif %}
+  {% if attempt and attempt.error %}<p class="hint">The original error is saved under Technical details.</p>{% endif %}
+  {% if user_summary.notes %}
+  <div class="information-note"><h3>Information not filled or not used</h3>
+    <ul>{% for note in user_summary.notes %}<li>{{ note }}</li>{% endfor %}</ul>
+    <p class="hint">These notes do not change the invoice's completion status.</p>
+  </div>
+  {% endif %}
+</section>
+<section class="panel">
+  <h2>Invoice information</h2>
+  {% if data %}
+  <dl class="header-fields">
+    {% for key,label in [('invoice_number','Invoice number'),('export_date','Date'),('consignee','Consignee'),('consignee_address','Address / BIN'),('shipping_marks','Shipping marks'),('package_count','Packages'),('gross_weight_kg','Gross weight (kg)'),('net_weight_kg','Net weight (kg)'),('total_value','Total (USD)')] %}
+    <div><dt>{{ label }}</dt><dd>{{ data.get(key) if data.get(key) is not none else '—' }}</dd></div>
+    {% endfor %}
+  </dl>
+  <div class="table-scroll"><table>
+    <thead><tr><th>Goods</th><th>Quantity</th><th>Unit</th><th>Unit value (USD)</th><th>Item value (USD)</th><th>PDF page</th></tr></thead>
+    <tbody>{% for item in data.get('items',[]) %}<tr>
+      <td>{{ item.description }}</td><td>{{ item.quantity if item.quantity is not none else '—' }}</td>
+      <td>{{ item.unit or '—' }}</td><td>{{ item.unit_price if item.unit_price is not none else '—' }}</td>
+      <td>{{ item.amount if item.amount is not none else '—' }}</td>
+      <td>{{ item.source_page if item.source_page is not none else ('Multiple' if item.source_refs else '—') }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="hint">A dash means the value was left blank. Item values are calculated using the applicable invoice rates; the final total can be rounded.</p>
+  {% else %}<p class="muted">{% if data_error %}The saved invoice information could not be opened or verified. The processing result above has not been changed.{% else %}Invoice information will appear once the PDF has been processed and the workbook is ready to save.{% endif %}</p>{% endif %}
+</section>
+<section class="panel">
+  <div class="section-heading"><h2>Image readings</h2><span>{{ evidence|length }} {{ 'area' if evidence|length==1 else 'areas' }} checked</span></div>
+  <p class="hint">Open an area to see what the image reader found and where it appears in the PDF.</p>
+  {% for item in evidence %}{% set detail=item.request.details %}
+  <details class="evidence" name="vision-review">
+    <summary>{{ item.label }} · page {{ detail.page }} <span class="muted">Reading {{ loop.index }}</span></summary>
+    <p><strong>{{ item.original_label }}:</strong> {{ item.original }}</p>
+    <p><strong>Image reader found:</strong> {{ item.reading }}</p>
+    <p>{{ item.outcome }} {% if item.failed %}The image reader could not finish this reading.{% elif item.saved %}A saved reading of the same image was reused.{% endif %}</p>
+    <div class="image-pair">
+      <figure><figcaption>Area read from the PDF</figcaption><a href="{{ url_for('image',job_id=job.id,event_id=item.request.id) }}" target="_blank" rel="noopener"><img data-src="{{ url_for('image',job_id=job.id,event_id=item.request.id) }}" alt="Exact model input for {{ item.label }} on page {{ detail.page }}"></a></figure>
+      <figure><figcaption>Source page · highlighted region</figcaption><a href="{{ url_for('preview',job_id=job.id,page=detail.page,event=item.request.id) }}" target="_blank" rel="noopener"><img data-src="{{ url_for('preview',job_id=job.id,page=detail.page,event=item.request.id) }}" alt="Source page {{ detail.page }} with selected {{ item.label }} region"></a></figure>
+    </div>
+    <details><summary>Technical details for this reading</summary>
+      {% for event in item.related %}{% if event.details.kind in ('vision_response','vision_decision','vision_failed') %}<pre>{{ event.details|tojson(indent=2) }}</pre>{% endif %}{% endfor %}
+      <pre>{{ detail|tojson(indent=2) }}</pre>
+    </details>
+  </details>
+  {% else %}<p class="muted">{% if attempt and attempt.metadata.get('processing',{}).get('vision_contributions') %}Saved processing records show that image readings helped this invoice, but individual reading images were not recorded for this run.{% elif attempt and attempt.metadata.get('processing') %}No image-reader requests were recorded for this run.{% else %}Image-reading details are not available for this run.{% endif %}</p>{% endfor %}
+</section>
+{% include 'technical_detail.html' %}
+{% endblock %}

@@ -1,0 +1,2232 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FOC local invoice dashboard",
+    "version": "0.1.0",
+    "description": "Implemented Stage 5 read-only local interface. Loopback only; unauthenticated. No submission, retry, pause, settings or mutation APIs. GET endpoints also accept HEAD. Schemas permit additional retained metadata; nullable values are not zero. See api.md for lifecycle, error and privacy details."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8080",
+      "description": "Default local dashboard port; configurable at launch."
+    }
+  ],
+  "security": [],
+  "paths": {
+    "/api/status": {
+      "get": {
+        "operationId": "getStatus",
+        "summary": "Queue counts, independent health, current progress and today totals.",
+        "tags": [
+          "Read-only API"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      }
+    },
+    "/api/ollama": {
+      "get": {
+        "operationId": "getOllama",
+        "summary": "Availability/model presence through bounded cached tags lookup; no generation.",
+        "tags": [
+          "Read-only API"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ollama"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      }
+    },
+    "/api/system": {
+      "get": {
+        "operationId": "getSystem",
+        "summary": "Current configuration, versions, fingerprints and disk status.",
+        "tags": [
+          "Read-only API"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/System"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      }
+    },
+    "/api/jobs": {
+      "get": {
+        "operationId": "listJobs",
+        "summary": "Latest-attempt job listing with literal search and pagination.",
+        "tags": [
+          "Read-only API"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/q"
+          },
+          {
+            "$ref": "#/components/parameters/status"
+          },
+          {
+            "$ref": "#/components/parameters/date"
+          },
+          {
+            "$ref": "#/components/parameters/issues"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}": {
+      "get": {
+        "operationId": "getJob",
+        "summary": "Selected attempt, verified extracted data, reading explanations and events.",
+        "tags": [
+          "Read-only API"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/job_id"
+          },
+          {
+            "$ref": "#/components/parameters/attempt"
+          },
+          {
+            "$ref": "#/components/parameters/event_page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/status": {
+      "get": {
+        "operationId": "getJobStatus",
+        "summary": "Small live status response for detail-page polling.",
+        "tags": [
+          "Read-only API"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/job_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      }
+    },
+    "/files/jobs/{job_id}/source": {
+      "get": {
+        "operationId": "downloadSource",
+        "summary": "Download the accepted immutable PDF snapshot as an attachment.",
+        "tags": [
+          "Files"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/job_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      }
+    },
+    "/files/attempts/{attempt_id}/invoice": {
+      "get": {
+        "operationId": "downloadInvoice",
+        "summary": "Download the recorded completed invoice after path/hash verification.",
+        "tags": [
+          "Files"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/attempt_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      }
+    },
+    "/images/jobs/{job_id}/events/{event_id}": {
+      "get": {
+        "operationId": "getModelImage",
+        "summary": "Exact retained model-input PNG for a vision_request event.",
+        "tags": [
+          "Files"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/job_id"
+          },
+          {
+            "$ref": "#/components/parameters/event_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        }
+      }
+    },
+    "/images/jobs/{job_id}/pages/{page}": {
+      "get": {
+        "operationId": "getSourcePreview",
+        "summary": "On-demand verified transformed source-page PNG, optionally highlighted.",
+        "tags": [
+          "Files"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/job_id"
+          },
+          {
+            "$ref": "#/components/parameters/page_path"
+          },
+          {
+            "$ref": "#/components/parameters/event"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error429"
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "operationId": "overviewPage",
+        "summary": "Overview page.",
+        "tags": [
+          "Pages"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filter/number or untrusted Host.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Nonlocal, cross-site or mismatched Origin request.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job, attempt, event or retained file not found.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Only GET/HEAD are accepted.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State or retained artifact verification prevents this request.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Data is temporarily unavailable; no stack trace is returned.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs": {
+      "get": {
+        "operationId": "jobsPage",
+        "summary": "Searchable jobs page or table fragment.",
+        "tags": [
+          "Pages"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/q"
+          },
+          {
+            "$ref": "#/components/parameters/status"
+          },
+          {
+            "$ref": "#/components/parameters/date"
+          },
+          {
+            "$ref": "#/components/parameters/issues"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "$ref": "#/components/parameters/partial"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filter/number or untrusted Host.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Nonlocal, cross-site or mismatched Origin request.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job, attempt, event or retained file not found.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Only GET/HEAD are accepted.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State or retained artifact verification prevents this request.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Data is temporarily unavailable; no stack trace is returned.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/{job_id}": {
+      "get": {
+        "operationId": "jobPage",
+        "summary": "User-friendly detail with optional technical records.",
+        "tags": [
+          "Pages"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/job_id"
+          },
+          {
+            "$ref": "#/components/parameters/attempt"
+          },
+          {
+            "$ref": "#/components/parameters/event_page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filter/number or untrusted Host.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Nonlocal, cross-site or mismatched Origin request.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job, attempt, event or retained file not found.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Only GET/HEAD are accepted.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State or retained artifact verification prevents this request.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Data is temporarily unavailable; no stack trace is returned.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/system": {
+      "get": {
+        "operationId": "systemPage",
+        "summary": "Read-only system page.",
+        "tags": [
+          "Pages"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filter/number or untrusted Host.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Nonlocal, cross-site or mismatched Origin request.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job, attempt, event or retained file not found.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Only GET/HEAD are accepted.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State or retained artifact verification prevents this request.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Data is temporarily unavailable; no stack trace is returned.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "Counts": {
+        "type": "object",
+        "properties": {
+          "waiting_for_file": {
+            "type": "integer"
+          },
+          "queued": {
+            "type": "integer"
+          },
+          "running": {
+            "type": "integer"
+          },
+          "waiting_to_save": {
+            "type": "integer"
+          },
+          "completed": {
+            "type": "integer"
+          },
+          "failed": {
+            "type": "integer"
+          },
+          "interrupted": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "waiting_for_file",
+          "queued",
+          "running",
+          "waiting_to_save",
+          "completed",
+          "failed",
+          "interrupted"
+        ]
+      },
+      "Processing": {
+        "type": "object",
+        "properties": {
+          "vision_attempts": {
+            "type": "integer"
+          },
+          "fresh_calls": {
+            "type": "integer"
+          },
+          "fresh_responses": {
+            "type": "integer"
+          },
+          "cached_responses": {
+            "type": "integer"
+          },
+          "accepted_cells": {
+            "type": "integer"
+          },
+          "models": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "vision_contributions": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "field": {
+                      "type": "string"
+                    },
+                    "source_ref": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "field"
+                  ]
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unresolved_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "stage": {
+            "type": "string"
+          },
+          "stage_status": {
+            "type": "string"
+          },
+          "last_event": {
+            "type": "string"
+          },
+          "page": {
+            "type": "integer"
+          }
+        },
+        "required": []
+      },
+      "Configuration": {
+        "type": "object",
+        "properties": {
+          "incoming_dir": {
+            "type": "string"
+          },
+          "output_dir": {
+            "type": "string"
+          },
+          "state_dir": {
+            "type": "string"
+          },
+          "artifact_dir": {
+            "type": "string"
+          },
+          "scan_interval_seconds": {
+            "type": "number"
+          },
+          "local_model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "incoming_dir",
+          "output_dir",
+          "state_dir",
+          "artifact_dir",
+          "scan_interval_seconds",
+          "local_model"
+        ]
+      },
+      "Metadata": {
+        "type": "object",
+        "properties": {
+          "configuration": {
+            "$ref": "#/components/schemas/Configuration"
+          },
+          "application_version": {
+            "type": "string"
+          },
+          "application_sha256": {
+            "type": "string"
+          },
+          "python_version": {
+            "type": "string"
+          },
+          "template_sha256": {
+            "type": "string"
+          },
+          "rates_sha256": {
+            "type": "string"
+          },
+          "local_model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_digest": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "processing": {
+            "$ref": "#/components/schemas/Processing"
+          }
+        },
+        "required": []
+      },
+      "Job": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "source_identity": {
+            "type": "string"
+          },
+          "source_sha256": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "waiting_for_file",
+              "queued",
+              "running",
+              "waiting_to_save",
+              "completed",
+              "failed",
+              "interrupted"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "attempt_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "invoice_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "export_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/Metadata"
+          },
+          "method": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "started_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "state"
+        ]
+      },
+      "Attempt": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "job_id": {
+            "type": "integer"
+          },
+          "worker_id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "waiting_for_file",
+              "queued",
+              "running",
+              "waiting_to_save",
+              "completed",
+              "failed",
+              "interrupted"
+            ]
+          },
+          "started_at": {
+            "type": "string"
+          },
+          "heartbeat_at": {
+            "type": "string"
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/Metadata"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "job_id",
+          "state",
+          "metadata",
+          "issues"
+        ]
+      },
+      "LineItem": {
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "weight_kg": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "unit_price": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "amount": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "confidence": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hs_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_page": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "source_refs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "description"
+        ]
+      },
+      "FOCData": {
+        "type": "object",
+        "properties": {
+          "ocr_backend": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "invoice_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "export_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "consignee": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "consignee_address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "shipping_marks": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "carton_range": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "destination_country": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "destination_city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "port_of_discharge": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "shipment_terms": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "template_type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pages_processed": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "pages_total": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "package_count": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "gross_weight_kg": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "net_weight_kg": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "total_value": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "source_file": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LineItem"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "source_file",
+          "items",
+          "warnings"
+        ]
+      },
+      "Event": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "job_id": {
+            "type": "integer"
+          },
+          "attempt_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "job_id",
+          "kind",
+          "details"
+        ]
+      },
+      "Evidence": {
+        "type": "object",
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/Event"
+          },
+          "related": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            }
+          },
+          "label": {
+            "type": "string"
+          },
+          "original": {
+            "type": "string"
+          },
+          "original_label": {
+            "type": "string"
+          },
+          "reading": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "saved": {
+            "type": "boolean"
+          },
+          "failed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "request",
+          "related"
+        ]
+      },
+      "JobDetail": {
+        "type": "object",
+        "properties": {
+          "job": {
+            "$ref": "#/components/schemas/Job"
+          },
+          "attempt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Attempt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Attempt"
+            }
+          },
+          "method": {
+            "type": "string"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FOCData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "data_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user_summary": {
+            "type": "object",
+            "properties": {
+              "result": {
+                "type": "string"
+              },
+              "how": {
+                "type": "string"
+              },
+              "notes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": []
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            }
+          },
+          "event_page": {
+            "type": "integer"
+          },
+          "event_pages": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job",
+          "attempt",
+          "attempts",
+          "data",
+          "events",
+          "evidence"
+        ]
+      },
+      "JobList": {
+        "type": "object",
+        "properties": {
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Job"
+            }
+          },
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          },
+          "pages": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "jobs",
+          "total",
+          "page",
+          "pages"
+        ]
+      },
+      "Component": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "pid": {
+            "type": "integer"
+          },
+          "state": {
+            "type": "string"
+          },
+          "heartbeat_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "age_seconds": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "state",
+          "heartbeat_at",
+          "age_seconds"
+        ]
+      },
+      "Progress": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "integer"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "stage_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_observed_page": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "attempt_seconds": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "stage_seconds": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "job_id",
+          "stage"
+        ]
+      },
+      "Status": {
+        "type": "object",
+        "properties": {
+          "web": {
+            "type": "string"
+          },
+          "web_uptime_seconds": {
+            "type": "number"
+          },
+          "checked_at": {
+            "type": "string"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/Counts"
+          },
+          "attempts": {
+            "type": "integer"
+          },
+          "completed_with_issues": {
+            "type": "integer"
+          },
+          "today": {
+            "type": "object",
+            "properties": {
+              "date": {
+                "type": "string"
+              },
+              "timezone": {
+                "type": "string"
+              },
+              "received": {
+                "type": "integer"
+              },
+              "completed": {
+                "type": "integer"
+              }
+            },
+            "required": []
+          },
+          "scanner": {
+            "$ref": "#/components/schemas/Component"
+          },
+          "worker": {
+            "$ref": "#/components/schemas/Component"
+          },
+          "active": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Progress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "intake_counts": {
+            "type": "object",
+            "properties": {
+              "waiting_for_file": {
+                "type": "integer"
+              },
+              "queued": {
+                "type": "integer"
+              },
+              "rejected": {
+                "type": "integer"
+              },
+              "missing": {
+                "type": "integer"
+              }
+            },
+            "required": []
+          },
+          "intake_issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "filename": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "error": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": []
+            }
+          }
+        },
+        "required": [
+          "web",
+          "counts",
+          "attempts",
+          "scanner",
+          "worker",
+          "active",
+          "today"
+        ]
+      },
+      "JobStatus": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "integer"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "waiting_for_file",
+              "queued",
+              "running",
+              "waiting_to_save",
+              "completed",
+              "failed",
+              "interrupted"
+            ]
+          },
+          "status_label": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "state",
+          "status_label",
+          "updated_at"
+        ]
+      },
+      "Ollama": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "disabled",
+              "available",
+              "model_missing",
+              "unavailable"
+            ]
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "digest": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checked_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "model"
+        ]
+      },
+      "System": {
+        "type": "object",
+        "properties": {
+          "folders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "exists": {
+                  "type": "boolean"
+                },
+                "free_bytes": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "total_bytes": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
+              },
+              "required": []
+            }
+          },
+          "versions": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "application_version": {
+            "type": "string"
+          },
+          "python": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "template": {
+            "type": "string"
+          },
+          "fingerprints": {
+            "$ref": "#/components/schemas/Metadata"
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model_defaults": {
+            "type": "object",
+            "properties": {
+              "num_predict": {
+                "type": "integer"
+              },
+              "num_ctx": {
+                "type": "integer"
+              },
+              "timeout_seconds": {
+                "type": "integer"
+              }
+            },
+            "required": []
+          },
+          "scan_interval_seconds": {
+            "type": "number"
+          }
+        },
+        "required": []
+      }
+    },
+    "parameters": {
+      "job_id": {
+        "name": "job_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": "Recorded identifier; use values returned by the API."
+      },
+      "attempt_id": {
+        "name": "attempt_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": "Recorded identifier; use values returned by the API."
+      },
+      "event_id": {
+        "name": "event_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": "Recorded identifier; use values returned by the API."
+      },
+      "page_path": {
+        "name": "page",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "description": "One-based PDF page within retained OCR coverage."
+      },
+      "page": {
+        "name": "page",
+        "in": "query",
+        "description": "Job-list page, 25 jobs per page.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000,
+          "default": 1
+        }
+      },
+      "attempt": {
+        "name": "attempt",
+        "in": "query",
+        "description": "Attempt belonging to this job; latest is selected when omitted.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        }
+      },
+      "event_page": {
+        "name": "event_page",
+        "in": "query",
+        "description": "Event-history page, 100 events per page.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000,
+          "default": 1
+        }
+      },
+      "event": {
+        "name": "event",
+        "in": "query",
+        "description": "Optional event ID from this job/attempt to highlight.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        }
+      },
+      "q": {
+        "name": "q",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "description": "Literal substring of filename or recorded invoice number."
+      },
+      "status": {
+        "name": "status",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "waiting_for_file",
+            "queued",
+            "running",
+            "waiting_to_save",
+            "completed",
+            "failed",
+            "interrupted"
+          ]
+        }
+      },
+      "date": {
+        "name": "date",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "format": "date"
+        },
+        "description": "Extracted document date YYYY-MM-DD; not arrival date."
+      },
+      "issues": {
+        "name": "issues",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "yes",
+            "no"
+          ]
+        },
+        "description": "Filter latest-attempt recorded issues."
+      },
+      "partial": {
+        "name": "partial",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "1"
+          ]
+        },
+        "description": "Return only the escaped jobs table HTML for refresh."
+      }
+    },
+    "responses": {
+      "Error400": {
+        "description": "Invalid filter/number or untrusted Host.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error403": {
+        "description": "Nonlocal, cross-site or mismatched Origin request.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error404": {
+        "description": "Job, attempt, event or retained file not found.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error405": {
+        "description": "Only GET/HEAD are accepted.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error409": {
+        "description": "State or retained artifact verification prevents this request.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error429": {
+        "description": "Two source previews are already rendering; retry later.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "Error503": {
+        "description": "Data is temporarily unavailable; no stack trace is returned.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}

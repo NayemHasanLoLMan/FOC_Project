@@ -1,0 +1,8 @@
+<div class="table-scroll"><table><caption class="sr-only">Pipeline jobs, latest attempt per job</caption><thead><tr><th>Source / invoice</th><th>Document date</th><th>Status</th><th>Processing method</th><th>Issues</th><th>Received</th><th>Invoice</th></tr></thead><tbody>
+{% for job in listing.jobs %}<tr>
+<td><a class="file-link" href="{{ url_for('detail',job_id=job.id) }}">{{ job.filename }}</a><small class="subline">#{{ job.id }} · {{ job.invoice_number or 'Invoice number not recorded' }}</small></td>
+<td>{{ job.export_date or '—' }}</td><td><span class="badge state-{{ job.state }}">{{ job.state|replace('_',' ') }}</span></td><td>{{ job.method }}</td><td>{% if job.issues %}<span class="issue-count">{{ job.issues|length }} recorded</span>{% else %}<span class="muted">None recorded</span>{% endif %}</td><td><time datetime="{{ job.created_at }}">{{ job.created_at[:16]|replace('T',' ') }} UTC</time></td>
+<td>{% if job.state=='completed' and job.attempt_id %}<a href="{{ url_for('invoice',attempt_id=job.attempt_id) }}">Excel ↓</a>{% else %}—{% endif %}</td></tr>
+{% else %}<tr><td colspan="7"><div class="empty"><h3>No jobs found</h3><p>New PDFs appear here after the scanner accepts them. Only jobs in this configured queue are shown.</p></div></td></tr>{% endfor %}
+</tbody></table></div>
+<div class="pagination"><span>{{ listing.total }} jobs · Page {{ listing.page }} of {{ listing.pages }} · 25 per page</span><div>{% if listing.page>1 %}<a class="button secondary" href="{{ url_for('jobs',page=listing.page-1,**filters) }}">← Previous</a>{% endif %}{% if listing.page<listing.pages %}<a class="button secondary" href="{{ url_for('jobs',page=listing.page+1,**filters) }}">Next →</a>{% endif %}</div></div>

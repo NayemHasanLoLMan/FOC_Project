@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Pipeline overview{% endblock %} · FOC Operations</title>
+  <link rel="stylesheet" href="{{ url_for('static',filename='dashboard.css') }}">
+  <script src="{{ url_for('static',filename='dashboard.js') }}" defer></script>
+</head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="{{ url_for('overview') }}"><span class="brand-icon">F</span><span>FOC<span class="brand-sub">INVOICE OPERATIONS</span></span></a>
+  <nav aria-label="Main navigation">
+    <a {% if request.path=='/' %}aria-current="page"{% endif %} href="{{ url_for('overview') }}">Overview</a>
+    <a {% if request.path.startswith('/jobs') %}aria-current="page"{% endif %} href="{{ url_for('jobs') }}">Jobs &amp; evidence</a>
+    <a {% if request.path=='/system' %}aria-current="page"{% endif %} href="{{ url_for('system') }}">System</a>
+  </nav>
+  <div class="sidebar-note"><span class="badge">Read-only</span><p>Local PDF → invoice pipeline</p><small>Viewing this dashboard does not start the scanner or worker.</small></div>
+</aside>
+<div class="workspace">
+  <header class="topbar"><span>OPERATIONS / {% block breadcrumb %}OVERVIEW{% endblock %}</span><span id="web-status" class="web-status" role="status">Web available</span></header>
+  <main id="main-content">{% block content %}{% endblock %}</main>
+  <footer>Local processing · Review details stay outside printed invoices <span id="refreshed">Refreshing status…</span></footer>
+</div>
+</body></html>

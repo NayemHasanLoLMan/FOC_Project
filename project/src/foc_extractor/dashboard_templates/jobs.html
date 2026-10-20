@@ -1,0 +1,10 @@
+{% extends 'base.html' %}{% block title %}Jobs &amp; evidence{% endblock %}{% block breadcrumb %}JOBS &amp; EVIDENCE{% endblock %}
+{% block content %}<div class="page-heading"><div><p class="eyebrow">PROCESSING HISTORY</p><h1>Jobs &amp; evidence</h1><p>Each PDF version is one job. Retries are separate attempts within that job.</p></div></div>
+<form class="filters panel" method="get" action="{{ url_for('jobs') }}">
+<label>Filename or invoice number<input name="q" type="search" maxlength="200" placeholder="Search a shipment…" value="{{ filters.q }}"></label>
+<label>Status<select name="status"><option value="">All statuses</option>{% for state in states %}<option value="{{ state }}" {% if filters.status==state %}selected{% endif %}>{{ state|replace('_',' ') }}</option>{% endfor %}</select></label>
+<label>Document date<input type="date" name="date" value="{{ filters.date }}"></label>
+<label>Recorded issues<select name="issues"><option value="">All jobs</option><option value="yes" {% if filters.issues=='yes' %}selected{% endif %}>With issues</option><option value="no" {% if filters.issues=='no' %}selected{% endif %}>No recorded issues</option></select></label>
+<button type="submit">Apply</button><a href="{{ url_for('jobs') }}">Clear</a></form>
+<p class="hint">Document date is the extracted invoice date, not the arrival date. Historical jobs without field events show “not recorded” and cannot match an unrecorded document date.</p>
+<section class="panel"><div id="job-list" data-refresh-url="{{ url_for('jobs',partial=1,page=listing.page,**filters) }}">{% include 'job_table.html' %}</div></section>{% endblock %}

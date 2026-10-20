@@ -1,6 +1,6 @@
 # Continuous PDF-to-invoice pipeline and admin dashboard
 
-Status: Stages 1–4 implemented and verified; Stage 5 awaits user approval. Implement one stage at a time, prove its acceptance checks, and ask the user before proceeding. Existing single-file/batch conversion and BD invoice contents/formatting remain supported. See the [Stage 1](pipeline_stage1.md), [Stage 2](pipeline_stage2.md) [Stage 3](pipeline_stage3.md) and [Stage 4](pipeline_stage4.md) acceptance reports.
+Status: Stages 1–5 implemented and verified; Stage 6 awaits user approval. Implement one stage at a time, prove its acceptance checks, and ask the user before proceeding. Existing single-file/batch conversion and BD invoice contents/formatting remain supported. See the [Stage 1](pipeline_stage1.md), [Stage 2](pipeline_stage2.md), [Stage 3](pipeline_stage3.md), [Stage 4](pipeline_stage4.md) and [Stage 5](pipeline_stage5.md) acceptance reports.
 
 ## Outcome and boundaries
 
@@ -56,7 +56,7 @@ References: [Flask deployment](https://flask.palletsprojects.com/en/stable/deplo
 | 7 | Unattended Windows startup | Background startup, failure restart, single-instance protection and Ollama dependency reporting work without a browser |
 | 8 | End-to-end acceptance and operating guide | Restart/copy/duplicate/locked-file/model-failure cases pass; BD regression and unseen-PDF checks pass; recovery instructions are documented |
 
-Stages 1–4 are complete: configuration, durable state, safe intake, a recoverable extraction worker and structured processing evidence/review artifacts. Neither scanner nor worker is left running. Dashboard/startup management and Stages 5–8 are not implemented. The user explicitly requires approval before each next stage.
+Stages 1–5 are complete: durable intake/processing, review evidence and a read-only local dashboard. Neither scanner nor worker is left running. The demo dashboard is available for review. Controls/startup management and Stages 6–8 are not implemented. The user explicitly requires approval before each next stage.
 
 ### Stage 1 — configuration and durable state
 
@@ -102,13 +102,15 @@ All 190 tests pass. The real 20-PDF worker run retains 20 OCR documents and 6 ex
 
 ### Stage 5 — read-only admin dashboard
 
-- [ ] Overview: scanner/worker/Ollama health separately, last scan/heartbeat, active stage/page and elapsed time, queued/running/waiting-to-save/completed/failed counts, and completed jobs with issues. Report stale telemetry as unknown/offline rather than implying the invoice is still processing.
-- [ ] Jobs: search/filter by filename, invoice number, date, status and issues; show total/history and today's counts with clear definitions, pagination and output links. Separate job counts from retry-attempt counts.
-- [ ] Job detail: source PDF, generated invoice download, extracted header/goods summary, stage timeline, errors/warnings, source method, model/cache details, and source/crop comparison. Show the attempt and template/rate version used.
-- [ ] Evidence view: OCR reading, exact model-input image, structured answer, accepted result/rejection reason and source-page link. Review remains optional and does not block automatic invoice generation.
-- [ ] System view: watched/output folders, template, active model/settings, component versions and dependency/disk status. Reuse available model timing; only add a genuine completion ETA after measured history supports it. Stage elapsed time is available first.
-- [ ] Auto-refresh small status endpoints. Heavy PDF/model processing stays outside web requests. Serve files by authorized job/artifact IDs, validate paths and escape source/model text. Do not expose raw arbitrary paths, stack traces or all cache files.
-- [ ] Verify that the dashboard remains responsive during a long model request and clearly shows the difference between web availability, worker liveness and actual stage progress.
+- [x] Overview: scanner/worker/Ollama health separately, last scan/heartbeat, active stage/page and elapsed time, queued/running/waiting-to-save/completed/failed counts, and completed jobs with issues. Report stale telemetry as unknown/offline rather than implying the invoice is still processing.
+- [x] Jobs: search/filter by filename, invoice number, date, status and issues; show total/history and today's counts with clear definitions, pagination and output links. Separate job counts from retry-attempt counts.
+- [x] Job detail: source PDF, generated invoice download, extracted header/goods summary, stage timeline, errors/warnings, source method, model/cache details, and source/crop comparison. Show the attempt and template/rate version used.
+- [x] Evidence view: OCR reading, exact model-input image, structured answer, accepted result/rejection reason and source-page link. Review remains optional and does not block automatic invoice generation.
+- [x] System view: watched/output folders, template, active model/settings, component versions and dependency/disk status. Reuse available model timing; only add a genuine completion ETA after measured history supports it. Stage elapsed time is available first.
+- [x] Auto-refresh small status endpoints. Heavy PDF/model processing stays outside web requests. Serve files by authorized job/artifact IDs, validate paths and escape source/model text. Do not expose raw arbitrary paths, stack traces or all cache files.
+- [x] Verify that the dashboard remains responsive during a long model request and clearly shows the difference between web availability, worker liveness and actual stage progress.
+
+All 203 tests pass. The worker completed all 20 PDFs during live HTTP polling (83 requests; median 16 ms, maximum 406 ms). All 20 job pages, PDF/Excel downloads and 6 model images passed 94 HTTP checks without changing database bytes. Invoice contents/styles/reference scores and 81 protected files are unchanged. See [Stage 5 operation and limits](pipeline_stage5.md).
 
 ### Stage 6 — small, safe admin controls
 
@@ -141,4 +143,4 @@ No cloud services, additional OCR/model changes, distributed/multi-worker execut
 
 ## Current checkpoint
 
-Stages 1–4 are implemented and verified. Ask the user before Stage 5 (the read-only local dashboard). Do not install startup tasks before their stage. The dashboard should read proven pipeline state rather than becoming a second independent processing implementation.
+Stages 1–5 are implemented and verified. Ask the user before Stage 6 (pause/resume and selected retry controls). Do not install startup tasks before their stage. The dashboard should read proven pipeline state rather than becoming a second independent processing implementation.

@@ -62,8 +62,17 @@ def _attempt(row):
 
 
 class JobStore:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, *, read_only=False):
         self.path = Path(path).resolve()
+        self.read_only = read_only
+        if read_only:
+            if not self.path.is_file():
+                raise FileNotFoundError('Initialize pipeline state before opening the dashboard')
+            with self._connection() as db:
+                if (db.execute('PRAGMA application_id').fetchone()[0] != APPLICATION_ID
+                        or db.execute('PRAGMA user_version').fetchone()[0] != SCHEMA_VERSION):
+                    raise ValueError('Initialize/migrate pipeline state before opening the dashboard')
+            return
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._connection(write=True) as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
@@ -89,7 +98,9 @@ class JobStore:
 
     @contextmanager
     def _connection(self, write=False):
-        db = sqlite3.connect(self.path, timeout=5)
+        if write and self.read_only:
+            raise ValueError('Dashboard state connection is read-only')
+        db = sqlite3.connect(self.path.as_uri()+'?mode=ro', uri=True, timeout=5) if self.read_only else sqlite3.connect(self.path, timeout=5)
         db.row_factory = sqlite3.Row
         try:
             db.execute('PRAGMA foreign_keys=ON')

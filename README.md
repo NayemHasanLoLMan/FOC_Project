@@ -1,20 +1,19 @@
 # Local PDF to invoice
 
-The application lives in **[project](project/README.md)**. It converts shipment PDFs into the supplied Excel invoice templates using local PaddleOCR.
+The application lives in **[project](project/README.md)**. It converts shipment PDFs into the shared Excel invoice template using local PaddleOCR and optional local vision, with a durable folder pipeline and read-only dashboard.
 
-- `project/src/foc_extractor/` — OCR, parsing and invoice generation
-- `project/tools/` — comparison and output checks
-- `project/tests/` — regression tests
-- `project/examples/` — source PDFs
-- `project/expected_outputs/` — manually prepared test references
-- `project/templates/` — blank invoice templates
-- `project/output/` — generated invoices
-- `project/docs/diagnosis.md` — measured accuracy and the next improvement priorities
+- [Full documentation index](project/docs/README.md)
+- [Install and run](project/docs/setup.md) · [User guide](project/docs/user-guide.md)
+- [Architecture and code](project/docs/architecture.md) · [Project structure](project/docs/project-structure.md)
+- [HTTP API](project/docs/api.md) · [OpenAPI JSON](project/docs/openapi.json) · [Python reference](project/docs/code-reference.md)
+- [Build and release](project/docs/build.md) · [Operations](project/docs/operations.md) · [Testing](project/docs/testing.md)
 
-Run from this repository root:
+Production code is in project/src/foc_extractor and the production CLI scripts. Test/evaluation implementations are under project/tests. Canonical sample/reference paths remain compatible; production bundles exclude tests, fixtures, reports, generated data, caches and environments.
 
-```powershell
-project/.venv/Scripts/python.exe project/run_batch.py
-```
+From this repository root:
 
-See the application README for setup, production input folders and verification commands. Manual reference workbooks are used only by the evaluation tools.
+~~~powershell
+project/.venv/Scripts/python.exe project/run_dashboard.py
+~~~
+
+The dashboard needs initialized state and does not start the scanner/worker. See setup/operations for the three-process workflow. BD is the validated development scope; production never reads manual expected invoices. Admin controls and unattended startup remain later stages.

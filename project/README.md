@@ -2,7 +2,13 @@
 
 Read shipment PDFs with local PaddleOCR and fill the existing Excel invoice template. Bangladesh is the tested scope. India/Jordan templates, mappings and unique reference documents are retained for later work; they have not been validated by the BD benchmark.
 
-The [continuous folder pipeline and admin dashboard checklist](docs/pipeline_dashboard_plan.md) tracks staged updates. [Stage 1](docs/pipeline_stage1.md) adds configuration and durable job state; [Stage 2](docs/pipeline_stage2.md) adds safe PDF intake; [Stage 3](docs/pipeline_stage3.md) processes queued snapshots with recoverable publication; [Stage 4](docs/pipeline_stage4.md) records OCR/vision evidence and retains review images. No scanner or worker is left running or installed at startup. The dashboard is the next stage. Current CLI conversion remains unchanged. Each next stage requires user approval after regression checks.
+The [continuous folder pipeline and admin dashboard checklist](docs/pipeline_dashboard_plan.md) tracks staged updates. [Stages 1–4](docs/pipeline_stage4.md) provide durable intake/processing and review evidence; [Stage 5](docs/pipeline_stage5.md) adds the read-only local dashboard. Scanner/worker operation remains independent of the browser. Nothing is installed at startup. Current CLI conversion remains unchanged. Each next stage requires user approval after regression checks.
+
+## Documentation
+
+Start with the [documentation index](docs/README.md). It links setup, user guide, architecture, configuration, all CLI commands, HTTP/OpenAPI and Python references, data/evidence, testing, operations, and the full build/release procedure.
+
+Development evaluation now lives in tests/evaluation; the old tools commands still work. A production ZIP is built by tools/build_release.py and excludes all test/local data. See [structure](docs/project-structure.md) and [build](docs/build.md).
 
 ## Project layout
 
@@ -13,8 +19,10 @@ project/
   init_pipeline.py           Initialize empty pipeline state; no processing
   scan_incoming.py           Continuously queue stable PDFs
   run_worker.py              Process queued PDFs and retry prepared invoice saves
+  run_dashboard.py           Local read-only dashboard; no processing or controls
   pipeline_config.json       Folder-pipeline configuration
-  requirements.txt           Runtime dependencies
+  requirements.txt           Direct runtime dependency constraints
+  requirements-lock.txt      Validated Windows/Python dependency snapshot
   src/foc_extractor/
     ocr_engine.py            Page OCR, table geometry and caching
     parser.py                Source-grounded shipment and item parsing
@@ -30,11 +38,15 @@ project/
     process_lock.py          Native single-instance scanner/worker locks
     queue_worker.py          Existing converter, restart recovery and safe publication
     processing_evidence.py   Optional events, exact model-input images and source previews
+    dashboard.py             Read-only views, status and verified downloads
+    dashboard_templates/     Overview, history, evidence detail and system pages
+    dashboard_static/        Local CSS/JavaScript; no frontend build or CDN
   tools/
-    compare_invoices.py      Read-only comparison with manual references
-    check_outputs.py         Sample coverage, audit and invoice checks
-    export_print_samples.ps1 Read-only Excel-to-PDF print check
-  tests/                     Parser, OCR, Excel and local-vision tests
+    build_release.py         Production ZIP builder (development only)
+    compare_invoices.py      Legacy forwarder to tests/evaluation
+    check_outputs.py         Legacy forwarder to tests/evaluation
+    export_print_samples.ps1 Legacy forwarder to tests/evaluation
+  tests/                     Unit tests; evaluation/ holds comparison/print QA
   examples/                  BD PDFs; india/ and jordan/ hold other samples
   expected_outputs/          Manual references; evaluation only
   templates/                 Blank BD, India and Jordan invoice templates
@@ -45,6 +57,7 @@ project/
   runtime/                   Local pipeline database/artifacts (ignored)
   .cache/                    Active OCR evidence and local models (ignored)
   .venv/                     Project Python environment (ignored)
+  dist/                      Production ZIP artifacts (ignored)
 ```
 
 Source PDFs and manual references have one canonical location. The former root `FOC` copies were deduplicated by file hashes. All unique regional documents were preserved.
@@ -108,7 +121,19 @@ The scanner and worker run independently. The worker processes one PDF at a time
 
 Worker `--once` retries prepared saves and processes at most one new job; `--drain` processes the current backlog and exits. Both accept `--config <path>` and exit with code 1 if failed/interrupted/waiting-to-save jobs remain. Ctrl+C finishes the current conversion before stopping; a forced exit is recovered at restart. One-shot flags do not continuously watch for new arrivals. Existing `main.py` and `run_batch.py` still convert directly, outside this queue. See the [Stage 3 operating and acceptance report](docs/pipeline_stage3.md).
 
-The worker now retains structured processing events, original OCR evidence and the exact model-input PNGs in managed attempt storage. Its metadata distinguishes fresh inference, cached model answers, accepted readings and final invoice contributions. Missing fields and failed/rejected readings are recorded separately from job completion. Review information is never added to printed invoices. On-demand source previews and image/hash checks are ready for the next dashboard stage. See [Stage 4 evidence, retention and tests](docs/pipeline_stage4.md).
+The worker now retains structured processing events, original OCR evidence and the exact model-input PNGs in managed attempt storage. Its metadata distinguishes fresh inference, cached model answers, accepted readings and final invoice contributions. Missing fields and failed/rejected readings are recorded separately from job completion. Review information is never added to printed invoices. On-demand source previews and image/hash checks are exposed through the Stage 5 dashboard. See [Stage 4 evidence, retention and tests](docs/pipeline_stage4.md).
+
+## Read-only dashboard — Stage 5
+
+~~~powershell
+project/.venv/Scripts/python.exe project/run_dashboard.py
+~~~
+
+Open **http://127.0.0.1:8080**. Use --config followed by a configuration path to inspect another queue, or --port 8081 for another local port. Install the updated requirements first. Initialize state with init_pipeline.py if necessary; the dashboard never creates/migrates it. Scanner, worker and dashboard must use the same configuration for production arrivals.
+
+Overview shows independent component health and queue counts. Jobs support search/filtering and attempt history; detail pages expose goods, diagnostics, version fingerprints, exact vision inputs and source highlights. PDF/Excel downloads are verified. System shows folders, model defaults, dependencies and disk space. The database is opened read-only; pause/retry/settings controls remain pending. Old standalone/batch files are not automatically imported into the queue.
+
+The acceptance preview uses an isolated 20-job test queue; the default production queue remains empty. See [Stage 5 commands, tests and limits](docs/pipeline_stage5.md). No Windows startup task is installed.
 
 ## Verification
 

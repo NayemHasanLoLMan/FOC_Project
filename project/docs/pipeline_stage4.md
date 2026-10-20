@@ -1,5 +1,7 @@
 # Stage 4 — processing evidence and review artifacts
 
+Historical acceptance checkpoint. [Stage 5](pipeline_stage5.md) now exposes this evidence through the read-only dashboard. Statements below about the pending UI describe the Stage 4 checkpoint.
+
 Implemented and verified on 20 October 2026. Stop before Stage 5 for user approval. This stage adds the data and image helpers for review; the web dashboard is not implemented yet. Scanner/worker commands and invoice-generation rules are unchanged.
 
 ## What is recorded

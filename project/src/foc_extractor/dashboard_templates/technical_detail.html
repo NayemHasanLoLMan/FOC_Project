@@ -1,0 +1,9 @@
+<details class="panel technical-details" id="technical-details"><summary>Technical details (optional)</summary>
+<p class="hint">Original processing records for support and troubleshooting.</p>
+{% if attempt %}<h2>Run details and saved versions</h2><pre>{{ attempt.metadata|tojson(indent=2) }}</pre>
+<h2>Original processing notes</h2><pre>{{ attempt.issues|tojson(indent=2) }}</pre>
+{% if attempt.error %}<pre>{{ attempt.error }}</pre>{% endif %}{% endif %}
+{% if data %}<details><summary>Original extracted data and diagnostics</summary><pre>{{ data|tojson(indent=2) }}</pre></details>{% endif %}
+<section class="panel"><h2>Stage timeline</h2><div class="table-scroll"><table><thead><tr><th>Time (UTC)</th><th>Stage</th><th>Outcome</th><th>Elapsed seconds</th></tr></thead><tbody>{% for event in stages %}<tr><td>{{ event.created_at }}</td><td>{{ event.details.stage }}</td><td>{{ event.details.status }}</td><td>{{ '%.2f'|format(event.details.elapsed_seconds) if event.details.elapsed_seconds is defined else '—' }}</td></tr>{% else %}<tr><td colspan="4">No stage observations recorded.</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="panel"><h2>Event history</h2><p class="hint">Includes PDF, directory, valuation and field decisions. Page {{ event_page }} of {{ event_pages }} · 100 events per page.</p>{% for event in events %}<details><summary>#{{ event.id }} · {{ event.created_at }} · {{ event.details.get('kind',event.kind)|replace('_',' ') }}</summary><pre>{{ event.details|tojson(indent=2) }}</pre></details>{% endfor %}<div class="pagination">{% if event_page>1 %}<a href="{{ url_for('detail',job_id=job.id,attempt=attempt.id,event_page=event_page-1) }}">← Previous events</a>{% endif %}{% if event_page<event_pages %}<a href="{{ url_for('detail',job_id=job.id,attempt=attempt.id,event_page=event_page+1) }}">Next events →</a>{% endif %}</div></section>
+</details>
