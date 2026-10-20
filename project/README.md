@@ -2,7 +2,7 @@
 
 Read shipment PDFs with local PaddleOCR and fill the existing Excel invoice template. Bangladesh is the tested scope. India/Jordan templates, mappings and unique reference documents are retained for later work; they have not been validated by the BD benchmark.
 
-The [continuous folder pipeline and admin dashboard checklist](docs/pipeline_dashboard_plan.md) tracks staged updates. [Stage 1](docs/pipeline_stage1.md) adds configuration and durable job state; [Stage 2](docs/pipeline_stage2.md) adds safe PDF intake; [Stage 3](docs/pipeline_stage3.md) processes queued snapshots through the existing converter with recoverable invoice publication. No scanner or worker is left running or installed at startup. Processing evidence and the dashboard are later stages. Current CLI conversion remains unchanged. Each next stage requires user approval after regression checks.
+The [continuous folder pipeline and admin dashboard checklist](docs/pipeline_dashboard_plan.md) tracks staged updates. [Stage 1](docs/pipeline_stage1.md) adds configuration and durable job state; [Stage 2](docs/pipeline_stage2.md) adds safe PDF intake; [Stage 3](docs/pipeline_stage3.md) processes queued snapshots with recoverable publication; [Stage 4](docs/pipeline_stage4.md) records OCR/vision evidence and retains review images. No scanner or worker is left running or installed at startup. The dashboard is the next stage. Current CLI conversion remains unchanged. Each next stage requires user approval after regression checks.
 
 ## Project layout
 
@@ -29,6 +29,7 @@ project/
     folder_intake.py         File readiness, PDF validation and versioned snapshots
     process_lock.py          Native single-instance scanner/worker locks
     queue_worker.py          Existing converter, restart recovery and safe publication
+    processing_evidence.py   Optional events, exact model-input images and source previews
   tools/
     compare_invoices.py      Read-only comparison with manual references
     check_outputs.py         Sample coverage, audit and invoice checks
@@ -106,6 +107,8 @@ project/.venv/Scripts/python.exe project/run_worker.py
 The scanner and worker run independently. The worker processes one PDF at a time using the same converter and shared BD template. Existing output files are preserved; filename collisions receive a job/attempt suffix. A blocked save retains the prepared workbook and retries without repeating OCR/VL. Native locks prevent duplicate scanner or worker instances for the same state directory. Keep Ollama running for the configured local vision fallback.
 
 Worker `--once` retries prepared saves and processes at most one new job; `--drain` processes the current backlog and exits. Both accept `--config <path>` and exit with code 1 if failed/interrupted/waiting-to-save jobs remain. Ctrl+C finishes the current conversion before stopping; a forced exit is recovered at restart. One-shot flags do not continuously watch for new arrivals. Existing `main.py` and `run_batch.py` still convert directly, outside this queue. See the [Stage 3 operating and acceptance report](docs/pipeline_stage3.md).
+
+The worker now retains structured processing events, original OCR evidence and the exact model-input PNGs in managed attempt storage. Its metadata distinguishes fresh inference, cached model answers, accepted readings and final invoice contributions. Missing fields and failed/rejected readings are recorded separately from job completion. Review information is never added to printed invoices. On-demand source previews and image/hash checks are ready for the next dashboard stage. See [Stage 4 evidence, retention and tests](docs/pipeline_stage4.md).
 
 ## Verification
 

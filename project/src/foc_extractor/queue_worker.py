@@ -16,6 +16,7 @@ from .job_store import JobStore
 from .pipeline import run
 from .pipeline_config import ROOT, PipelineConfig, attempt_metadata
 from .process_lock import process_lock
+from .processing_evidence import EvidenceRecorder
 
 HEARTBEAT_SECONDS = 5
 
@@ -225,8 +226,10 @@ class QueueWorker:
             if not folder.resolve().is_relative_to(self.config.artifact_dir):
                 raise ValueError('Attempt directory escapes managed artifact storage')
             folder.mkdir(parents=True, exist_ok=True)
+            observer = EvidenceRecorder(self.store, attempt, folder / 'evidence')
             workbook = Path(run(source, template=ROOT / 'templates/BD_template.xlsx', output_dir=folder,
-                                save_json=True, cache_dir=ROOT / '.cache/ocr', local_model=self.config.local_model)).resolve()
+                                save_json=True, cache_dir=ROOT / '.cache/ocr', local_model=self.config.local_model,
+                                observer=observer)).resolve()
             if workbook.parent != folder or workbook.suffix.lower() != '.xlsx':
                 raise ValueError('Converter returned an unexpected output path')
             data_path = folder / f'{source.stem}.json'

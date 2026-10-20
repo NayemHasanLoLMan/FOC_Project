@@ -5,11 +5,12 @@ Works with the unified OCRResult from ocr_engine.py.
 Handles all template types: BD (EGMCL/PGCL), India (TGPL), Jordan (EJU1).
 
 Extraction strategy:
-  1. Header fields — entity dictionaries & regex with OCR tolerance
-  2. Line items    — recovered tables or regex-based line item parsing
-  3. Validation    — cross-checks package counts, carton numbers, and totals
+  1. Header fields â€” entity dictionaries & regex with OCR tolerance
+  2. Line items    â€” recovered tables or regex-based line item parsing
+  3. Validation    â€” cross-checks package counts, carton numbers, and totals
 """
 
+from .processing_evidence import emit
 import re
 from collections import Counter
 from pathlib import Path
@@ -294,7 +295,7 @@ def _extract_carton_range(text):
     ranges=[]
     # Correct O only inside a labelled carton number, never in style codes.
     text=re.sub(r'(C\s*[/I1]?\s*NO[.:]?[^\n]*)',lambda m:re.sub(r'(?<=[0-9])O\b','0',m[0]),text.upper())
-    for m in re.finditer(r'C\s*[/I1]?\s*NO[.:]?\s*([A-Z]\s*\d{1,3})(?:(?:[ \t]*[-–][ \t]*|[ \t]+(?=[A-Z]\d))([A-Z]?\s*\d{1,3}))?',text):
+    for m in re.finditer(r'C\s*[/I1]?\s*NO[.:]?\s*([A-Z]\s*\d{1,3})(?:(?:[ \t]*[-â€“][ \t]*|[ \t]+(?=[A-Z]\d))([A-Z]?\s*\d{1,3}))?',text):
         first=re.sub(r'\s','',m[1]); last=re.sub(r'\s','',m[2] or '')
         if last:
             if last[0].isdigit():last=first[0]+last
@@ -315,7 +316,7 @@ def _carton_count(value):
 
 
 def _extract_shipping_marks(text):
-    m=re.search(r'\b([A-Z]{2,8})(?:\s+\d{1,2})?\s*[-–]?\s*FOC\b',text.upper())
+    m=re.search(r'\b([A-Z]{2,8})(?:\s+\d{1,2})?\s*[-â€“]?\s*FOC\b',text.upper())
     return f'{m[1]}-FOC' if m else None
 
 
@@ -670,7 +671,7 @@ def _extract_table_data(ocr):
                         if '%' in line and re.search(r'\b(?:SHIRTS?|PANTS?|DRESS(?:ES)?|BLOUSES?|TOPS?)\b',line,re.I):
                             previous=lines[index-1] if index else ''
                             gender=re.search(r'\b(MENS?|WOMENS?|LADIES|LADY|KIDS?)\s*$',previous,re.I)
-                            prefix=gender[1]+' ' if gender else ('MENS ' if re.search(r"\bM['’]S\b",previous,re.I) else '')
+                            prefix=gender[1]+' ' if gender else ('MENS ' if re.search(r"\bM['â€™]S\b",previous,re.I) else '')
                             descriptions.append(prefix+line)
                 if len(descriptions)!=len(main_matches):
                     labels=[re.match(r'^(FABRIC HANGER|(?:EMBY )?MF PART CARD)\b',line.strip(),re.I)
@@ -743,13 +744,17 @@ def parse_result(ocr_result, source):
     filename=re.search(r'(\d{2})S(\d{3,5})',Path(source).stem,re.I)
     filename_invoice=f'S/{filename[2]}/{filename[1]}' if filename else None
     data.invoice_number=_extract_invoice_number(text,filename_invoice)
+    emit('field_source', field='invoice_number', method='best_effort_pdf_and_filename',
+         value=data.invoice_number, filename_hint=filename_invoice)
     if data.invoice_number:
         data.warnings.append(f'Best-effort invoice number: {data.invoice_number}; filename hint: {filename_invoice or "none"}. '
                              'PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); '
                              'a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.')
     data.export_date=_extract_export_date(text)
+    emit('field_source', field='export_date', method='explicit_export_label', value=data.export_date)
     if data.export_date is None and not re.search(EXPORT_DATE_LABEL,text,re.I):
         data.export_date=_extract_packing_date(ocr_result.pages or [text])
+        emit('field_source', field='export_date', method='first_labelled_packing_date', value=data.export_date)
         if data.export_date:
             data.warnings.append('Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).')
     data.shipping_marks=_extract_shipping_marks(text)
@@ -760,6 +765,8 @@ def parse_result(ocr_result, source):
     data.gross_weight_kg=_extract_gross_weight(summary)
     data.net_weight_kg=_extract_net_weight(text)
     data.total_value=_extract_total_value(text)
+    for field in ('shipping_marks','gross_weight_kg','net_weight_kg','total_value'):
+        emit('field_source', field=field, method='explicit_pdf_reading', value=getattr(data,field))
     items,weights,parsed_pages,warnings=_extract_table_data(ocr_result)
     data.warnings.extend(warnings)
     for page,content in enumerate(ocr_result.pages or [text]):
@@ -816,19 +823,23 @@ def parse_result(ocr_result, source):
             if not data.shipping_marks:
                 data.shipping_marks=entity['shipping_marks']
                 data.warnings.append('Shipping marks supplied by existing consignee directory; verify.')
+                emit('field_source', field='shipping_marks', method='company_directory', key=key, value=data.shipping_marks)
             if region:
                 lines=region.splitlines()
                 address=[line for line in lines[1:] if not re.fullmatch(r'\s*(?:TEL(?:EPHONE)?|FAX)(?:\s+NO\.?)?\s*:?\s*',line,re.I)]
                 data.consignee_address='\n'.join(address) or None
+                emit('field_source', field='consignee_address', method='labelled_pdf_block', value=data.consignee_address)
             if not unknown_unit:
                 if not data.consignee_address:
                     data.consignee_address=entity['address']
                     data.warnings.append('Consignee address/BIN supplied by company directory.')
+                    emit('field_source', field='consignee_address', method='company_directory', key=key, value=data.consignee_address)
                 elif not re.search(r'\bBIN\b',data.consignee_address,re.I):
                     bin_line=next((line for line in entity['address'].splitlines() if re.search(r'\bBIN\b',line,re.I)),None)
                     if bin_line:
                         data.consignee_address+='\n'+bin_line
                         data.warnings.append('Consignee BIN supplied by company directory.')
+                        emit('field_source', field='consignee_BIN', method='company_directory', key=key, value=bin_line)
             break
     if region and not data.consignee:
         data.consignee=region.splitlines()[0]

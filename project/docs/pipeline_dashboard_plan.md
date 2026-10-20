@@ -1,6 +1,6 @@
 # Continuous PDF-to-invoice pipeline and admin dashboard
 
-Status: Stages 1–3 implemented and verified; Stage 4 awaits user approval. Implement one stage at a time, prove its acceptance checks, and ask the user before proceeding. Existing single-file/batch conversion and BD invoice contents/formatting remain supported. See the [Stage 1](pipeline_stage1.md), [Stage 2](pipeline_stage2.md) and [Stage 3](pipeline_stage3.md) acceptance reports.
+Status: Stages 1–4 implemented and verified; Stage 5 awaits user approval. Implement one stage at a time, prove its acceptance checks, and ask the user before proceeding. Existing single-file/batch conversion and BD invoice contents/formatting remain supported. See the [Stage 1](pipeline_stage1.md), [Stage 2](pipeline_stage2.md) [Stage 3](pipeline_stage3.md) and [Stage 4](pipeline_stage4.md) acceptance reports.
 
 ## Outcome and boundaries
 
@@ -56,7 +56,7 @@ References: [Flask deployment](https://flask.palletsprojects.com/en/stable/deplo
 | 7 | Unattended Windows startup | Background startup, failure restart, single-instance protection and Ollama dependency reporting work without a browser |
 | 8 | End-to-end acceptance and operating guide | Restart/copy/duplicate/locked-file/model-failure cases pass; BD regression and unseen-PDF checks pass; recovery instructions are documented |
 
-Stages 1–3 are complete: configuration, durable job/attempt/event state, safe folder intake and a single extraction worker with recoverable publication. Neither scanner nor worker is left running. Dashboard/startup management and Stages 4–8 are not implemented. The user explicitly requires approval before each next stage.
+Stages 1–4 are complete: configuration, durable state, safe intake, a recoverable extraction worker and structured processing evidence/review artifacts. Neither scanner nor worker is left running. Dashboard/startup management and Stages 5–8 are not implemented. The user explicitly requires approval before each next stage.
 
 ### Stage 1 — configuration and durable state
 
@@ -89,14 +89,16 @@ All 177 tests pass. The real worker completed all 20 example PDFs (66 pages, 89 
 
 ### Stage 4 — truthful processing evidence
 
-- [ ] Add optional structured observation to the shared pipeline and its OCR/quantity/package/weight/model steps. Existing callers that do not request observation must retain their behavior and return type. Do not scrape console text as the authoritative status API.
-- [ ] Record job/attempt, stage, page/region, method, elapsed time, original OCR reading, candidate/final value, accepted/rejected outcome and reason. Separate explicit source values, directory fallback, derived packing sums and approved valuation assumptions.
-- [ ] Separate **VL attempted**, **VL contributed an accepted value**, **fresh inference**, and **cached model answer**. A cache hit still uses model-derived information. Do not label a job OCR-only simply because no fresh model call ran.
-- [ ] Distinguish rejected answers, unavailable model, invalid/truncated response and no model needed. Persist events for failures as well as successes. Record model name/digest, request settings and available timing/token metrics; missing telemetry stays unavailable.
-- [ ] Save the exact PNG bytes sent to the model, including supplied KG headings, resizing/composites and source page/coordinates/transforms. Saving only a new approximation of the region is insufficient for review. Reuse content-addressed artifacts where appropriate.
-- [ ] Show source page thumbnails/highlighted regions using the retained coordinate transform. Generate full-page previews on demand rather than storing every page at multiple resolutions. Preserve field-to-source links through grouped goods rows where they already exist; do not invent provenance where it is absent.
-- [ ] Keep artifacts in managed job storage, not evaluation reports or arbitrary filesystem links. A cache cleanup must not silently remove retained review evidence. Establish a simple retention policy before enabling cleanup.
-- [ ] Test OCR-only, fresh accepted/rejected VL, cached VL, missing images and failed calls. Review records never force human approval or add warnings to printed invoices.
+- [x] Add optional structured observation to the shared pipeline and its OCR/quantity/package/weight/model steps. Existing callers that do not request observation must retain their behavior and return type. Do not scrape console text as the authoritative status API.
+- [x] Record job/attempt, stage, page/region, method, elapsed time, original OCR reading, candidate/final value, accepted/rejected outcome and reason. Separate explicit source values, directory fallback, derived packing sums and approved valuation assumptions.
+- [x] Separate **VL attempted**, **VL contributed an accepted value**, **fresh inference**, and **cached model answer**. A cache hit still uses model-derived information. Do not label a job OCR-only simply because no fresh model call ran.
+- [x] Distinguish rejected answers, unavailable model, invalid/truncated response and no model needed. Persist events for failures as well as successes. Record model name/digest, request settings and available timing/token metrics; missing telemetry stays unavailable.
+- [x] Save the exact PNG bytes sent to the model, including supplied KG headings, resizing/composites and source page/coordinates/transforms. Saving only a new approximation of the region is insufficient for review. Reuse content-addressed artifacts where appropriate.
+- [x] Provide tested on-demand source thumbnails/highlighted regions using the retained coordinate transform; displaying them in the web UI belongs to Stage 5. Generate full-page previews on demand rather than storing every page at multiple resolutions. Preserve field-to-source links through grouped goods rows where they already exist; do not invent provenance where it is absent.
+- [x] Keep artifacts in managed job storage, not evaluation reports or arbitrary filesystem links. A cache cleanup must not silently remove retained review evidence. Establish a simple retention policy before enabling cleanup.
+- [x] Test OCR-only, fresh accepted/rejected VL, cached VL, missing images and failed calls. Review records never force human approval or add warnings to printed invoices.
+
+All 190 tests pass. The real 20-PDF worker run retains 20 OCR documents and 6 exact cached-model inputs; 3 invoices have model contributions and 17 do not. All invoice values/styles and reference scores are unchanged. Evidence ownership, image corruption/missing paths, fresh/cache/error outcomes and save/restart preservation are tested. See [Stage 4 details and limits](pipeline_stage4.md).
 
 ### Stage 5 — read-only admin dashboard
 
@@ -139,4 +141,4 @@ No cloud services, additional OCR/model changes, distributed/multi-worker execut
 
 ## Current checkpoint
 
-Stages 1–3 are implemented and verified. Ask the user before Stage 4 (structured processing evidence and review artifacts). Do not install startup tasks before their stage. The dashboard should read proven pipeline state rather than becoming a second independent processing implementation.
+Stages 1–4 are implemented and verified. Ask the user before Stage 5 (the read-only local dashboard). Do not install startup tasks before their stage. The dashboard should read proven pipeline state rather than becoming a second independent processing implementation.

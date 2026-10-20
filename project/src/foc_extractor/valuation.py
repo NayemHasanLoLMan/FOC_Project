@@ -1,4 +1,5 @@
 """Apply the approved approximate USD rates to supported BD goods only."""
+from .processing_evidence import emit
 import json
 import re
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -77,6 +78,8 @@ def apply_valuation(data):
             if item.unit == unit:
                 if item.unit_price is None:
                     item.unit_price = float(rates[key])
+                    emit('valuation_rate', method='approved_approximate_rate', rule=key, rate=item.unit_price,
+                         unit=item.unit, source_refs=item.source_refs, description=item.description)
                 break
         quantity, price = _positive(item.quantity), _positive(item.unit_price)
         if item.amount is None and quantity is not None and price is not None:
@@ -92,4 +95,5 @@ def apply_valuation(data):
     if data.total_value is None and data.items and priced == len(data.items) and not incomplete_pdf:
         total = sum(Decimal(str(item.amount)) for item in data.items)
         data.total_value = float(total.quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+        emit('field_source', field='total_value', method='approved_rates_sum_whole_usd_half_up', value=data.total_value)
         data.warnings = [w for w in data.warnings if not w.startswith('total_value not established')]

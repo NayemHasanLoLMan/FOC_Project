@@ -43,7 +43,7 @@ class WorkerTests(unittest.TestCase):
             document.save(snapshot)
         return self.store.enqueue(original, hashlib.sha256(snapshot.read_bytes()).hexdigest(), snapshot)
 
-    def convert(self, source, *, template, output_dir, save_json, cache_dir, local_model):
+    def convert(self, source, *, template, output_dir, save_json, cache_dir, local_model, observer=None):
         self.assertEqual(template, ROOT / 'templates/BD_template.xlsx')
         self.assertEqual(cache_dir, ROOT / '.cache/ocr')
         self.assertTrue(save_json)
@@ -80,6 +80,24 @@ class WorkerTests(unittest.TestCase):
             worker.run_once()
         convert.assert_not_called()
         self.assertEqual(self.store.get_job(job)['state'], 'failed')
+
+    def test_prepared_restart_retains_evidence_and_issues_without_conversion(self):
+        job = self.enqueue()
+        def convert(source, **kwargs):
+            kwargs['observer']({'kind':'invoice_evidence','vision_contributions':[],
+                                'unresolved_fields':['net_weight_kg']})
+            return self.convert(source, **kwargs)
+        with patch.object(queue_worker, 'run', side_effect=convert), QueueWorker(self.config, self.store) as worker:
+            with patch.object(queue_worker, '_publish_copy', side_effect=PermissionError('locked')):
+                attempt_id = worker.run_once()
+        with patch.object(queue_worker, 'run') as converter, QueueWorker(self.config, self.store) as worker:
+            worker.run_once()
+        converter.assert_not_called()
+        attempt = self.store.get_attempt(attempt_id)
+        self.assertEqual(attempt['state'], 'completed')
+        self.assertEqual(attempt['issues'], ['missing:net_weight_kg'])
+        self.assertEqual(attempt['metadata']['processing']['vision_contributions'], [])
+        self.assertEqual(len([e for e in self.store.events(job) if e['kind']=='processing']), 1)
 
     def test_bad_job_does_not_stop_the_next_pdf(self):
         first = self.enqueue('bad.pdf')

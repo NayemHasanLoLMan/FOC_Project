@@ -5,6 +5,7 @@ import re
 from dataclasses import asdict
 from pathlib import Path
 
+from .processing_evidence import emit, region as evidence_region
 from .ocr_engine import _cached_page_image, _column_regions, _paddle_readers
 from .parser import PACKAGE_UNIT, _carton_count, _extract_package_count, _table_fields
 
@@ -33,7 +34,7 @@ def _read_count(text):
 
 def _carton_ids(text):
     ids=set()
-    for match in re.finditer(r'\bCARTON\s*(?:#|NO\.?\s*[:#]?)\s*([A-Z]?)(\d{1,3})\b(?:\s*[-–]\s*([A-Z]?)(\d{1,3})\b)?',text.upper()):
+    for match in re.finditer(r'\bCARTON\s*(?:#|NO\.?\s*[:#]?)\s*([A-Z]?)(\d{1,3})\b(?:\s*[-â€“]\s*([A-Z]?)(\d{1,3})\b)?',text.upper()):
         prefix,start,last_prefix,end=match.groups()
         end=int(end or start)
         if last_prefix and prefix!=last_prefix or end<int(start):continue
@@ -81,7 +82,9 @@ def packing_packages(ocr, carton_range=None, pdf=None, cache_dir=None, local_mod
                 cached=json.loads(cache.read_text(encoding='utf-8'))
                 if isinstance(cached,dict) and {'total','basis','entries','reason'}<=cached.keys() and (
                         cached['total'] is None or type(cached['total']) is int and cached['total']>=0):
-                    if cached['total'] is not None or not local_model:return cached
+                    if cached['total'] is not None or not local_model:
+                        emit('field_cache', field='package_count', evidence=cached, cached=True)
+                        return cached
             except (OSError,ValueError):pass
     seen=set();seen_cartons=set();images={};page_counts={};reader=None;used_vision=False
     try:
@@ -122,16 +125,23 @@ def packing_packages(ocr, carton_range=None, pdf=None, cache_dir=None, local_mod
                         raw=next(iter(reader.predict(np.asarray(crop.convert('RGB'))[:,:,::-1])))
                         candidate='\n'.join(t for t,s in zip(raw['rec_texts'],raw['rec_scores']) if float(s)>=.65)
                         count=_read_count(candidate)
+                        emit('cell_ocr', **evidence_region('package_count',ocr,table.page,region), text=list(raw['rec_texts']),
+                             scores=[float(v) for v in raw['rec_scores']], candidate=count, accepted=count is not None)
                         if candidate:text=candidate;method='local package-cell OCR'
                     if count is None and local_model and re.search(r'(?<![A-Z])(?:'+PACKAGE_UNIT+r')(?![A-Z])',text,re.I):
                         from .local_vision import transcribe_cell
                         used_vision=True
                         print(f'  Local package transcription: page {table.page+1}',flush=True)
-                        answer,provenance=transcribe_cell(crop,local_model,cache_dir,prompt=PACKAGE_PROMPT)
+                        context=evidence_region('package_count',ocr,table.page,region,original=text,
+                                                preprocessing={'inset':4,'scale':2})
+                        answer,provenance=transcribe_cell(crop,local_model,cache_dir,prompt=PACKAGE_PROMPT,context=context)
                         candidate=answer.get('text') if answer else None
                         match=COUNTS.fullmatch(candidate.strip()) if isinstance(candidate,str) else None
                         original_kinds={_package_kind(u) for u in re.findall(r'(?<![A-Z])(?:'+PACKAGE_UNIT+r')(?![A-Z])',text,re.I)}
-                        if match and (not original_kinds or {_package_kind(match[2])}==original_kinds):
+                        accepted=bool(match and (not original_kinds or {_package_kind(match[2])}==original_kinds))
+                        emit('vision_decision', **context, candidate=candidate, accepted=accepted,
+                             reason='Explicit count and compatible package unit' if accepted else 'Unreadable count or conflicting package unit')
+                        if accepted:
                             count=_read_count(candidate);text=candidate;method='local vision: '+provenance
                     entries.append({'page':table.page+1,'bbox':region,'text':text,'count':count,'method':method})
             else:

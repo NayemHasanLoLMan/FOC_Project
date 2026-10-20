@@ -1,7 +1,9 @@
+from dataclasses import asdict
 import json
 import re
 from pathlib import Path
 
+from .processing_evidence import emit, observed, track, accepted_vision_refs
 from .ocr_engine import analyze_pdf
 from .parser import parse_result
 from .excel_writer import populate_template
@@ -32,6 +34,7 @@ def _resolve_template(template: Path | None, template_type: str | None) -> Path:
     return selected
 
 
+@observed
 def run(
     pdf: Path,
     template: Path | None = None,
@@ -40,6 +43,7 @@ def run(
     max_pages: int | None = None,
     cache_dir: Path | None = None,
     local_model: str | None = DEFAULT_MODEL,
+    observer=None,
 ):
     """
     Execute end-to-end extraction pipeline:
@@ -57,15 +61,17 @@ def run(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. OCR
-    result = analyze_pdf(pdf_path,max_pages=max_pages,cache_dir=cache_dir)
+    result = track('ocr', analyze_pdf, pdf_path,max_pages=max_pages,cache_dir=cache_dir)
+    emit('ocr_document', document=asdict(result))
     if local_model:
         from .local_vision import resolve_quantities
-        resolve_quantities(result, pdf_path, local_model, cache_dir)
+        track('goods_vision', resolve_quantities, result, pdf_path, local_model, cache_dir)
 
     # 2. Parse structured data
-    data = parse_result(result, pdf_path)
+    data = track('parse', parse_result, result, pdf_path)
     from .packages import packing_packages
-    package_evidence=packing_packages(result,data.carton_range,pdf_path,cache_dir,local_model=local_model)
+    package_evidence=track('packages', packing_packages, result,data.carton_range,pdf_path,cache_dir,local_model=local_model)
+    emit('field_evidence', field='package_count', evidence=package_evidence)
     data.package_count=package_evidence['total']
     data.warnings=[w for w in data.warnings if not w.startswith(('Package count basis:','Package extraction:'))
                    and not (data.package_count is not None and w.startswith('package_count not established'))]
@@ -74,9 +80,11 @@ def run(
         data.warnings.append('Package extraction: '+package_evidence['reason'])
     if data.gross_weight_kg is None and not re.search(r'\bGROSS\s+WEIGHT|\bG\.?\s*W\.?(?:\s*:|\s+\d)',result.content,re.I):
         from .weights import packing_weight
-        weight = packing_weight(result, pdf_path, cache_dir,local_model=local_model)
+        weight = track('weights', packing_weight, result, pdf_path, cache_dir,local_model=local_model)
+        emit('field_evidence', field='gross_weight_kg', evidence=weight)
         if weight['total_kg'] is not None:
             data.gross_weight_kg = weight['total_kg']
+            emit('field_source', field='gross_weight_kg', method='corrected_packing_weight_sum', value=data.gross_weight_kg)
             data.warnings = [w for w in data.warnings if not w.startswith((
                 'Packing-list weights are not established', 'gross_weight_kg not established'))]
             if any(c.get('method')=='local vision' for c in weight['cells']):
@@ -87,17 +95,33 @@ def run(
 
     if (data.net_weight_kg is not None and data.gross_weight_kg is not None
             and data.net_weight_kg > data.gross_weight_kg):
+        emit('field_decision', field='net_weight_kg', candidate=data.net_weight_kg, accepted=False,
+             reason='Declared net weight exceeds gross weight', gross_weight_kg=data.gross_weight_kg)
         data.net_weight_kg = None
         data.warnings.append('Declared net weight exceeds gross weight; net weight left empty.')
 
-    apply_valuation(data)
+    track('valuation', apply_valuation, data)
+    contributions=[]
+    refs={ref for item in data.items for ref in item.source_refs}
+    contributions.extend({'field':'goods_quantity','source_ref':ref} for ref in sorted(accepted_vision_refs() & refs))
+    if data.package_count is not None and any('local vision' in e.get('method','') for e in package_evidence['entries']):
+        contributions.append({'field':'package_count'})
+    if data.gross_weight_kg is not None and 'weight' in locals() and weight['total_kg'] is not None and any(c.get('method')=='local vision' for c in weight['cells']):
+        contributions.append({'field':'gross_weight_kg'})
+    unresolved=[field for field in ('invoice_number','export_date','consignee','consignee_address','shipping_marks',
+                'package_count','gross_weight_kg','net_weight_kg','total_value') if getattr(data,field) is None]
+    unresolved.extend(f'goods:{i+1}:{field}' for i,item in enumerate(data.items)
+                      for field in ('description','quantity','unit','unit_price') if getattr(item,field) in (None,''))
+    if not data.items:unresolved.append('goods')
+    emit('invoice_evidence', vision_contributions=contributions, unresolved_fields=unresolved,
+         goods=[asdict(item) for item in data.items], diagnostics=data.warnings)
 
     # 3. Resolve template and populate Excel
     if not template:
         active_template = _resolve_template(None, data.template_type)
     out_name = pdf_path.name.replace("-D.pdf", "-I.xlsx") if "-D.pdf" in pdf_path.name else f"{pdf_path.stem}.xlsx"
     xlsx_path = out_dir / out_name
-    populate_template(active_template, xlsx_path, data)
+    track('workbook', populate_template, active_template, xlsx_path, data)
     if save_json:
         json_path = out_dir / f"{pdf_path.stem}.json"
         temporary = json_path.with_suffix('.json.tmp')

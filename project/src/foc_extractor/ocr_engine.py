@@ -6,6 +6,7 @@ Local PaddleOCR with page geometry and source-keyed caching.
 OCRResult carries page text, coordinates, tables and coverage to the parser.
 """
 
+from .processing_evidence import emit
 import os
 import re
 import hashlib
@@ -357,6 +358,8 @@ def analyze_with_paddle(pdf_path: Path, max_pages=None, page_cache_dir=None) -> 
         result.words.extend(words)
         result.tables.extend(tables)
         result.page_transforms.append(transform)
+        emit('ocr_page', page=page+1, cached=saved is not None, transform=transform,
+             words=len(words), tables=len(tables), dpi=300)
     result.content='\n\n--- PAGE BREAK ---\n\n'.join(result.pages)
     if len(result.pages)<total_pages:result.warnings.append('Page limit excluded source pages.')
     return result
@@ -387,7 +390,9 @@ def analyze_pdf(pdf_path: Path, max_pages: int | None = None, cache_dir: Path | 
                 temporary=cache.with_suffix('.tmp')
                 temporary.write_text(json.dumps(asdict(result),ensure_ascii=False),encoding='utf-8')
                 temporary.replace(cache)
+            emit('ocr_cache', cached=True, pages=len(result.pages), table_version=result.table_version)
             return result
+    emit('ocr_cache', cached=False)
     result=analyze_with_paddle(pdf_path,max_pages=max_pages,page_cache_dir=cache.with_suffix('') if cache else None)
     if cache:
         cache.parent.mkdir(parents=True,exist_ok=True)

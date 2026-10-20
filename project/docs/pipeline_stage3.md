@@ -1,5 +1,7 @@
 # Stage 3 — queue worker and recoverable invoice publication
 
+Historical acceptance checkpoint. [Stage 4](pipeline_stage4.md) now adds processing evidence, model attribution and retained review images; operating commands remain the same. Statements below about pending evidence describe the Stage 3 checkpoint.
+
 Implemented and verified on 20 October 2026. Stopped before Stage 4 for user approval. The scanner and worker can now run continuously in separate terminals; no dashboard or startup task is installed, and neither process is left running.
 
 ## Operation

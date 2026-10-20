@@ -210,14 +210,15 @@ class JobStore:
                 raise ValueError('Completion requires an existing XLSX output and no error')
         elif output_path is not None or not isinstance(error, str) or not error.strip():
             raise ValueError('Failure/interruption requires an error and no published output')
-        issues = [] if issues is None else issues
-        if not isinstance(issues, list) or any(not isinstance(issue, str) for issue in issues):
+        if issues is not None and (not isinstance(issues, list) or any(not isinstance(issue, str) for issue in issues)):
             raise ValueError('Issues must be a list of strings')
         with self._connection(write=True) as db:
-            row = db.execute("SELECT job_id FROM attempts WHERE id=? AND worker_id=? AND state IN ('running','waiting_to_save')",
+            row = db.execute("SELECT job_id,issues_json FROM attempts WHERE id=? AND worker_id=? AND state IN ('running','waiting_to_save')",
                              (attempt_id, worker_id)).fetchone()
             if row is None:
                 raise ValueError('Attempt is not running under this worker')
+            if issues is None:
+                issues = json.loads(row['issues_json'])
             now = _now()
             db.execute('''UPDATE attempts SET state=?,finished_at=?,heartbeat_at=?,output_path=?,error=?,issues_json=? WHERE id=?''',
                        (state, now, now, str(Path(output_path).resolve()) if output_path else None,
@@ -231,6 +232,43 @@ class JobStore:
             if row is None:
                 raise KeyError(attempt_id)
             return _attempt(row)
+
+    def processing_event(self, attempt_id: int, owner: str, event: dict):
+        with self._connection(write=True) as db:
+            row = db.execute("SELECT * FROM attempts WHERE id=? AND worker_id=? AND state='running'", (attempt_id, owner)).fetchone()
+            if row is None:
+                raise ValueError('Processing attempt is not owned by this worker')
+            metadata = json.loads(row['metadata_json'])
+            summary = metadata.setdefault('processing', {'vision_attempts': 0, 'fresh_calls': 0, 'fresh_responses': 0,
+                'cached_responses': 0, 'accepted_cells': 0, 'models': {}, 'vision_contributions': None})
+            summary['last_event'] = event['kind']
+            if event.get('page') is not None:
+                summary['page'] = event['page']
+            issues = json.loads(row['issues_json'])
+            if event['kind'] == 'stage':
+                summary.update(stage=event['stage'], stage_status=event['status'])
+            elif event['kind'] == 'vision_request':
+                summary['vision_attempts'] += 1
+            elif event['kind'] == 'vision_inference':
+                summary['fresh_calls'] += 1
+            elif event['kind'] == 'vision_response':
+                key = 'cached_responses' if event['cached'] else 'fresh_responses'
+                summary[key] += 1
+            elif event['kind'] == 'vision_decision' and event['accepted']:
+                summary['accepted_cells'] += 1
+            elif event['kind'] == 'invoice_evidence':
+                summary['vision_contributions'] = event['vision_contributions']
+                summary['unresolved_fields'] = event['unresolved_fields']
+                issues.extend('missing:'+field for field in event['unresolved_fields'])
+            if event.get('model_digest'):
+                summary['models'][event['model']] = event['model_digest']
+                digests = set(summary['models'].values())
+                metadata['model_digest'] = next(iter(digests)) if len(digests) == 1 else None
+            if event['kind'] == 'vision_failed' or event['kind'] == 'vision_decision' and not event['accepted']:
+                issues.append(f"{event['kind']}:{event.get('field', 'unknown')}:page-{event.get('page', 'unknown')}")
+            db.execute('UPDATE attempts SET metadata_json=?,issues_json=? WHERE id=?',
+                       (json.dumps(metadata, allow_nan=False), json.dumps(list(dict.fromkeys(issues))), attempt_id))
+            self._event(db, row['job_id'], attempt_id, 'processing', event)
 
     def unfinished_attempts(self) -> list[dict]:
         with self._connection() as db:

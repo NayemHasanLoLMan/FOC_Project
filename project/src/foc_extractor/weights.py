@@ -7,6 +7,7 @@ from dataclasses import asdict
 from decimal import Decimal
 from pathlib import Path
 
+from .processing_evidence import emit, region
 from .ocr_engine import _cached_page_image, _paddle_readers, _column_regions
 from .parser import NUM, _number, _table_fields
 
@@ -93,7 +94,9 @@ def packing_weight(ocr, pdf, cache_dir=None, local_model=None):
         try:
             saved = json.loads(cache.read_text(encoding='utf-8'))
             if isinstance(saved, dict) and {'total_kg','cells','reason'} <= saved.keys():
-                if saved['total_kg'] is not None or not local_model:return saved
+                if saved['total_kg'] is not None or not local_model:
+                    emit('field_cache', field='gross_weight_kg', evidence=saved, cached=True)
+                    return saved
         except (OSError, ValueError):
             pass
     used_vision=False
@@ -128,12 +131,16 @@ def packing_weight(ocr, pdf, cache_dir=None, local_model=None):
                         reader = _paddle_readers()[0]
                     raw = next(iter(reader.predict(np.asarray(crop.convert('RGB'))[:, :, ::-1])))
                     value = _read_weight(raw)
+                    emit('cell_ocr', **region('gross_weight_kg',ocr,page,box), text=list(raw['rec_texts']),
+                         scores=[float(v) for v in raw['rec_scores']], candidate=value, accepted=value is not None,
+                         preprocessing={'blue_ink_removed':True,'inset_x':inset,'inset_y':6})
                     page_cells.append({'page': page+1, 'bbox': box,
                                               'text': list(raw['rec_texts']), 'weight_kg': value})
             if any(c['weight_kg'] is None for c in page_cells) and local_model:
                 from .local_vision import transcribe_cell
                 from PIL import Image
                 used_vision=True
+                original_cells=page_cells
                 page_cells=[];physical_seen=set()
                 # A failed page may contain cancellations that OCR reads as valid old numbers.
                 for table in tables:
@@ -151,9 +158,16 @@ def packing_weight(ocr, pdf, cache_dir=None, local_model=None):
                         crop.paste(heading,(0,0));crop.paste(body,(0,heading.height+8))
                         crop=crop.resize((crop.width*2,crop.height*2))
                         print(f'  Local weight transcription: page {page+1}, cell {len(page_cells)+1}',flush=True)
-                        answer,provenance=transcribe_cell(crop,local_model,cache_dir,prompt=WEIGHT_PROMPT,schema=WEIGHT_SCHEMA)
+                        context=region('gross_weight_kg',ocr,page,box,
+                                       original=original_cells,
+                                       preprocessing={'inset':2,'header_bbox':[left+2,header_top+2,right-2,header_bottom-2],
+                                                      'body_bbox':[left+2,top+2,right-2,bottom-2],'gap':8,'scale':2})
+                        answer,provenance=transcribe_cell(crop,local_model,cache_dir,prompt=WEIGHT_PROMPT,schema=WEIGHT_SCHEMA,context=context)
                         value=answer.get('weight_kg') if answer else None
-                        if type(value) not in (int,float) or not math.isfinite(value) or value<=0:
+                        accepted=type(value) in (int,float) and math.isfinite(value) and value>0
+                        emit('vision_decision', **context, candidate=value, accepted=accepted,
+                             reason='Positive finite corrected KG cell' if accepted else 'No positive finite corrected weight')
+                        if not accepted:
                             raise ValueError(f'Page {page+1}: local vision did not establish a positive corrected weight')
                         page_cells.append({'page':page+1,'bbox':box,'weight_kg':value,'method':'local vision','model':provenance})
             evidence['cells'].extend(page_cells)
