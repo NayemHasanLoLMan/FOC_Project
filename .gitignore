@@ -1,18 +1,17 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+.venv/
 *.py[cod]
 *$py.class
 
 # Caches and temporary files
 .cache/
-project/.cache/
 *.tmp
 *.log
 
 # Environment variables & secrets
 .env
 *.env
-!.env.example
 
 # Generated outputs and reports
 project/output/

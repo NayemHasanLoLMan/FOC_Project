@@ -42,7 +42,7 @@ def _find_label(ws, label: str):
     return None
 
 
-def _next_writable(ws, cell, max_steps=8):
+def _next_writable(ws, cell):
     """Search right, then below, avoiding merged non-anchor cells."""
     merged_nonanchors = {
         c.coordinate for rng in ws.merged_cells.ranges
@@ -69,7 +69,7 @@ def _split_address_lines(address: str | None) -> list[str]:
 
 def _populate_bd(ws, data: FOCData):
     """Populate BD (Bangladesh) customs invoice template."""
-    for coordinate in ('C9', 'H11', 'H12', 'I13', 'B11', 'E21', 'C25', 'B27', 'G27', 'A29', 'G40'):
+    for coordinate in ('C9', 'H11', 'H12', 'I13', 'B11', 'E21', 'C25', 'B27', 'G27', 'F28', 'G28', 'H28', 'A29', 'G40'):
         ws[coordinate] = None
     for row in range(12, 18):
         _safe_write(ws, row, 2, None)
@@ -87,7 +87,13 @@ def _populate_bd(ws, data: FOCData):
         _safe_write(ws, 11, 8, data.shipping_marks)  # H11
     _safe_write(ws, 12, 8, data.destination_city)  # H12
     if data.carton_range:
-        _safe_write(ws, 13, 9, data.carton_range)  # I13
+        ws.merge_cells('H13:I13')
+        _safe_write(ws, 13, 8, f'C/NO. {data.carton_range}')
+        carton_alignment=copy(ws['H13'].alignment)
+        carton_alignment.wrap_text=True
+        carton_alignment.vertical='top'
+        ws['H13'].alignment=carton_alignment
+        ws.row_dimensions[13].height=max(30,15*math.ceil((6+len(data.carton_range))/13))
 
     if data.consignee:
         _safe_write(ws, 11, 2, data.consignee)  # B11
@@ -95,10 +101,14 @@ def _populate_bd(ws, data: FOCData):
     if len(addr_lines) > 6:
         addr_lines = addr_lines[:5] + ['\n'.join(addr_lines[5:])]
     for i, line in enumerate(addr_lines):
+        ws.merge_cells(start_row=12+i,start_column=2,end_row=12+i,end_column=6)
         _safe_write(ws, 12 + i, 2, line)
         alignment = copy(ws.cell(12 + i, 2).alignment)
         alignment.wrap_text = True
+        alignment.vertical='top'
         ws.cell(12 + i, 2).alignment = alignment
+        lines=sum(max(1,math.ceil(len(part)/65)) for part in line.splitlines())
+        ws.row_dimensions[12+i].height=max(ws.row_dimensions[12+i].height or 15,15*lines)
         ws.row_dimensions[12 + i].height = max(ws.row_dimensions[12 + i].height or 15,
                                               15 * sum(max(1, math.ceil(len(s) / 55)) for s in line.splitlines()))
 
@@ -110,10 +120,21 @@ def _populate_bd(ws, data: FOCData):
         _safe_write(ws, 27, 2, int(data.package_count))  # B27
     if data.gross_weight_kg is not None:
         _safe_write(ws, 27, 7, float(data.gross_weight_kg))  # G27
+        ws['G27'].number_format='0.00############'
+    if data.net_weight_kg is not None:
+        for col,value in [(6,'N.W.'),(7,float(data.net_weight_kg)),(8,'KGS')]:
+            ws.cell(28,col)._style = copy(ws.cell(27,col)._style)
+            _safe_write(ws,28,col,value)
+        ws['G28'].number_format='0.00############'
+
 
     # Preserve the BD design, growing its detail area before totals/footer.
     start_row = 33
-    extra = max(0, len(data.items) - 6)
+    carton_labels=[part.strip() for part in (data.carton_range or '').split(',') if part.strip()]
+    if not carton_labels and data.package_count:
+        # Rose's invoice uses a bare count; other BD formats use the PKGS label.
+        carton_labels=[str(int(data.package_count)) if data.shipping_marks=='ROSE-FOC' else f'{int(data.package_count)} PKGS']
+    extra = max(0, max(len(data.items),len(carton_labels)) - 6)
     shifted_merges = [copy(rng) for rng in ws.merged_cells.ranges if rng.min_row >= 39]
     if extra:
         for rng in shifted_merges:
@@ -140,16 +161,27 @@ def _populate_bd(ws, data: FOCData):
         alignment.vertical = 'top'
         ws.cell(r,2).alignment = alignment
         ws.row_dimensions[r].height = max(24, 15 * math.ceil(len(item.description) / 65))
-        if i == 0:
-            if data.carton_range:
-                _safe_write(ws, r, 1, data.carton_range)
-            elif data.package_count:
-                _safe_write(ws, r, 1, f"{int(data.package_count)} PKGS")
         _safe_write(ws, r, 2, item.description)
         if item.quantity is not None:
             _safe_write(ws, r, 7, item.quantity)
+            ws.cell(r,7).number_format='#,##0' if float(item.quantity).is_integer() else '#,##0.####'
         if item.unit:
             _safe_write(ws, r, 8, item.unit)
+        for col in (7,8):
+            numeric_alignment=copy(ws.cell(r,col).alignment)
+            numeric_alignment.vertical='top'
+            ws.cell(r,col).alignment=numeric_alignment
+
+    for index,label in enumerate(carton_labels):
+        cell=ws.cell(start_row+index,1)
+        cell._style=copy(ws.cell(start_row,1)._style)
+        _safe_write(ws,cell.row,1,label)
+        alignment=copy(cell.alignment)
+        alignment.wrap_text=True
+        alignment.vertical='top'
+        cell.alignment=alignment
+        ws.row_dimensions[cell.row].height=max(ws.row_dimensions[cell.row].height or 15,
+                                               15*math.ceil(len(label)/max(1,ws.column_dimensions['A'].width)))
 
     tot_row = 40 + extra
     _safe_write(ws, tot_row, 6, "TOTAL VALUE:")
@@ -162,8 +194,10 @@ def _populate_bd(ws, data: FOCData):
     total_alignment.wrap_text=True
     ws.cell(tot_row,7).alignment=total_alignment
     ws.row_dimensions[tot_row].height=max(30,ws.row_dimensions[tot_row].height or 0)
+    for r in (tot_row+2,tot_row+3):
+        ws.row_dimensions[r].height=max(15,ws.row_dimensions[r].height or 0)
     ws.print_area = f'A1:I{43+extra}'
-    ws.print_title_rows = '1:30'
+    ws.print_title_rows = '30:30'
     ws.sheet_properties.pageSetUpPr.fitToPage = True
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 0
@@ -334,6 +368,8 @@ def populate_template(template: Path, output: Path, data: FOCData):
                 idx, it.description, it.quantity, it.unit,
                 it.weight_kg, it.hs_code, it.unit_price, it.amount, it.source_page, it.confidence, '; '.join(it.source_refs),
             ])
+            items_sheet.cell(idx + 1, 7).number_format = '0.00####'
+            items_sheet.cell(idx + 1, 8).number_format = '0.00'
         items_sheet.column_dimensions['B'].width = 90
         items_sheet.freeze_panes = 'A2'
     audit.column_dimensions['A'].width = 25

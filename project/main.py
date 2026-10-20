@@ -1,16 +1,26 @@
+"""Convert one PDF to an invoice using local OCR."""
 import argparse
 from pathlib import Path
 from src.foc_extractor.pipeline import run
+from src.foc_extractor.local_vision import DEFAULT_MODEL
 
-p = argparse.ArgumentParser(description="Extract FOC packing-list PDF data with Azure Document Intelligence and populate an Excel invoice template.")
-p.add_argument("--pdf", required=True, type=Path)
-p.add_argument("--template", type=Path)
-p.add_argument("--output-dir", default=Path("output"), type=Path)
-p.add_argument("--model-id", default=None)
-p.add_argument('--backend', choices=['auto','easyocr','azure'], default='auto')
-p.add_argument('--max-pages', type=int, default=None)
-p.add_argument('--cache-dir', type=Path)
-p.add_argument('--save-json', action='store_true')
-a = p.parse_args()
-print(run(a.pdf, a.template, a.output_dir, a.model_id, backend=a.backend,
-          max_pages=a.max_pages, cache_dir=a.cache_dir, save_json=a.save_json))
+ROOT=Path(__file__).resolve().parent
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--pdf',required=True,type=Path)
+    parser.add_argument('--template',type=Path)
+    parser.add_argument('--output-dir',type=Path,default=ROOT/'output')
+    parser.add_argument('--cache-dir',type=Path,default=ROOT/'.cache/ocr')
+    parser.add_argument('--max-pages',type=int)
+    parser.add_argument('--save-json',action='store_true')
+    parser.add_argument('--local-model',default=DEFAULT_MODEL,help='Installed Ollama vision model for unresolved weight, package and quantity cells')
+    parser.add_argument('--no-local-vision',dest='local_model',action='store_const',const=None,help='Use OCR only')
+    args=parser.parse_args()
+    print(run(args.pdf,template=args.template,output_dir=args.output_dir,
+              cache_dir=args.cache_dir,max_pages=args.max_pages,
+              save_json=args.save_json,local_model=args.local_model))
+
+
+if __name__=='__main__':main()
