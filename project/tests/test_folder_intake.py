@@ -285,12 +285,13 @@ class IntakeTests(unittest.TestCase):
             db.execute("INSERT INTO jobs VALUES(1,'old.pdf','old.pdf',?,'saved/old.pdf','failed','before','before')", ('a'*64,))
             db.execute("INSERT INTO attempts VALUES(1,1,'owner','failed','before','before','before','{}',NULL,'old error','[]')")
             db.execute("INSERT INTO events VALUES(1,1,1,'before','failed','{}')")
-            before = {table: db.execute(f'SELECT * FROM {table}').fetchall() for table in ('jobs','attempts','events')}
+            columns = {table: [row[1] for row in db.execute(f'PRAGMA table_info({table})')] for table in ('jobs','attempts','events')}
+            before = {table: db.execute(f'SELECT * FROM {table}').fetchall() for table in columns}
         migrated = JobStore(database)
         with closing(sqlite3.connect(database)) as db:
             self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0], SCHEMA_VERSION)
             for table, rows in before.items():
-                self.assertEqual(db.execute(f'SELECT * FROM {table}').fetchall(), rows)
+                self.assertEqual(db.execute(f"SELECT {','.join(columns[table])} FROM {table}").fetchall(), rows)
         self.assertEqual(migrated.counts()['failed'], 1)
         self.assertEqual(migrated.intake_files(self.config.incoming_dir), [])
         JobStore(database)  # Reopening a migrated database is idempotent.

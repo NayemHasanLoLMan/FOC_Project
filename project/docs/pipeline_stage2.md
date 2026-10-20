@@ -1,5 +1,7 @@
 # Stage 2 — folder scanning and safe PDF intake
 
+Historical acceptance report. Stage 3 now adds the worker, native scanner locking and component health records; see [current operation](pipeline_stage3.md). Schema/count statements below describe the Stage 2 checkpoint.
+
 Implemented and verified on 20 October 2026. Stopped before Stage 3 for user approval. The scanner can run continuously and queue PDF snapshots; it does not claim jobs, invoke OCR/VL or create invoices.
 
 ## Delivered behavior

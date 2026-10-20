@@ -1,6 +1,6 @@
 # Continuous PDF-to-invoice pipeline and admin dashboard
 
-Status: Stages 1–2 implemented and verified; Stage 3 awaits user approval. Implement one stage at a time, prove its acceptance checks, and ask the user before proceeding. Existing single-file/batch conversion and BD invoice contents/formatting remain supported. See the [Stage 1](pipeline_stage1.md) and [Stage 2](pipeline_stage2.md) acceptance reports.
+Status: Stages 1–3 implemented and verified; Stage 4 awaits user approval. Implement one stage at a time, prove its acceptance checks, and ask the user before proceeding. Existing single-file/batch conversion and BD invoice contents/formatting remain supported. See the [Stage 1](pipeline_stage1.md), [Stage 2](pipeline_stage2.md) and [Stage 3](pipeline_stage3.md) acceptance reports.
 
 ## Outcome and boundaries
 
@@ -56,14 +56,14 @@ References: [Flask deployment](https://flask.palletsprojects.com/en/stable/deplo
 | 7 | Unattended Windows startup | Background startup, failure restart, single-instance protection and Ollama dependency reporting work without a browser |
 | 8 | End-to-end acceptance and operating guide | Restart/copy/duplicate/locked-file/model-failure cases pass; BD regression and unseen-PDF checks pass; recovery instructions are documented |
 
-Stages 1–2 are complete: configuration, durable job/attempt/event state, and a safe folder scanner. The scanner queues snapshots only; no extraction worker/dashboard/startup task is implemented or running. Stages 3–8 are not implemented. The user explicitly requires approval before each next stage.
+Stages 1–3 are complete: configuration, durable job/attempt/event state, safe folder intake and a single extraction worker with recoverable publication. Neither scanner nor worker is left running. Dashboard/startup management and Stages 4–8 are not implemented. The user explicitly requires approval before each next stage.
 
 ### Stage 1 — configuration and durable state
 
 - [x] Added `pipeline_config.json` for incoming/output/state/artifact paths, a five-second scan interval and the existing model choice. Paths resolve relative to the config file, independent of the working directory. Defaults use `project/incoming`, existing `project/output` and ignored `project/runtime` state/artifacts; actual production intake still needs confirmation. Examples remain tests. No watcher is enabled.
 - [x] Added a SQLite-backed job/attempt/event store. Source identity/hash and snapshot reference, states, timestamps, outputs, errors, issues and worker ownership persist. Transactions are short; processing is not performed by the store.
 - [x] Added attempt metadata snapshots for configuration, template/rates/application fingerprints and Python/application versions. Actual model digest remains explicitly unknown until processing resolves it in a later stage. Configuration changes do not requeue completed work.
-- [x] Defined waiting-for-file, queued, running, waiting-to-save, completed, failed and interrupted states. Queue/claim/finish/interruption/retry history is tested. Stage 2 now stores waiting-for-file readiness separately in intake records; waiting-to-save transitions remain Stage 3 work. Issues remain separate from lifecycle state.
+- [x] Defined waiting-for-file, queued, running, waiting-to-save, completed, failed and interrupted states. Queue/claim/finish/interruption/retry history is tested. Stage 2 now stores waiting-for-file readiness separately in intake records; Stage 3 now implements waiting-to-save transitions. Issues remain separate from lifecycle state.
 - [x] Existing converter/CLI files remain byte-for-byte unchanged. Baseline 128 tests passed; all 142 tests now pass, including 14 new state/configuration tests. All 78 protected files and the complete reference comparison remain unchanged; 20 invoices/66 source pages/89 goods rows pass output checks.
 
 ### Stage 2 — stable folder intake
@@ -77,13 +77,15 @@ Stages 1–2 are complete: configuration, durable job/attempt/event state, and a
 
 ### Stage 3 — durable worker and output publication
 
-- [ ] Claim one queued job transactionally; prevent two worker instances from claiming the same attempt. Give the coordinator and worker independent heartbeats.
-- [ ] Call the existing converter against the immutable snapshot, preserving the original filename and current template/source policies. Use a job-specific working output directory to prevent collisions.
-- [ ] Publish completed work atomically. Keep compatible invoice filenames for the first version and a deterministic version suffix/directory for later collisions; never replace an unrelated or historical invoice silently.
-- [ ] If Excel locks a destination, retain the already generated workbook and mark waiting to save. Retry publication without rerunning expensive OCR/VL.
-- [ ] On restart, reconcile persisted attempts and completed files. Interrupted jobs can replay from the snapshot using caches. Use recoverable attempts and idempotent publication; do not promise that a crash can never repeat computation.
-- [ ] Isolate one PDF's failure. Bound transient retries; malformed input and repeated model failures must not create infinite retry loops. Record exceptions and the last known stage.
-- [ ] Test successful conversion, worker crash, output-lock recovery, same-name versions, duplicate worker launch and disk/write failures. Compare invoice facts/styles with the baseline.
+- [x] Claim one queued job transactionally; prevent two worker instances from claiming the same attempt. Give the coordinator and worker independent heartbeats.
+- [x] Call the existing converter against the immutable snapshot, preserving the original filename and current template/source policies. Use a job-specific working output directory to prevent collisions.
+- [x] Publish completed work atomically. Keep compatible invoice filenames for the first version and a deterministic version suffix/directory for later collisions; never replace an unrelated or historical invoice silently.
+- [x] If Excel locks a destination, retain the already generated workbook and mark waiting to save. Retry publication without rerunning expensive OCR/VL.
+- [x] On restart, reconcile persisted attempts and completed files. Interrupted jobs can replay from the snapshot using caches. Use recoverable attempts and idempotent publication; do not promise that a crash can never repeat computation.
+- [x] Isolate one PDF's failure. Ordinary conversion failures stop that job; unprepared crash recovery is limited to three interrupted attempts. Record lifecycle errors; detailed extraction-stage events remain Stage 4.
+- [x] Test successful conversion, worker crash, output-lock recovery, same-name versions, duplicate worker launch and disk/write failures. Compare invoice facts/styles with the baseline.
+
+All 177 tests pass. The real worker completed all 20 example PDFs (66 pages, 89 goods rows) with the same invoice values/styles and reference scores. Restart created no extra attempts. All 82 protected files are unchanged; default state is schema 3 with zero production jobs, and both components are stopped. See [Stage 3 acceptance and operating limits](pipeline_stage3.md).
 
 ### Stage 4 — truthful processing evidence
 
@@ -137,4 +139,4 @@ No cloud services, additional OCR/model changes, distributed/multi-worker execut
 
 ## Current checkpoint
 
-Stages 1–2 are implemented and verified. Ask the user before Stage 3 (the extraction worker). Do not install startup tasks before their stage. The dashboard should read proven pipeline state rather than becoming a second independent processing implementation.
+Stages 1–3 are implemented and verified. Ask the user before Stage 4 (structured processing evidence and review artifacts). Do not install startup tasks before their stage. The dashboard should read proven pipeline state rather than becoming a second independent processing implementation.

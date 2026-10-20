@@ -2,7 +2,7 @@
 
 Read shipment PDFs with local PaddleOCR and fill the existing Excel invoice template. Bangladesh is the tested scope. India/Jordan templates, mappings and unique reference documents are retained for later work; they have not been validated by the BD benchmark.
 
-The [continuous folder pipeline and admin dashboard checklist](docs/pipeline_dashboard_plan.md) tracks staged updates. [Stage 1](docs/pipeline_stage1.md) adds configuration and durable job state; [Stage 2](docs/pipeline_stage2.md) adds a continuous folder scanner that queues safe PDF snapshots. It does not convert queued jobs yet. No scanner is left running or installed at startup; the processing worker and dashboard are later stages. Current CLI conversion remains unchanged. Each next stage requires user approval after regression checks.
+The [continuous folder pipeline and admin dashboard checklist](docs/pipeline_dashboard_plan.md) tracks staged updates. [Stage 1](docs/pipeline_stage1.md) adds configuration and durable job state; [Stage 2](docs/pipeline_stage2.md) adds safe PDF intake; [Stage 3](docs/pipeline_stage3.md) processes queued snapshots through the existing converter with recoverable invoice publication. No scanner or worker is left running or installed at startup. Processing evidence and the dashboard are later stages. Current CLI conversion remains unchanged. Each next stage requires user approval after regression checks.
 
 ## Project layout
 
@@ -11,7 +11,8 @@ project/
   main.py                    Convert one PDF
   run_batch.py               Convert a folder of PDFs
   init_pipeline.py           Initialize empty pipeline state; no processing
-  scan_incoming.py           Continuously queue stable PDFs; no extraction yet
+  scan_incoming.py           Continuously queue stable PDFs
+  run_worker.py              Process queued PDFs and retry prepared invoice saves
   pipeline_config.json       Folder-pipeline configuration
   requirements.txt           Runtime dependencies
   src/foc_extractor/
@@ -26,6 +27,8 @@ project/
     pipeline_config.py       Validated configuration and version snapshots
     job_store.py             Durable jobs, attempts and transition events
     folder_intake.py         File readiness, PDF validation and versioned snapshots
+    process_lock.py          Native single-instance scanner/worker locks
+    queue_worker.py          Existing converter, restart recovery and safe publication
   tools/
     compare_invoices.py      Read-only comparison with manual references
     check_outputs.py         Sample coverage, audit and invoice checks
@@ -82,7 +85,7 @@ Single-file and batch defaults resolve to this project's output/cache folders, r
 
 OCR caches contain source text, coordinates and table cells. Cache keys include the source bytes and OCR settings. A different `--cache-dir` forces fresh OCR. Parser changes reuse existing OCR evidence. Preserve `.cache/paddlex` to avoid downloading model weights again.
 
-## Folder intake — Stage 2
+## Continuous folder processing — Stages 2–3
 
 Run the scanner from the repository root:
 
@@ -94,7 +97,15 @@ It checks the folder configured in `pipeline_config.json` (default `project/inco
 
 The scanner ignores temporary files, symbolic links and subfolders. It checks PDF completion/readability, saves verified original-name snapshots under `runtime/artifacts/inputs`, and queues each source-identity/content version once. Invalid/password-protected/repair-required PDFs remain recorded as rejected; changed bytes are checked again. Missing/locked files do not discard existing snapshots/jobs. A temporary final rename is the preferred producer handoff; no stability heuristic proves a writer has finished.
 
-**This stage only queues PDFs.** Invoice generation from the queue starts with Stage 3, which still requires approval. Existing `main.py` and `run_batch.py` can still convert PDFs directly. See the [Stage 2 acceptance report](docs/pipeline_stage2.md).
+In a second terminal, start the worker:
+
+```powershell
+project/.venv/Scripts/python.exe project/run_worker.py
+```
+
+The scanner and worker run independently. The worker processes one PDF at a time using the same converter and shared BD template. Existing output files are preserved; filename collisions receive a job/attempt suffix. A blocked save retains the prepared workbook and retries without repeating OCR/VL. Native locks prevent duplicate scanner or worker instances for the same state directory. Keep Ollama running for the configured local vision fallback.
+
+Worker `--once` retries prepared saves and processes at most one new job; `--drain` processes the current backlog and exits. Both accept `--config <path>` and exit with code 1 if failed/interrupted/waiting-to-save jobs remain. Ctrl+C finishes the current conversion before stopping; a forced exit is recovered at restart. One-shot flags do not continuously watch for new arrivals. Existing `main.py` and `run_batch.py` still convert directly, outside this queue. See the [Stage 3 operating and acceptance report](docs/pipeline_stage3.md).
 
 ## Verification
 

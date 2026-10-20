@@ -1,4 +1,4 @@
-"""Durable local queue foundation. No scanning, processing or automatic recovery."""
+"""Durable local jobs, attempts, recovery transitions and component health."""
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
@@ -9,7 +9,7 @@ import sqlite3
 
 STATES = ('waiting_for_file', 'queued', 'running', 'waiting_to_save', 'completed', 'failed', 'interrupted')
 APPLICATION_ID = 0x464F4349
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 SCHEMA = (
     """CREATE TABLE jobs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,10 +75,16 @@ class JobStore:
                     db.execute(statement)
                 db.execute(f'PRAGMA application_id={APPLICATION_ID}')
                 db.execute('PRAGMA user_version=1')
-            elif version not in (1, SCHEMA_VERSION) or application_id != APPLICATION_ID:
+            elif version not in (1, 2, SCHEMA_VERSION) or application_id != APPLICATION_ID:
                 raise ValueError('Unsupported pipeline database identity or schema version')
             if version < 2:
                 db.execute(INTAKE_SCHEMA)
+            if version < 3:
+                db.execute('ALTER TABLE attempts ADD COLUMN receipt_path TEXT')
+                db.execute('''CREATE TABLE components (
+                    name TEXT PRIMARY KEY, owner TEXT NOT NULL, pid INTEGER NOT NULL,
+                    state TEXT NOT NULL, heartbeat_at TEXT NOT NULL, error TEXT)''')
+            if version < SCHEMA_VERSION:
                 db.execute(f'PRAGMA user_version={SCHEMA_VERSION}')
 
     @contextmanager
@@ -208,7 +214,7 @@ class JobStore:
         if not isinstance(issues, list) or any(not isinstance(issue, str) for issue in issues):
             raise ValueError('Issues must be a list of strings')
         with self._connection(write=True) as db:
-            row = db.execute("SELECT job_id FROM attempts WHERE id=? AND worker_id=? AND state='running'",
+            row = db.execute("SELECT job_id FROM attempts WHERE id=? AND worker_id=? AND state IN ('running','waiting_to_save')",
                              (attempt_id, worker_id)).fetchone()
             if row is None:
                 raise ValueError('Attempt is not running under this worker')
@@ -218,6 +224,78 @@ class JobStore:
                         error, json.dumps(issues), attempt_id))
             db.execute('UPDATE jobs SET state=?,updated_at=? WHERE id=?', (state, now, row[0]))
             self._event(db, row[0], attempt_id, state, {'error': error, 'issues': issues})
+
+    def get_attempt(self, attempt_id: int) -> dict:
+        with self._connection() as db:
+            row = db.execute('SELECT * FROM attempts WHERE id=?', (attempt_id,)).fetchone()
+            if row is None:
+                raise KeyError(attempt_id)
+            return _attempt(row)
+
+    def unfinished_attempts(self) -> list[dict]:
+        with self._connection() as db:
+            return [_attempt(row) for row in db.execute('SELECT * FROM attempts WHERE finished_at IS NULL ORDER BY id')]
+
+    def prepare(self, attempt_id: int, owner: str, receipt_path: Path):
+        if not Path(receipt_path).is_file():
+            raise ValueError('Prepared receipt does not exist')
+        with self._connection(write=True) as db:
+            row = db.execute("SELECT job_id FROM attempts WHERE id=? AND worker_id=? AND state='running'", (attempt_id, owner)).fetchone()
+            if row is None:
+                raise ValueError('Attempt is not running under this worker')
+            db.execute("UPDATE attempts SET state='waiting_to_save',receipt_path=?,error=NULL WHERE id=?",
+                       (str(Path(receipt_path).resolve()), attempt_id))
+            db.execute("UPDATE jobs SET state='waiting_to_save',updated_at=? WHERE id=?", (_now(), row[0]))
+            self._event(db, row[0], attempt_id, 'prepared', {})
+
+    def publication_error(self, attempt_id: int, owner: str, error: str):
+        with self._connection(write=True) as db:
+            row = db.execute("SELECT job_id,error FROM attempts WHERE id=? AND worker_id=? AND state='waiting_to_save'",
+                             (attempt_id, owner)).fetchone()
+            if row is None:
+                raise ValueError('Prepared attempt is not owned by this worker')
+            db.execute('UPDATE attempts SET error=? WHERE id=?', (error, attempt_id))
+            if row['error'] != error:
+                self._event(db, row['job_id'], attempt_id, 'waiting_to_save', {'error': error})
+
+    def recover_attempt(self, attempt_id: int, old_owner: str, owner: str, lock_path: Path, receipt_path=None):
+        """Caller must hold the OS lock, proving the previous managed worker exited."""
+        with self._connection(write=True) as db:
+            row = db.execute('SELECT * FROM attempts WHERE id=? AND worker_id=? AND finished_at IS NULL',
+                             (attempt_id, old_owner)).fetchone()
+            if row is None or json.loads(row['metadata_json']).get('worker_lock') != str(Path(lock_path).resolve()):
+                raise ValueError('Cannot recover an attempt outside this managed worker lock')
+            now = _now()
+            if receipt_path is not None:
+                db.execute("UPDATE attempts SET worker_id=?,state='waiting_to_save',receipt_path=?,heartbeat_at=? WHERE id=?",
+                           (owner, str(Path(receipt_path).resolve()), now, attempt_id))
+                db.execute("UPDATE jobs SET state='waiting_to_save',updated_at=? WHERE id=?", (now, row['job_id']))
+                self._event(db, row['job_id'], attempt_id, 'recovered_prepared', {'previous_owner': old_owner, 'owner': owner})
+            else:
+                error = 'Managed worker exited before a verified workbook was prepared'
+                db.execute("UPDATE attempts SET state='interrupted',finished_at=?,error=? WHERE id=?", (now, error, attempt_id))
+                interrupted = db.execute("SELECT COUNT(*) FROM attempts WHERE job_id=? AND state='interrupted'", (row['job_id'],)).fetchone()[0]
+                state = 'failed' if interrupted >= 3 else 'queued'
+                db.execute('UPDATE jobs SET state=?,updated_at=? WHERE id=?', (state, now, row['job_id']))
+                self._event(db, row['job_id'], attempt_id, 'interrupted', {'error': error})
+                self._event(db, row['job_id'], None, 'recovery_limit' if state == 'failed' else 'queued_again', {})
+
+    def component(self, name: str, owner: str, pid: int, state: str, error=None):
+        with self._connection(write=True) as db:
+            db.execute('''INSERT INTO components VALUES(?,?,?,?,?,?) ON CONFLICT(name) DO UPDATE SET
+                owner=excluded.owner,pid=excluded.pid,state=excluded.state,heartbeat_at=excluded.heartbeat_at,error=excluded.error''',
+                (name, owner, pid, state, _now(), error))
+
+    def touch_worker(self, owner: str):
+        with self._connection(write=True) as db:
+            now = _now()
+            if not db.execute("UPDATE components SET heartbeat_at=? WHERE name='worker' AND owner=?", (now, owner)).rowcount:
+                raise ValueError('Worker component ownership changed')
+            db.execute("UPDATE attempts SET heartbeat_at=? WHERE worker_id=? AND finished_at IS NULL", (now, owner))
+
+    def components(self) -> list[dict]:
+        with self._connection() as db:
+            return [dict(row) for row in db.execute('SELECT * FROM components ORDER BY name')]
 
     def retry(self, job_id: int):
         with self._connection(write=True) as db:
