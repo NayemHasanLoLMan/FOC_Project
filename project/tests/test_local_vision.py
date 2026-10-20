@@ -31,6 +31,10 @@ class LocalVisionTests(unittest.TestCase):
                 first=transcribe_cell(image,'test',directory)
                 self.assertEqual(transcribe_cell(image,'test',directory),first)
                 self.assertEqual(request.call_count,3)
+            next((Path(directory)/'local_vision').glob('*.json')).write_text('invalid JSON')
+            with patch('src.foc_extractor.local_vision._request',side_effect=[tags,
+                       {'done_reason':'stop','message':{'content':'{"text":"1 PK"}'}}]):
+                self.assertEqual(transcribe_cell(image,'test',directory),first)
             with patch('src.foc_extractor.local_vision._request',side_effect=[tags,
                        {'done_reason':'length','message':{'content':'','thinking':'25'}}]):
                 self.assertIsNone(transcribe_cell(image,'test',directory,prompt='different task')[0])

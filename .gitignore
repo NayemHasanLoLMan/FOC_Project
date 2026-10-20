@@ -16,6 +16,8 @@ __pycache__/
 # Generated outputs and reports
 project/output/
 project/reports/
+project/runtime/
+project/incoming/
 
 # IDE / Editor folders
 .vscode/

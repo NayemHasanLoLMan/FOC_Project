@@ -15,6 +15,7 @@ from copy import copy
 from datetime import date
 import math
 from tempfile import NamedTemporaryFile
+from textwrap import wrap
 from openpyxl import load_workbook
 from .models import FOCData
 
@@ -70,7 +71,8 @@ def _split_address_lines(address: str | None) -> list[str]:
 def _populate_bd(ws, data: FOCData):
     """Populate BD (Bangladesh) customs invoice template."""
     for coordinate in ('C9', 'H11', 'H12', 'I13', 'B11', 'E21', 'C25', 'B27', 'G27', 'F28', 'G28', 'H28', 'A29', 'G40'):
-        ws[coordinate] = None
+        cell = ws[coordinate]
+        _safe_write(ws, cell.row, cell.column, None)
     for row in range(12, 18):
         _safe_write(ws, row, 2, None)
     ws.merge_cells('C9:F9')
@@ -97,9 +99,18 @@ def _populate_bd(ws, data: FOCData):
 
     if data.consignee:
         _safe_write(ws, 11, 2, data.consignee)  # B11
+        alignment = copy(ws['B11'].alignment)
+        alignment.wrap_text = True
+        alignment.vertical = 'top'
+        ws['B11'].alignment = alignment
+        ws.row_dimensions[11].height = max(ws.row_dimensions[11].height or 19,
+                                           15 * math.ceil(len(data.consignee) / 55))
     addr_lines = _split_address_lines(data.consignee_address)
     if len(addr_lines) > 6:
         addr_lines = addr_lines[:5] + ['\n'.join(addr_lines[5:])]
+    for row in range(12 + len(addr_lines), 18):
+        if row != 13 or not data.carton_range:
+            ws.row_dimensions[row].height = 4
     for i, line in enumerate(addr_lines):
         ws.merge_cells(start_row=12+i,start_column=2,end_row=12+i,end_column=6)
         _safe_write(ws, 12 + i, 2, line)
@@ -107,8 +118,6 @@ def _populate_bd(ws, data: FOCData):
         alignment.wrap_text = True
         alignment.vertical='top'
         ws.cell(12 + i, 2).alignment = alignment
-        lines=sum(max(1,math.ceil(len(part)/65)) for part in line.splitlines())
-        ws.row_dimensions[12+i].height=max(ws.row_dimensions[12+i].height or 15,15*lines)
         ws.row_dimensions[12 + i].height = max(ws.row_dimensions[12 + i].height or 15,
                                               15 * sum(max(1, math.ceil(len(s) / 55)) for s in line.splitlines()))
 
@@ -126,6 +135,8 @@ def _populate_bd(ws, data: FOCData):
             ws.cell(28,col)._style = copy(ws.cell(27,col)._style)
             _safe_write(ws,28,col,value)
         ws['G28'].number_format='0.00############'
+    else:
+        ws.row_dimensions[28].height = 4
 
 
     # Preserve the BD design, growing its detail area before totals/footer.
@@ -160,7 +171,8 @@ def _populate_bd(ws, data: FOCData):
         alignment.wrap_text = True
         alignment.vertical = 'top'
         ws.cell(r,2).alignment = alignment
-        ws.row_dimensions[r].height = max(24, 15 * math.ceil(len(item.description) / 65))
+        line_count = sum(max(1, len(wrap(part, width=55))) for part in item.description.splitlines())
+        ws.row_dimensions[r].height = max(24, 15 * line_count + 4)
         _safe_write(ws, r, 2, item.description)
         if item.quantity is not None:
             _safe_write(ws, r, 7, item.quantity)
@@ -199,10 +211,35 @@ def _populate_bd(ws, data: FOCData):
     ws.print_area = f'A1:I{43+extra}'
     ws.print_title_rows = '30:30'
     ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.sheet_view.showGridLines = False
+    ws.page_setup.orientation = 'portrait'
+    ws.page_setup.paperSize = ws.PAPERSIZE_A4
     ws.page_setup.fitToWidth = 1
     ws.page_setup.fitToHeight = 0
-    ws.page_margins.bottom = max(.75, ws.page_margins.bottom)
-    ws.page_margins.footer = .3
+    ws.page_margins.left = ws.page_margins.right = .4
+    ws.page_margins.top = .5
+    ws.page_margins.bottom = .55
+    ws.page_margins.header = ws.page_margins.footer = .2
+    # Excel interprets ampersands in header/footer text as field codes.
+    identity = (data.invoice_number or Path(data.source_file).stem).replace('&', '&&')
+    ws.HeaderFooter.differentFirst = True
+    ws.HeaderFooter.differentOddEven = False
+    company = str(ws['A1'].value or ws['E1'].value or '').replace('&', '&&')
+    ws.oddHeader.left.text = company
+    ws.oddHeader.right.text = identity
+    for part in (ws.oddHeader.left, ws.oddHeader.right):
+        part.font = 'Arial'
+        part.size = 8
+        part.color = '606060'
+    ws.firstHeader.left.text = ws.firstHeader.center.text = ws.firstHeader.right.text = None
+    ws.oddFooter.left.text = identity
+    ws.oddFooter.center.text = None
+    ws.oddFooter.right.text = 'Page &P of &N'
+    for part in (ws.oddFooter.left, ws.oddFooter.right):
+        part.font = 'Arial'
+        part.size = 8
+        part.color = '606060'
+    ws.firstFooter = copy(ws.oddFooter)
 
 
 def _populate_india(ws, data: FOCData):

@@ -6,7 +6,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from tools.compare_invoices import read_invoice
 records=[]
-files=sorted((ROOT/'output').glob('*.xlsx'))
+files=sorted(p for p in (ROOT/'output').glob('*.xlsx') if not p.name.startswith('~$'))
 if not files:raise SystemExit('No sample invoices found in project/output')
 for path in files:
     wb=openpyxl.load_workbook(path)

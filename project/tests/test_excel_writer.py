@@ -15,6 +15,46 @@ from tools.compare_invoices import read_invoice, compare
 
 
 class WriterTests(unittest.TestCase):
+    def test_unseen_invoices_inherit_master_highlights_and_alignment_after_growth(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for count in (1, 9):
+                path=Path(directory)/f'new_shipment_{count}.xlsx'
+                data=FOCData(source_file='unseen_shipment.pdf',template_type='BD',
+                             invoice_number='S/NEW/27',destination_country='Bangladesh',
+                             gross_weight_kg=3.1,net_weight_kg=2.7,total_value=11.5,
+                             items=[LineItem(f'NEW MATERIAL {n}',1.25,'YDS') for n in range(count)])
+                populate_template(ROOT/'templates/BD_template.xlsx',path,data)
+                wb=openpyxl.load_workbook(path);ws=wb.active
+                extra=max(0,count-6)
+                for coordinate in ['G27','G28',f'G{40+extra}',f'A{43+extra}']:
+                    self.assertEqual(ws[coordinate].font.color.rgb[-6:],'FF0000',coordinate)
+                for coordinate in ['C25','E21']:
+                    self.assertEqual(ws[coordinate].font.color.rgb[-6:],'0000FF',coordinate)
+                self.assertEqual(ws['C25'].alignment.horizontal,'left')
+                for row in range(33,33+count):
+                    self.assertEqual(ws.cell(row,2).alignment.horizontal,'left')
+                    self.assertEqual(ws.cell(row,7).alignment.horizontal,'right')
+                    self.assertEqual(ws.cell(row,8).alignment.horizontal,'left')
+                self.assertEqual(ws[f'G{40+extra}'].alignment.horizontal,'right')
+                self.assertEqual(ws['G28'].alignment.horizontal,'right')
+                self.assertEqual(read_invoice(path)['total_value'],11.5)
+                wb.close()
+
+    def test_wrapped_rows_and_continuation_identity_preserve_literal_text(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'invoice.xlsx'
+            data=FOCData(source_file='new.pdf',template_type='BD',invoice_number='S/12&Page/26',
+                         items=[LineItem('FIRST LINE\nSECOND LINE\nTHIRD LINE',1,'PCS')])
+            populate_template(ROOT/'templates/BD_template.xlsx',path,data)
+            wb=openpyxl.load_workbook(path);ws=wb.active
+            self.assertGreaterEqual(ws.row_dimensions[33].height,45)
+            self.assertEqual(ws.row_dimensions[28].height,4)
+            self.assertEqual(ws['C25'].value,'S/12&Page/26')
+            self.assertEqual(ws.oddHeader.right.text,'S/12&&Page/26')
+            self.assertIsNone(ws.firstHeader.right.text)
+            self.assertEqual(ws.firstFooter.right.text,'Page &P of &N')
+            wb.close()
+
     def test_footer_text_has_room_after_detail_rows_grow(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'new.xlsx'

@@ -137,7 +137,7 @@ def packing_weight(ocr, pdf, cache_dir=None, local_model=None):
                 page_cells=[];physical_seen=set()
                 # A failed page may contain cancellations that OCR reads as valid old numbers.
                 for table in tables:
-                    columns,header=_table_fields(table)
+                    _,header=_table_fields(table)
                     header_top=min(c.bbox[1] for c in table.cells if c.bbox and c.row_index<=header)
                     header_bottom=max(c.bbox[3] for c in table.cells if c.bbox and c.row_index<=header)
                     for box in _weight_regions(image,table,ocr.words,group_braces=False):

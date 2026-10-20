@@ -1,0 +1,8 @@
+{
+  "incoming_dir": "incoming",
+  "output_dir": "output",
+  "state_dir": "runtime/state",
+  "artifact_dir": "runtime/artifacts",
+  "scan_interval_seconds": 5,
+  "local_model": "qwen3-vl:latest"
+}

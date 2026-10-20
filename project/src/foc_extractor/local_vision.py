@@ -42,20 +42,25 @@ def transcribe_cell(crop, model, cache_dir=None, prompt=PROMPT, schema=SCHEMA):
     key=hashlib.sha256(png+json.dumps({'model':installed['digest'],'prompt':prompt,
         'schema':schema,'options':options},sort_keys=True).encode()).hexdigest()
     cache=Path(cache_dir)/'local_vision'/(key+'.json') if cache_dir else None
+    provenance=f'{installed["name"]} ({installed["digest"][:12]})'
     if cache and cache.exists():
-        response=json.loads(cache.read_text(encoding='utf-8'))
-    else:
-        response=_request('chat',{'model':installed['name'],'stream':False,'think':False,'keep_alive':0,
-            'options':options,'format':schema,
-            'messages':[{'role':'user','content':prompt,'images':[base64.b64encode(png).decode()]}]})
-        if cache and isinstance(response,dict) and response.get('done_reason')=='stop':
-            cache.parent.mkdir(parents=True,exist_ok=True)
-            temporary=cache.with_suffix('.tmp')
-            temporary.write_text(json.dumps(response),encoding='utf-8');temporary.replace(cache)
-    if not isinstance(response,dict):raise ValueError('Cached model response must be an object')
+        try:
+            response=json.loads(cache.read_text(encoding='utf-8'))
+            if isinstance(response,dict) and response.get('done_reason')=='stop':
+                answer=json.loads(response['message']['content'])
+                if isinstance(answer,dict):return answer,provenance
+        except (OSError,ValueError,KeyError,TypeError):pass
+    response=_request('chat',{'model':installed['name'],'stream':False,'think':False,'keep_alive':0,
+        'options':options,'format':schema,
+        'messages':[{'role':'user','content':prompt,'images':[base64.b64encode(png).decode()]}]})
+    if not isinstance(response,dict):raise ValueError('Local model response must be an object')
     answer=json.loads(response['message']['content']) if response.get('done_reason')=='stop' else None
-    if answer is not None and not isinstance(answer,dict):answer=None
-    return answer,f'{installed["name"]} ({installed["digest"][:12]})'
+    if not isinstance(answer,dict):return None,provenance
+    if cache:
+        cache.parent.mkdir(parents=True,exist_ok=True)
+        temporary=cache.with_suffix('.tmp')
+        temporary.write_text(json.dumps(response),encoding='utf-8');temporary.replace(cache)
+    return answer,provenance
 
 
 def _accepted_quantity(original, candidate):

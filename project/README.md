@@ -2,12 +2,17 @@
 
 Read shipment PDFs with local PaddleOCR and fill the existing Excel invoice template. Bangladesh is the tested scope. India/Jordan templates, mappings and unique reference documents are retained for later work; they have not been validated by the BD benchmark.
 
+The [continuous folder pipeline and admin dashboard checklist](docs/pipeline_dashboard_plan.md) tracks staged updates. [Stage 1](docs/pipeline_stage1.md) adds configuration and durable job state; [Stage 2](docs/pipeline_stage2.md) adds a continuous folder scanner that queues safe PDF snapshots. It does not convert queued jobs yet. No scanner is left running or installed at startup; the processing worker and dashboard are later stages. Current CLI conversion remains unchanged. Each next stage requires user approval after regression checks.
+
 ## Project layout
 
 ```text
 project/
   main.py                    Convert one PDF
   run_batch.py               Convert a folder of PDFs
+  init_pipeline.py           Initialize empty pipeline state; no processing
+  scan_incoming.py           Continuously queue stable PDFs; no extraction yet
+  pipeline_config.json       Folder-pipeline configuration
   requirements.txt           Runtime dependencies
   src/foc_extractor/
     ocr_engine.py            Page OCR, table geometry and caching
@@ -18,6 +23,9 @@ project/
     weights.py               Packing weight cells, shared-cell totals and evidence
     packages.py              PDF container totals, physical shared cells and evidence
     local_vision.py          Optional Ollama quantity-cell transcription
+    pipeline_config.py       Validated configuration and version snapshots
+    job_store.py             Durable jobs, attempts and transition events
+    folder_intake.py         File readiness, PDF validation and versioned snapshots
   tools/
     compare_invoices.py      Read-only comparison with manual references
     check_outputs.py         Sample coverage, audit and invoice checks
@@ -28,7 +36,9 @@ project/
   templates/                 Blank BD, India and Jordan invoice templates
   docs/diagnosis.md          Accuracy, known errors and next-stage priorities
   output/                    Generated invoices and batch manifest (ignored)
+  incoming/                  Configured default inbox (ignored)
   reports/                   Latest comparison and verification (ignored)
+  runtime/                   Local pipeline database/artifacts (ignored)
   .cache/                    Active OCR evidence and local models (ignored)
   .venv/                     Project Python environment (ignored)
 ```
@@ -47,6 +57,8 @@ project/.venv/Scripts/python.exe -m pip install -r project/requirements.txt
 The working environment and the three required OCR models are already installed on this PC. A new installation downloads dependencies/model weights once; document processing runs locally. PaddleOCR is the single supported OCR engine. Obsolete Azure/EasyOCR backends, backend-selection flags and Azure environment setup have been removed.
 
 ## Convert PDFs
+
+To validate the future folder-worker configuration and initialize its empty database, run `project/.venv/Scripts/python.exe project/init_pipeline.py` from the repository root. Paths in `pipeline_config.json` resolve relative to that file. This command does not watch folders, process PDFs or start a service. See the [Stage 1 report](docs/pipeline_stage1.md).
 
 Process the BD examples into `project/output`:
 
@@ -70,6 +82,20 @@ Single-file and batch defaults resolve to this project's output/cache folders, r
 
 OCR caches contain source text, coordinates and table cells. Cache keys include the source bytes and OCR settings. A different `--cache-dir` forces fresh OCR. Parser changes reuse existing OCR evidence. Preserve `.cache/paddlex` to avoid downloading model weights again.
 
+## Folder intake — Stage 2
+
+Run the scanner from the repository root:
+
+```powershell
+project/.venv/Scripts/python.exe project/scan_incoming.py
+```
+
+It checks the folder configured in `pipeline_config.json` (default `project/incoming`), prints JSON status, and continues until Ctrl+C. `--once` scans once and exits; `--config <path>` selects another configuration. New PDFs need matching observations at least one scan interval apart (default five seconds), so the first scan normally reports waiting files. The next scan occurs after the previous scan finishes plus the configured interval.
+
+The scanner ignores temporary files, symbolic links and subfolders. It checks PDF completion/readability, saves verified original-name snapshots under `runtime/artifacts/inputs`, and queues each source-identity/content version once. Invalid/password-protected/repair-required PDFs remain recorded as rejected; changed bytes are checked again. Missing/locked files do not discard existing snapshots/jobs. A temporary final rename is the preferred producer handoff; no stability heuristic proves a writer has finished.
+
+**This stage only queues PDFs.** Invoice generation from the queue starts with Stage 3, which still requires approval. Existing `main.py` and `run_batch.py` can still convert PDFs directly. See the [Stage 2 acceptance report](docs/pipeline_stage2.md).
+
 ## Verification
 
 ```powershell
@@ -88,6 +114,10 @@ project/tools/export_print_samples.ps1 -Invoices project/output/26S5075-I.xlsx
 
 The tool opens the chosen workbooks read-only with macros disabled and exports their first invoice sheets to `reports/print_check`.
 
+`templates/BD_template.xlsx` is the shared master for future BD invoices, used by both single-file and batch conversion. It owns fonts, colors, alignment, borders, column widths and the base layout. Red highlights gross/net weights, total value and the customs-purpose note; blue highlights invoice number and destination country, preserving the original convention. Text/descriptions align left, quantities/weights/value align right, and package counts align centrally. The generator inherits these styles when adding goods rows and shifting the total/footer, so no per-invoice styling step is needed.
+
+The master uses consistent Arial typography, neutral section rules, a shaded goods header and total, and A4 portrait printing. The existing invoice sections and data anchors are preserved. Goods rows grow for wrapped descriptions; unused address/net-weight space is reduced. Continuation pages repeat the goods header, company/invoice identification and page count. Internal audit sheets remain available. The presentation change does not alter extraction or valuation rules. See the [template quality checks](reports/template_quality_20261020/RESULTS.md).
+
 The [shared processing flow](docs/processing_flow.md) documents source ownership, conservative fallback and remaining production acceptance gates.
 
 ## Extraction rules and limits
@@ -104,18 +134,19 @@ The [shared processing flow](docs/processing_flow.md) documents source ownership
 
 The current BD development set has **58/75 strict expected-item matches (77.3%)**, with **70.7% generated-item precision (58/82 paired generated rows)**. Strict differences include source-correct GROSS units/precision, sample wording, and manually grouped or conflicting quantities. The [PDF-priority verification](reports/pdf_priority_20261019/RESULTS.md) records the evidence and reference exceptions. All **89/89 resulting goods rows** have quantities, units and prices, with calculated totals in **20/20 outputs**. Grouping reduced row count while preserving source quantity totals and row references. Fourteen of 18 paired totals equal the manual values; 17 of 18 paired totals are within USD 1. 5193 now uses the source-counted trim cards and separate kids jacket/dress; its total is USD 69 versus manual USD 80. Context-inferred units and approximate names are recorded internally. These results do not establish accuracy on unseen PDFs. See [the diagnosis](docs/diagnosis.md) for the remaining structural and business-rule gaps. See the [current repair checklist](reports/carton_fix_20261019/CHECKLIST.md) for completed fixes, current metrics and the next task.
 
-## Optional Ollama
+## Local vision fallback
 
-An already installed **vision-capable** Ollama model can transcribe unresolved quantity cells:
+The installed `qwen3-vl:latest` model is enabled by default in single-file and batch conversion. PaddleOCR remains the first reader. Local vision handles unresolved goods quantity strings, unreadable package numbers with an established package unit, and physical weight cells on an ambiguous packing-list page. Readable integer goods counts and established values are preserved; existing source-context rules handle their units.
+
+Ollama must be running on `127.0.0.1:11434`. The application never downloads a model. Select another installed vision model or disable vision explicitly:
 
 ```powershell
-project/.venv/Scripts/python.exe project/run_batch.py --local-model qwen3.5:4b
+project/.venv/Scripts/python.exe project/run_batch.py --local-model qwen3-vl:latest
+project/.venv/Scripts/python.exe project/run_batch.py --no-local-vision
 ```
 
-Ollama must be running on `127.0.0.1:11434`. The application never downloads an Ollama model. Only located, unresolved quantity crops are submitted; known quantities are preserved. Responses must be positive quantities with a source-consistent unit. Invalid or timed-out readings leave the existing result intact. Requests are bounded to 7,200 seconds (two hours), allow up to 4,096 output tokens with an 8,192-token context, and are cached by model digest, prompt and crop. This optional path was not used for the current full-batch accuracy score.
+Weight images include the PDF's KG header and a single physical cell; the model returns only the final numeric weight, excluding a cancelled printed value. A failed page is rechecked by physical cell so a readable but cancelled old number cannot survive alongside a recovered correction. Physical shared cells count once. Gross is populated only from a complete positive finite weight sum; explicit gross declarations retain priority. A failed model reading leaves the field unresolved. Missing net weights and other facts absent from the PDF are not inferred.
 
-Local vision is a promising fallback for difficult handwriting. The installed Qwen3-VL read the confirmed package digit in the development probe, but its CPU-only run took 24 minutes 40 seconds and exhausted the old 96-token limit before returning final JSON. The output limit is now 512 tokens. A new isolated-package test returned valid JSON with 1 PKS in 3m 34s, but combined readings and an isolated corrected-weight test still exhausted the limit without final output. Practical productivity will require better hardware and a benchmark with GPU offload, or a faster model. Hardware speed does not establish extraction accuracy. Package-cell vision remains a tested research direction, not an integrated production fallback. See the [local-vision findings and hardware note](reports/package_handwriting_20261020/RESULTS.md).
+Requests allow 4,096 output tokens, an 8,192-token context and a two-hour timeout. Only completed structured answers are accepted. Cache keys include source-image pixels, model digest, prompt, schema and generation settings. Source coordinates/model provenance are retained in weight/package evidence; diagnostics stay outside the printed invoice. When Ollama is unavailable, supported OCR results remain usable and unresolved fields stay empty. The model must still be available to establish its digest when reusing responses.
 
-Latest [512-token validation results](reports/vision_validation_512_20261020/RESULTS.md): the package-cell control works, but corrected-weight extraction is not reliable yet. Better hardware addresses productivity; repetitive reasoning and final-output reliability require separate improvements.
-
-Latest [corrected-weight capability test](reports/weight_vision_4096_20261020/RESULTS.md): all five reviewed corrections returned correct final numbers (25, 12, 8.5, 8.5 and 10 kg) with isolated cells, their PDF KG headers and a numeric-only prompt. The transport now allows 4,096 output tokens, an 8,192-token context and two hours. All successful readings used fewer than 512 tokens; prompt/context clarity matters. This weight fallback is not integrated into production yet, and unseen accuracy remains unmeasured. Earlier 512-token failures above are historical benchmark results.
+The first uncached readings are slow on this CPU; better hardware remains a productivity improvement to benchmark later. Cached responses avoid repeating model generation. [Integration QA and current limitations](reports/local_vision_integration_20261020/RESULTS.md) distinguish field completeness, source agreement and reference agreement. Development test results do not guarantee unseen-handwriting accuracy.
