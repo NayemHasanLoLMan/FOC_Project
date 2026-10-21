@@ -2,14 +2,16 @@
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
+import hashlib
 import os
 from pathlib import Path
 import re
 import sqlite3
+from uuid import UUID
 
 STATES = ('waiting_for_file', 'queued', 'running', 'waiting_to_save', 'completed', 'failed', 'interrupted')
 APPLICATION_ID = 0x464F4349
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 5
 SCHEMA = (
     """CREATE TABLE jobs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,7 +86,7 @@ class JobStore:
                     db.execute(statement)
                 db.execute(f'PRAGMA application_id={APPLICATION_ID}')
                 db.execute('PRAGMA user_version=1')
-            elif version not in (1, 2, SCHEMA_VERSION) or application_id != APPLICATION_ID:
+            elif version not in (1, 2, 3, 4, SCHEMA_VERSION) or application_id != APPLICATION_ID:
                 raise ValueError('Unsupported pipeline database identity or schema version')
             if version < 2:
                 db.execute(INTAKE_SCHEMA)
@@ -93,6 +95,16 @@ class JobStore:
                 db.execute('''CREATE TABLE components (
                     name TEXT PRIMARY KEY, owner TEXT NOT NULL, pid INTEGER NOT NULL,
                     state TEXT NOT NULL, heartbeat_at TEXT NOT NULL, error TEXT)''')
+            if version < 4:
+                db.execute('''CREATE TABLE queue_control (
+                    id INTEGER PRIMARY KEY CHECK(id=1), paused INTEGER NOT NULL CHECK(paused IN (0,1)),
+                    updated_at TEXT NOT NULL)''')
+                db.execute('INSERT INTO queue_control VALUES(1,0,?)', (_now(),))
+                db.execute('''CREATE TABLE admin_commands (
+                    request_id TEXT PRIMARY KEY, action TEXT NOT NULL, job_id INTEGER REFERENCES jobs(id),
+                    attempt_id INTEGER REFERENCES attempts(id), created_at TEXT NOT NULL, result_json TEXT NOT NULL)''')
+            if version < 5:
+                db.execute('ALTER TABLE jobs ADD COLUMN manual_edit_json TEXT')
             if version < SCHEMA_VERSION:
                 db.execute(f'PRAGMA user_version={SCHEMA_VERSION}')
 
@@ -194,12 +206,17 @@ class JobStore:
             raise ValueError('Attempt metadata must be a dictionary')
         serialized = json.dumps(metadata, allow_nan=False, sort_keys=True)
         with self._connection(write=True) as db:
+            if db.execute('SELECT paused FROM queue_control WHERE id=1').fetchone()[0]:
+                return None
             if db.execute("SELECT 1 FROM attempts WHERE state='running'").fetchone():
                 return None
-            job = db.execute("SELECT id FROM jobs WHERE state='queued' ORDER BY id LIMIT 1").fetchone()
+            job = db.execute("SELECT id,manual_edit_json FROM jobs WHERE state='queued' ORDER BY id LIMIT 1").fetchone()
             if job is None:
                 return None
             now = _now()
+            if job['manual_edit_json']:
+                metadata = {**metadata,'manual_edit':json.loads(job['manual_edit_json'])}
+                serialized = json.dumps(metadata,allow_nan=False,sort_keys=True)
             attempt_id = db.execute('''INSERT INTO attempts(job_id,worker_id,state,started_at,heartbeat_at,metadata_json)
                 VALUES(?,?,'running',?,?,?)''', (job[0], worker_id, now, now, serialized)).lastrowid
             db.execute("UPDATE jobs SET state='running',updated_at=? WHERE id=?", (now, job[0]))
@@ -353,6 +370,73 @@ class JobStore:
             if not updated:
                 raise ValueError('Only failed or interrupted jobs can be queued again')
             self._event(db, job_id, None, 'queued_again', {})
+
+    def queue_control(self):
+        with self._connection() as db:
+            row = dict(db.execute('SELECT paused,updated_at FROM queue_control WHERE id=1').fetchone())
+            row['paused'] = bool(row['paused'])
+            return row
+
+    def admin_command(self, request_id, action, *, job_id=None, attempt_id=None, changes=None):
+        if not isinstance(request_id, str) or str(UUID(request_id)) != request_id:
+            raise ValueError('A canonical UUID request_id is required')
+        if action not in ('pause', 'resume', 'retry', 'reprocess', 'retry_save', 'edit'):
+            raise ValueError('Unknown command')
+        selected = action in ('retry', 'reprocess', 'retry_save', 'edit')
+        edit_digest = None
+        if action == 'edit':
+            from .invoice_edits import validate_changes
+            changes = validate_changes(changes)
+            edit_digest = hashlib.sha256(json.dumps(changes,sort_keys=True,allow_nan=False).encode()).hexdigest()
+        elif changes is not None:
+            raise ValueError('Only an edit command accepts invoice changes')
+        if selected and any(type(value) is not int or value < 1 for value in (job_id, attempt_id)):
+            raise ValueError('Positive job_id and attempt_id are required')
+        if not selected and (job_id is not None or attempt_id is not None):
+            raise ValueError('Queue commands do not take a job or attempt')
+        with self._connection(write=True) as db:
+            previous = db.execute('SELECT * FROM admin_commands WHERE request_id=?', (request_id,)).fetchone()
+            if previous:
+                if (previous['action'], previous['job_id'], previous['attempt_id']) != (action, job_id, attempt_id):
+                    raise ValueError('request_id already belongs to another command')
+                result = json.loads(previous['result_json'])
+                if result.get('edit_sha256') != edit_digest:
+                    raise ValueError('request_id already belongs to different invoice changes')
+                return result
+            now = _now()
+            if not selected:
+                paused = action == 'pause'
+                db.execute('UPDATE queue_control SET paused=?,updated_at=? WHERE id=1', (paused, now))
+                result = {'request_id': request_id, 'action': action, 'paused': paused}
+            else:
+                job = db.execute('SELECT * FROM jobs WHERE id=?', (job_id,)).fetchone()
+                if job is None:
+                    raise KeyError(job_id)
+                latest = db.execute('SELECT * FROM attempts WHERE job_id=? ORDER BY id DESC LIMIT 1', (job_id,)).fetchone()
+                allowed = {'retry': ('failed', 'interrupted'), 'reprocess': ('completed',), 'retry_save': ('waiting_to_save',), 'edit':('completed',)}[action]
+                if latest is None or latest['id'] != attempt_id or job['state'] not in allowed or latest['state'] != job['state']:
+                    raise ValueError('This job changed or cannot accept that action; refresh its details')
+                if action == 'retry_save':
+                    if not latest['receipt_path']:
+                        raise ValueError('No prepared invoice is available to save')
+                    state = 'waiting_to_save'
+                else:
+                    if latest['finished_at'] is None:
+                        raise ValueError('A processing attempt is still active')
+                    state = 'queued'
+                    db.execute("UPDATE jobs SET state='queued',updated_at=? WHERE id=?", (now, job_id))
+                    if action == 'edit':
+                        edit = {'base_attempt_id':attempt_id,'changes':changes,'request_id':request_id}
+                        db.execute('UPDATE jobs SET manual_edit_json=? WHERE id=?',(json.dumps(edit,allow_nan=False),job_id))
+                    elif action == 'reprocess':
+                        db.execute('UPDATE jobs SET manual_edit_json=NULL WHERE id=?',(job_id,))
+                self._event(db, job_id, attempt_id, 'admin_'+action, {'request_id': request_id})
+                result = {'request_id': request_id, 'action': action, 'job_id': job_id, 'attempt_id': attempt_id, 'state': state}
+                if edit_digest:
+                    result['edit_sha256'] = edit_digest
+            db.execute('INSERT INTO admin_commands VALUES(?,?,?,?,?,?)',
+                       (request_id, action, job_id, attempt_id, now, json.dumps(result)))
+            return result
 
     def attempts(self, job_id: int) -> list[dict]:
         with self._connection() as db:

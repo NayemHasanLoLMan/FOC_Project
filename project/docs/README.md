@@ -1,6 +1,6 @@
 # Project documentation
 
-Current scope: local PDF-to-BD-invoice conversion, a durable folder queue and a read-only dashboard. Stages 1–5 are implemented. Admin controls, unattended Windows startup and the final production acceptance gate remain pending.
+Current scope: local PDF-to-BD-invoice conversion, a durable folder queue and a local admin dashboard. Stages 1–6 are implemented. Unattended Windows startup and the final production acceptance gate remain pending.
 
 | Guide | Audience / purpose |
 |---|---|
@@ -19,7 +19,7 @@ Current scope: local PDF-to-BD-invoice conversion, a durable folder queue and a 
 | [Testing](testing.md) | Unit tests, evaluation tools, fixtures and result interpretation |
 | [Contributing](contributing.md) | Small-change rules and required checks |
 
-The source code is authoritative. The API reference describes implemented read-only endpoints; it does not promise future controls. Null values mean unavailable data, not zero. Production conversion never reads manual expected invoices.
+The source code is authoritative. The API reference describes implemented read-only views and protected Stage 6 commands; it does not promise future controls. Null values mean unavailable data, not zero. Production conversion never reads manual expected invoices.
 
 Historical development material is retained without moving its paths:
 
@@ -29,4 +29,10 @@ Historical development material is retained without moving its paths:
 - Local project/reports contains ignored generated QA evidence; it is not required by production and is excluded from release bundles.
 
 - [Deployment boundaries](deployment-boundaries.md): required production files and safe cleanup.
-- [Postman collection and usage](../development/postman/README.md): local read-only API checks.
+- [Postman collection and usage](../development/postman/README.md): local API checks and protected admin commands.
+
+- [Stage 6 controls and recovery](pipeline_stage6.md): pause/resume, selected retry, save recovery and preserved reprocessing.
+
+- [Country folders and Bangladesh layout update](bd_layout_update.md): source-only TIN/cover note, red identifiers and no Bangladesh net weight.
+
+See [manual invoice editing](manual-invoice-editing.md) for the simplified dashboard and safe versioned editing workflow.

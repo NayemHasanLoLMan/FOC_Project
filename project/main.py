@@ -11,7 +11,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--pdf',required=True,type=Path)
     parser.add_argument('--template',type=Path)
-    parser.add_argument('--output-dir',type=Path,default=ROOT/'output')
+    parser.add_argument('--output-dir',type=Path,default=ROOT/'output/bangladesh')
     parser.add_argument('--cache-dir',type=Path,default=ROOT/'.cache/ocr')
     parser.add_argument('--max-pages',type=int)
     parser.add_argument('--save-json',action='store_true')

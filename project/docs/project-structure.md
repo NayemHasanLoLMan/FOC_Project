@@ -49,3 +49,5 @@ Runtime/evidence paths are deliberately not reorganized: SQLite attempts and rec
 The production archive preserves the same repository-style command layout under foc-invoice/project/. It contains no environment, models, customer documents, live database or prior outputs. See [build](build.md) for the exact allowlist and verification.
 
 See [safe removal boundaries](deployment-boundaries.md) and [Postman instructions](../development/postman/README.md).
+
+The default managed inputs/outputs are incoming/bangladesh and output/bangladesh. Both parents also contain reserved india and jordan folders; only Bangladesh processing is active.

@@ -143,7 +143,7 @@ class ParserTests(unittest.TestCase):
                            ('NET WEIGHT 7 LBS',None),('NW 2 KG NW 3 KG',None)]:
             self.assertEqual(_extract_net_weight(text),value)
         data=parse_result(OCRResult(content='NET WEIGHT 1.2 KG'),Path('new.pdf'))
-        self.assertEqual(data.net_weight_kg,1.2)
+        self.assertIsNone(data.net_weight_kg)
 
     def test_explicit_goods_end_material_context_and_numbers_survive_without_units(self):
         rows=[['PARTICULARS','QTY'],['100% COTTON WOVEN FABRIC','3 YDS'],

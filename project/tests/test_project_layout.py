@@ -60,16 +60,16 @@ class ProjectLayoutTests(unittest.TestCase):
         requests = [item['request'] for group in collection['item'] for item in group['item']]
         routes = []
         for request in requests:
-            self.assertEqual(request['method'],'GET')
+            self.assertIn(request['method'],('GET','POST'))
             route = request['url']['raw'].removeprefix('{{base_url}}')
             route = re.sub(r'\{\{(\w+)\}\}',lambda m:'{'+('page' if m[1]=='pdf_page' else m[1])+'}',route)
-            routes.append(route)
-            documented = specification['paths'][route]['get'].get('parameters',[])
+            routes.append((route,request['method'].lower()))
+            documented = specification['paths'][route][request['method'].lower()].get('parameters',[])
             parameters = [specification['components']['parameters'][p['$ref'].split('/')[-1]] if '$ref' in p else p for p in documented]
             self.assertEqual({p['name'] for p in parameters if p['in']=='query'},
                              {p['key'] for p in request['url']['query']})
         self.assertEqual(len(routes),len(set(routes)))
-        self.assertEqual(set(routes),set(specification['paths']))
+        self.assertEqual(set(routes),{(route,method) for route,item in specification['paths'].items() for method in item if method in ('get','post')})
         variables = {v['key']:v['value'] for v in collection['variable']}
         self.assertEqual(variables['base_url'],'http://127.0.0.1:8080')
 

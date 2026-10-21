@@ -30,8 +30,8 @@ class ConfigurationTests(unittest.TestCase):
 
     def test_paths_are_relative_to_config_and_loading_creates_nothing(self):
         config = load_config(self.path)
-        self.assertEqual(config.incoming_dir, self.root / 'incoming')
-        self.assertEqual(config.output_dir, self.root / 'output')
+        self.assertEqual(config.incoming_dir, self.root / 'incoming/bangladesh')
+        self.assertEqual(config.output_dir, self.root / 'output/bangladesh')
         self.assertFalse(config.state_dir.exists())
         self.assertFalse(config.incoming_dir.exists())
         self.assertEqual(config.to_dict()['incoming_dir'], str(config.incoming_dir))
@@ -56,7 +56,7 @@ class ConfigurationTests(unittest.TestCase):
                 load_config(self.path)
 
     def test_rejects_overlapping_paths_and_files(self):
-        for output in ['incoming', 'incoming/outputs', '.']:
+        for output in ['incoming', 'incoming/bangladesh/outputs', '.']:
             self.raw['output_dir'] = output
             self.write()
             with self.assertRaisesRegex(ValueError, 'overlap'):
@@ -84,8 +84,9 @@ class ConfigurationTests(unittest.TestCase):
         self.assertFalse(result['processing_started'])
         self.assertEqual(sum(result['jobs'].values()), 0)
         self.assertTrue(Path(result['database']).is_file())
-        for name in ['incoming', 'output', 'runtime/artifacts']:
-            self.assertFalse((self.root / name).exists(), name)
+        for name in ['incoming/bangladesh', 'output/bangladesh','incoming/india','output/jordan']:
+            self.assertTrue((self.root / name).is_dir(), name)
+        self.assertFalse((self.root/'runtime/artifacts').exists())
 
 
 class JobStoreTests(unittest.TestCase):

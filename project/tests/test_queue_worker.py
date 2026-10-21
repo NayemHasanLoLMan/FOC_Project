@@ -113,7 +113,7 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(self.store.get_job(second)['state'], 'completed')
 
     def test_existing_files_and_new_versions_are_never_overwritten(self):
-        self.config.output_dir.mkdir()
+        self.config.output_dir.mkdir(parents=True)
         original = self.config.output_dir / 'shipment.xlsx'
         original.write_bytes(b'user-owned invoice')
         first = self.enqueue()
@@ -139,6 +139,7 @@ class WorkerTests(unittest.TestCase):
 
     def test_inaccessible_output_folder_keeps_a_prepared_workbook(self):
         job = self.enqueue()
+        self.config.output_dir.parent.mkdir(parents=True,exist_ok=True)
         self.config.output_dir.write_bytes(b'blocking file')
         with patch.object(queue_worker, 'run', side_effect=self.convert) as convert, QueueWorker(self.config, self.store) as worker:
             worker.run_once()

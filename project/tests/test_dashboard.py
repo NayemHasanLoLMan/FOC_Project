@@ -89,7 +89,7 @@ class DashboardTests(unittest.TestCase):
         page = self.client.get('/jobs/1').get_data(as_text=True)
         self.assertNotIn('<script>alert(1)</script>',page)
         self.assertIn('&lt;script&gt;alert(1)&lt;/script&gt;',page)
-        self.assertIn('missing:net_weight_kg',page)
+        self.assertNotIn('missing:net_weight_kg',page)
         self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),before)
 
     def test_plain_detail_hides_developer_records_and_preserves_image_links(self):
@@ -101,9 +101,9 @@ class DashboardTests(unittest.TestCase):
         self.assertNotIn('missing:net_weight_kg',main)
         self.assertNotIn('VL lookups',main)
         self.assertNotIn('Source references',main)
-        self.assertIn('Technical details (optional)',page)
-        self.assertIn('missing:net_weight_kg',page)
-        self.assertIn('Stage timeline',page)
+        self.assertNotIn('Technical details (optional)',page)
+        self.assertNotIn('missing:net_weight_kg',page)
+        self.assertNotIn('Stage timeline',page)
         self.assertNotIn('id="technical-details" open',page)
         self.assertIn(f'/files/attempts/{attempt}/invoice',page)
 
@@ -116,6 +116,23 @@ class DashboardTests(unittest.TestCase):
         self.assertIn('could not finish',_user_summary(attempt,'failed')['result'])
         attempt['metadata']['processing']['vision_contributions'] = [{'field':'gross_weight_kg'}]
         self.assertIn('helped with gross weight',_user_summary(attempt,'completed')['how'])
+
+    def test_display_names_hide_extension_and_show_recorded_processing_method(self):
+        self.complete()
+        for route in ('/', '/jobs', '/jobs/1', '/jobs/1/edit'):
+            page = self.client.get(route).get_data(as_text=True)
+            self.assertNotIn('shipment.pdf', page)
+            self.assertIn('shipment', page)
+        for route in ('/', '/jobs', '/jobs/1'):
+            self.assertIn('Processing: OCR / source rules', self.client.get(route).get_data(as_text=True))
+        self.assertEqual(self.client.get('/api/jobs/1').get_json()['job']['filename'], 'shipment.pdf')
+        self.assertIn('shipment.pdf', self.client.get('/files/jobs/1/source').headers['Content-Disposition'])
+        template = self.app.jinja_env.get_template('job_table.html')
+        with self.app.test_request_context():
+            page = template.render(listing={'jobs':[{'id':1,'filename':'BATCH.PDF','method':'Vision assisted',
+                'state':'completed','attempt_id':1}], 'total':1,'page':1,'pages':1}, filters={})
+        self.assertIn('>BATCH</a>', page)
+        self.assertIn('Processing: Vision assisted', page)
 
     def test_reading_explanation_separates_acceptance_from_use_and_keeps_image_urls(self):
         attempt = self.store.claim_next('reader',attempt_metadata(self.config))

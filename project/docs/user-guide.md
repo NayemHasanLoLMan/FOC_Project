@@ -14,9 +14,9 @@ The PC must be awake. The current version requires one manually launched Python 
 
 Overview separates the web page, folder scanner, invoice worker and local image reader. “Web available” does not mean the worker is running. A stale heartbeat is shown as unknown. Queued means waiting for the worker; waiting to save means an invoice was prepared but publication is blocked.
 
-Jobs lists each source/content version once. A retry belongs to the same job as another processing run. Search by filename or recorded invoice number; filter by extracted document date, status or recorded issues.
+Jobs lists each source/content version once. A retry belongs to the same job as another processing run. Search by filename or recorded invoice number; filter by document date or status. Use the prominent View, Edit and Download actions.
 
-The detail page explains **What happened**, shows invoice information and lists fields left blank. It uses “Invoice ready,” “Waiting to start” and other plain status labels. Technical details remain collapsed for support use.
+The detail page explains **What happened**, shows invoice information and lists fields left blank. It uses “Invoice ready,” “Waiting to start” and other plain status labels. Developer details are available through the API rather than on the job page.
 
 Image readings show the exact area read by the local image model and the highlighted original page. The page explains the value found and whether it was used. A reused saved reading still comes from the image model. An accepted reading can fail to contribute when a complete final field could not be established.
 
@@ -32,6 +32,6 @@ The PDF is the shipment source. Manual expected workbooks are development refere
 
 The queue preserves occupied output files and chooses a versioned filename when necessary. Identical unchanged arrivals do not create another job; changed bytes create a new source version. Renaming a PDF can create a distinct job because filenames may support invoice-number extraction.
 
-Do not rename, edit or delete internal job snapshots/evidence to repair a result. Use the original PDF and approved future retry controls. Pause/retry controls are not implemented in the current dashboard.
+Do not rename, edit or delete internal job snapshots/evidence to repair a result. Use the original PDF and approved future retry controls. Use Pause processing / Resume processing on Overview. Pause lets the current invoice finish while new PDFs continue to queue. On the latest eligible job detail, use Retry this PDF, Retry saving invoice, or Create another invoice. Earlier outputs stay available. A stopped worker must be started with run_system.py before queued requests can run.
 
 Direct main.py/run_batch.py conversion remains available, but it is outside the durable queue. Its outputs do not automatically become dashboard jobs, and it does not provide queue-style historical collision protection. Prefer the folder pipeline for managed operations.

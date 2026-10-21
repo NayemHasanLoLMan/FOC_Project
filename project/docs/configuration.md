@@ -4,8 +4,8 @@ The default file is project/pipeline_config.json. Each pipeline CLI accepts --co
 
 ~~~json
 {
-  "incoming_dir": "incoming",
-  "output_dir": "output",
+  "incoming_dir": "incoming/bangladesh",
+  "output_dir": "output/bangladesh",
   "state_dir": "runtime/state",
   "artifact_dir": "runtime/artifacts",
   "scan_interval_seconds": 5,
@@ -48,3 +48,15 @@ The worker explicitly uses the existing project OCR cache. Configuring another a
 PDF facts take priority over expected reference files. Export date falls back to a labelled packing-list date under the approved rule; there is no current-date assumption. Package quantities follow consistent PDF counting, not inferred consolidation from weight. Gross fallback has no added packaging allowance or rounding; unsupported net remains blank. G for the confirmed small-button categories means GROSS.
 
 Best-effort invoice numbering may use the original invoice-style filename and can be wrong. Renamed/new PDFs and changed source layouts need acceptance testing. These rules are not dashboard settings; changes require a small tested code update.
+
+## Country folders
+
+Default production processing watches incoming/bangladesh and publishes to output/bangladesh, relative to pipeline_config.json. Initialization and the single-command launcher create bangladesh, india and jordan siblings under each parent. Only the configured Bangladesh folder is scanned; India/Jordan are reserved and are not part of validated automatic processing. Do not drop PDFs into the parent folder. Custom configurations still use their exact supplied paths.
+
+Old queue snapshots and historical published files are not relocated. Changing the current default paths does not move attempts' recorded locations. The original standalone test workbooks were preserved under reports/bd_layout_20261021/previous_flat_output before regeneration into the Bangladesh output folder.
+
+## Bangladesh invoice details
+
+The shared writer prints BIN lines as BIN : identifier, without surrounding brackets, retaining leading zeros/hyphens and using red text. Carton references use red values. Labelled TINs from the PDF are printed in red above the customs-purpose footer. Import open cover notes from the PDF are printed in red above the customs invoice number, with wrapping. These optional values are never copied from expected workbooks or guessed from a company directory. Missing/conflicting values stay empty.
+
+Bangladesh invoices omit net weight, its audit entry and missing-field warnings. Net-weight support remains available for other regions. These generation rules apply to every future invoice; there is no per-shipment formatting patch or sample-specific lookup.

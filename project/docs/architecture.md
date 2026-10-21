@@ -66,3 +66,7 @@ The dashboard opens SQLite in read-only mode and serves artifacts only through j
 ## Current limits
 
 BD is the validated development scope, not arbitrary layouts or all unreadable handwriting. Cached development-set checks do not establish unseen accuracy. No cloud OCR, universal autonomous correction, speculative completion ETA, admin controls or scheduled startup is implemented. The [roadmap](pipeline_dashboard_plan.md) preserves the approval boundary for those stages.
+
+## Admin transaction boundary
+
+Stage 6 keeps dashboard readers read-only and opens a separate short writable transaction only for validated commands. Queue pause is checked inside the same transaction as a worker claim. Idempotency results and retry/reprocess state changes commit together. The web app never invokes the converter or publisher. Queue policy survives restarts, and component liveness remains separate.

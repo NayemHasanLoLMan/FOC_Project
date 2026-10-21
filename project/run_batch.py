@@ -11,7 +11,7 @@ ROOT=Path(__file__).resolve().parent
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--input-dir',type=Path,default=ROOT/'examples')
-    parser.add_argument('--output-dir',type=Path,default=ROOT/'output')
+    parser.add_argument('--output-dir',type=Path,default=ROOT/'output/bangladesh')
     parser.add_argument('--max-pages',type=int,default=None)
     parser.add_argument('--cache-dir',type=Path,default=ROOT/'.cache/ocr')
     parser.add_argument('--local-model',default=DEFAULT_MODEL,help='Installed Ollama vision model for unresolved weight, package and quantity cells')

@@ -14,6 +14,8 @@ import pymupdf
 from .folder_intake import _digest, _validate_pdf
 from .job_store import JobStore
 from .pipeline import run
+from .excel_writer import populate_template
+from .invoice_edits import edited_data
 from .pipeline_config import ROOT, PipelineConfig, attempt_metadata
 from .process_lock import process_lock
 from .processing_evidence import EvidenceRecorder
@@ -215,6 +217,7 @@ class QueueWorker:
         attempt = self.store.claim_next(self.owner, metadata)
         if attempt is None:
             return None
+        metadata = attempt['metadata']
         job = self.store.get_job(attempt['job_id'])
         try:
             source = Path(job['snapshot_path'])
@@ -227,9 +230,28 @@ class QueueWorker:
                 raise ValueError('Attempt directory escapes managed artifact storage')
             folder.mkdir(parents=True, exist_ok=True)
             observer = EvidenceRecorder(self.store, attempt, folder / 'evidence')
-            workbook = Path(run(source, template=ROOT / 'templates/BD_template.xlsx', output_dir=folder,
-                                save_json=True, cache_dir=ROOT / '.cache/ocr', local_model=self.config.local_model,
-                                observer=observer)).resolve()
+            if metadata.get('manual_edit'):
+                edit = metadata['manual_edit']
+                base = self.store.get_attempt(edit['base_attempt_id'])
+                if base['job_id'] != job['id'] or base['state'] != 'completed':
+                    raise ValueError('The original invoice does not belong to this completed job')
+                base_receipt, previous, _ = self._read_ready(base)
+                original = json.loads((base_receipt.parent/previous['data_name']).read_text(encoding='utf-8'))
+                data = edited_data(original,edit['changes'])
+                workbook = folder/previous['workbook_name']
+                populate_template(ROOT/'templates/BD_template.xlsx',workbook,data)
+                _write_json(folder/(source.stem+'.json'),data.to_dict())
+                for field in edit['changes']:
+                    observer({'kind':'field_source','field':field,'method':'manual_edit','value':getattr(data,field) if field!='items' else [i.__dict__ for i in data.items]})
+                unresolved = [f for f in ('invoice_number','export_date','consignee','consignee_address','shipping_marks','package_count','gross_weight_kg','total_value') if getattr(data,f) is None]
+                unresolved.extend(f'goods:{n+1}:{key}' for n,item in enumerate(data.items) for key in ('description','quantity','unit','unit_price') if getattr(item,key) in (None,''))
+                if not data.items:
+                    unresolved.append('goods')
+                observer({'kind':'invoice_evidence','vision_contributions':[], 'unresolved_fields':unresolved})
+            else:
+                workbook = Path(run(source, template=ROOT / 'templates/BD_template.xlsx', output_dir=folder,
+                                    save_json=True, cache_dir=ROOT / '.cache/ocr', local_model=self.config.local_model,
+                                    observer=observer)).resolve()
             if workbook.parent != folder or workbook.suffix.lower() != '.xlsx':
                 raise ValueError('Converter returned an unexpected output path')
             data_path = folder / f'{source.stem}.json'

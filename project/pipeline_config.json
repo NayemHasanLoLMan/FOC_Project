@@ -1,6 +1,6 @@
 {
-  "incoming_dir": "incoming",
-  "output_dir": "output",
+  "incoming_dir": "incoming/bangladesh",
+  "output_dir": "output/bangladesh",
   "state_dir": "runtime/state",
   "artifact_dir": "runtime/artifacts",
   "scan_interval_seconds": 5,

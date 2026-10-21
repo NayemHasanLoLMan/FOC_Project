@@ -3,7 +3,7 @@
   "info": {
     "title": "FOC local invoice dashboard",
     "version": "0.1.0",
-    "description": "Implemented Stage 5 read-only local interface. Loopback only; unauthenticated. No submission, retry, pause, settings or mutation APIs. GET endpoints also accept HEAD. Schemas permit additional retained metadata; nullable values are not zero. See api.md for lifecycle, error and privacy details."
+    "description": "Local invoice dashboard with Stage 6 admin controls. Loopback only. GET routes are read-only. Protected POST commands pause/resume queue consumption and retry/reprocess selected jobs without editing invoices. Startup management remains Stage 7. Manual invoice editing creates preserved versions through the worker without repeating OCR."
   },
   "servers": [
     {
@@ -951,6 +951,915 @@
           }
         }
       }
+    },
+    "/api/controls": {
+      "get": {
+        "operationId": "getControls",
+        "summary": "Get the current command token and persisted queue pause state.",
+        "tags": [
+          "Admin controls"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Current local control session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ControlSession"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/queue/pause": {
+      "post": {
+        "operationId": "pauseQueue",
+        "summary": "Pause new conversions; active work and prepared saves may finish.",
+        "tags": [
+          "Admin controls"
+        ],
+        "security": [
+          {
+            "CsrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact base URL, for example http://127.0.0.1:8080 (no trailing slash)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "request_id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "request_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "New UUID for each intended command. Reuse the identical ID and payload when repeating an uncertain request."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accepted command, or the identical saved result on request replay. Processing is performed by the existing worker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid command JSON/fields/UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing/invalid local Origin or command token, cross-site or nonlocal request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Job changed, action is ineligible, or request ID belongs to another command.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "application/json is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/queue/resume": {
+      "post": {
+        "operationId": "resumeQueue",
+        "summary": "Allow new claims by a running worker.",
+        "tags": [
+          "Admin controls"
+        ],
+        "security": [
+          {
+            "CsrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact base URL, for example http://127.0.0.1:8080 (no trailing slash)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "request_id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "request_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "New UUID for each intended command. Reuse the identical ID and payload when repeating an uncertain request."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accepted command, or the identical saved result on request replay. Processing is performed by the existing worker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid command JSON/fields/UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing/invalid local Origin or command token, cross-site or nonlocal request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Job changed, action is ineligible, or request ID belongs to another command.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "application/json is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/retry": {
+      "post": {
+        "operationId": "retryJob",
+        "summary": "Queue the latest failed/interrupted job again.",
+        "tags": [
+          "Admin controls"
+        ],
+        "security": [
+          {
+            "CsrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact base URL, for example http://127.0.0.1:8080 (no trailing slash)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "request_id",
+                  "attempt_id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "request_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "New UUID for each intended command. Reuse the identical ID and payload when repeating an uncertain request."
+                  },
+                  "attempt_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "ID of the latest eligible attempt. Stale or foreign attempts conflict."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accepted command, or the identical saved result on request replay. Processing is performed by the existing worker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid command JSON/fields/UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing/invalid local Origin or command token, cross-site or nonlocal request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Job changed, action is ineligible, or request ID belongs to another command.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "application/json is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/reprocess": {
+      "post": {
+        "operationId": "reprocessJob",
+        "summary": "Queue a completed PDF for another invoice; preserve earlier results.",
+        "tags": [
+          "Admin controls"
+        ],
+        "security": [
+          {
+            "CsrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact base URL, for example http://127.0.0.1:8080 (no trailing slash)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "request_id",
+                  "attempt_id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "request_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "New UUID for each intended command. Reuse the identical ID and payload when repeating an uncertain request."
+                  },
+                  "attempt_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "ID of the latest eligible attempt. Stale or foreign attempts conflict."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accepted command, or the identical saved result on request replay. Processing is performed by the existing worker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid command JSON/fields/UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing/invalid local Origin or command token, cross-site or nonlocal request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Job changed, action is ineligible, or request ID belongs to another command.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "application/json is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/retry-save": {
+      "post": {
+        "operationId": "retryInvoiceSave",
+        "summary": "Request the running worker to retry its prepared invoice on the next pass; no OCR rerun.",
+        "tags": [
+          "Admin controls"
+        ],
+        "security": [
+          {
+            "CsrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact base URL, for example http://127.0.0.1:8080 (no trailing slash)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "request_id",
+                  "attempt_id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "request_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "New UUID for each intended command. Reuse the identical ID and payload when repeating an uncertain request."
+                  },
+                  "attempt_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "ID of the latest eligible attempt. Stale or foreign attempts conflict."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accepted command, or the identical saved result on request replay. Processing is performed by the existing worker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid command JSON/fields/UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing/invalid local Origin or command token, cross-site or nonlocal request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Job changed, action is ineligible, or request ID belongs to another command.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "application/json is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/{job_id}/edit": {
+      "post": {
+        "operationId": "editInvoice",
+        "summary": "Save manual invoice changes as a new version through the worker; preserve source readings and previous files. No OCR rerun.",
+        "tags": [
+          "Admin controls"
+        ],
+        "security": [
+          {
+            "CsrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact base URL, for example http://127.0.0.1:8080 (no trailing slash)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "request_id",
+                  "attempt_id",
+                  "changes"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "request_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "New UUID for each intended command. Reuse the identical ID and payload when repeating an uncertain request."
+                  },
+                  "attempt_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "ID of the latest eligible attempt. Stale or foreign attempts conflict."
+                  },
+                  "changes": {
+                    "$ref": "#/components/schemas/InvoiceChanges"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accepted command, or the identical saved result on request replay. Processing is performed by the existing worker.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields/date/numbers/row references; protected source and provenance fields cannot be edited.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing/invalid local Origin or command token, cross-site or nonlocal request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Job changed, action is ineligible, or request ID belongs to another command.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "application/json is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/{job_id}/edit": {
+      "get": {
+        "operationId": "editInvoicePage",
+        "summary": "Editor for the latest completed Bangladesh invoice.",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTML editor."
+          },
+          "409": {
+            "description": "The latest invoice is not completed or its saved data is unavailable."
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1460,7 +2369,8 @@
             "type": [
               "number",
               "null"
-            ]
+            ],
+            "description": "Not applicable to Bangladesh invoices; retained for other regional formats."
           },
           "total_value": {
             "type": [
@@ -1485,6 +2395,20 @@
             "items": {
               "type": "string"
             }
+          },
+          "tin_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Unique labelled PDF TIN, preserving identifier suffixes; never copied from manual references."
+          },
+          "import_cover_note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "PDF-provided import cover note; absent/conflicting text stays null."
           }
         },
         "required": [
@@ -1856,6 +2780,9 @@
               },
               "required": []
             }
+          },
+          "queue": {
+            "$ref": "#/components/schemas/QueueControl"
           }
         },
         "required": [
@@ -2013,6 +2940,225 @@
           }
         },
         "required": []
+      },
+      "QueueControl": {
+        "type": "object",
+        "required": [
+          "paused",
+          "updated_at"
+        ],
+        "properties": {
+          "paused": {
+            "type": "boolean"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ControlSession": {
+        "type": "object",
+        "required": [
+          "csrf_token",
+          "queue"
+        ],
+        "properties": {
+          "csrf_token": {
+            "type": "string",
+            "description": "Process-scoped token; reload after web restart."
+          },
+          "queue": {
+            "$ref": "#/components/schemas/QueueControl"
+          }
+        }
+      },
+      "CommandResult": {
+        "type": "object",
+        "required": [
+          "request_id",
+          "action"
+        ],
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "pause",
+              "resume",
+              "retry",
+              "reprocess",
+              "retry_save",
+              "edit"
+            ]
+          },
+          "paused": {
+            "type": "boolean"
+          },
+          "job_id": {
+            "type": "integer"
+          },
+          "attempt_id": {
+            "type": "integer"
+          },
+          "state": {
+            "type": "string"
+          },
+          "edit_sha256": {
+            "type": "string"
+          }
+        }
+      },
+      "InvoiceChanges": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "properties": {
+          "invoice_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "export_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "consignee": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "consignee_address": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "shipping_marks": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "carton_range": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "destination_country": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "destination_city": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "tin_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "import_cover_note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "package_count": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ],
+            "description": "Nonnegative finite numeric value or blank; packages require a positive whole number. Maximum 1e12."
+          },
+          "gross_weight_kg": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ],
+            "description": "Nonnegative finite numeric value or blank; packages require a positive whole number. Maximum 1e12."
+          },
+          "total_value": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ],
+            "description": "Nonnegative finite numeric value or blank; packages require a positive whole number. Maximum 1e12."
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source_index",
+                "description",
+                "quantity",
+                "unit",
+                "unit_price"
+              ],
+              "properties": {
+                "source_index": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "quantity": {
+                  "type": [
+                    "number",
+                    "string",
+                    "null"
+                  ]
+                },
+                "unit": {
+                  "type": "string",
+                  "maxLength": 20
+                },
+                "unit_price": {
+                  "type": [
+                    "number",
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          }
+        }
       }
     },
     "parameters": {
@@ -2226,6 +3372,14 @@
             }
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "CsrfToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-CSRF-Token",
+        "description": "Obtain using GET /api/controls. POST also requires an exact local Origin header and application/json."
       }
     }
   }

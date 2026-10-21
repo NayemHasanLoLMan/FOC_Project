@@ -3,7 +3,7 @@ import argparse
 import json
 from pathlib import Path
 
-from src.foc_extractor.pipeline_config import ROOT, load_config
+from src.foc_extractor.pipeline_config import ROOT, load_config, initialize_folders
 from src.foc_extractor.job_store import JobStore
 
 
@@ -12,6 +12,7 @@ def main():
     parser.add_argument('--config', type=Path, default=ROOT / 'pipeline_config.json')
     args = parser.parse_args()
     config = load_config(args.config)
+    initialize_folders(config)
     store = JobStore(config.state_dir / 'jobs.sqlite3')
     print(json.dumps({'configuration': config.to_dict(), 'database': str(store.path),
                       'jobs': store.counts(), 'processing_started': False}, indent=2))

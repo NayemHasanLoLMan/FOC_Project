@@ -7,6 +7,9 @@ import json
 from pathlib import Path
 import platform
 import shutil
+import secrets
+from uuid import UUID
+from .invoice_edits import EDIT_FIELDS, validate_changes, edited_data
 import threading
 import time
 import urllib.request
@@ -59,6 +62,11 @@ def _readable_time(value):
 
 
 def _user_summary(attempt, state):
+    if attempt and attempt['metadata'].get('manual_edit'):
+        return {'result':{'completed':'Your edited invoice is ready to download.', 'failed':'The edited invoice could not be saved.',
+                          'interrupted':'Saving the edited invoice was interrupted.', 'waiting_to_save':'Your edited invoice is waiting to be saved.'}.get(state,'Your invoice changes are being saved.'),
+                'how':'Manual changes use the saved invoice information. The original PDF readings and earlier invoices are preserved.',
+                'notes':list(dict.fromkeys(_issue_text(issue) for issue in attempt['issues']))}
     result = {'completed':'The invoice was created and is ready to download.',
               'waiting_to_save':'The invoice has been created. Saving it to the output folder is still pending.',
               'failed':'This run could not finish. An invoice is not available from this run.',
@@ -94,6 +102,8 @@ def _health(row, stale_after):
 
 
 def _method(attempt):
+    if attempt.get('metadata',{}).get('manual_edit'):
+        return 'Manually edited'
     summary = attempt.get('metadata', {}).get('processing')
     if summary is None:
         return 'Not recorded'
@@ -141,7 +151,7 @@ def _prepared(job, attempt, kind):
 def _public(value):
     if isinstance(value, dict):
         return {k: _public(v) for k, v in value.items() if k not in
-                ('image_path', 'artifact_path', 'destination', 'snapshot_path', 'output_path', 'receipt_path', 'source_path')}
+                ('image_path', 'artifact_path', 'destination', 'snapshot_path', 'output_path', 'receipt_path', 'source_path','manual_edit_json')}
     if isinstance(value, list):
         return [_public(v) for v in value]
     return value
@@ -222,6 +232,7 @@ class DashboardData:
         intakes = self.store.intake_files(self.config.incoming_dir)
         intake_counts = {s: sum(i['state']==s for i in intakes) for s in ('waiting_for_file', 'queued', 'rejected', 'missing')}
         return {'web': 'available', 'web_uptime_seconds': time.monotonic()-self.started,
+                'queue': self.store.queue_control(),
                 'checked_at': datetime.now(timezone.utc).isoformat(), 'counts': self.store.counts(),
                 'attempts': attempts, 'completed_with_issues': with_issues,
                 'today': {'date': str(local_now.date()), 'timezone': str(local_now.tzinfo), 'received': received, 'completed': completed},
@@ -278,20 +289,26 @@ class DashboardData:
         attempt = next((a for a in attempts if a['id']==attempt_id), None) if attempt_id is not None else (attempts[-1] if attempts else None)
         if attempt_id is not None and attempt is None:
             raise KeyError(attempt_id)
-        events = [e for e in self.store.events(job_id) if attempt is None or e['attempt_id'] in (None, attempt['id'])]
+        all_events = self.store.events(job_id)
+        events = [e for e in all_events if attempt is None or e['attempt_id'] in (None, attempt['id'])]
+        reading_attempt = attempt
+        while reading_attempt and reading_attempt['metadata'].get('manual_edit'):
+            base_id = reading_attempt['metadata']['manual_edit']['base_attempt_id']
+            reading_attempt = next((a for a in attempts if a['id']==base_id and a['id']<reading_attempt['id']),None)
+        reading_events = [e for e in all_events if reading_attempt and e['attempt_id']==reading_attempt['id']]
         data, data_error = None, None
         if attempt and attempt['state'] in ('completed', 'waiting_to_save'):
             try: data = json.loads(_prepared(job, attempt, 'data'))
             except (OSError, ValueError, KeyError, TypeError): data_error = 'Retained extracted data is missing or failed verification.'
         evidence = []
-        for event in events:
+        for event in reading_events:
             if event['details'].get('kind') != 'vision_request':
                 continue
-            related = [e for e in events if e['details'].get('call_id')==event['details'].get('call_id')]
+            related = [e for e in reading_events if e['details'].get('call_id')==event['details'].get('call_id')]
             response = next((e['details'] for e in related if e['details'].get('kind')=='vision_response'), {})
             decision = next((e['details'] for e in related if e['details'].get('kind')=='vision_decision'), {})
             field = event['details'].get('field','unknown')
-            summary = attempt['metadata'].get('processing',{}) if attempt else {}
+            summary = reading_attempt['metadata'].get('processing',{}) if reading_attempt else {}
             contributions = summary.get('vision_contributions')
             used = bool(decision.get('accepted')) and any(c['field']==field and (field!='goods_quantity' or c.get('source_ref')==event['details'].get('source_ref'))
                                                          for c in contributions or [])
@@ -302,6 +319,8 @@ class DashboardData:
                            if contributions is not None else 'The reading was accepted. The final invoice is not ready yet.')
             else:
                 outcome = 'This reading was not accepted for the invoice.'
+            if attempt and attempt['metadata'].get('manual_edit'):
+                outcome = 'Original reading: ' + outcome
             answer = response.get('answer') or {}
             candidate = decision.get('candidate', answer.get('weight_kg') if field=='gross_weight_kg' else answer.get('text'))
             evidence.append({'request': event, 'related': related, 'label':_field_label(field),
@@ -321,24 +340,36 @@ class DashboardData:
 def create_app(config):
     app = Flask(__name__, template_folder=str(ROOT/'frontend/templates'),
                 static_folder=str(ROOT/'frontend/static'), static_url_path='/dashboard_static')
-    app.config.update(TRUSTED_HOSTS=['127.0.0.1', 'localhost'], MAX_CONTENT_LENGTH=1024)
+    app.config.update(TRUSTED_HOSTS=['127.0.0.1', 'localhost'], MAX_CONTENT_LENGTH=65536)
     data = DashboardData(config)
     app.extensions['dashboard_data'] = data
     app.jinja_env.filters['field_label'] = _field_label
     app.jinja_env.filters['readable_time'] = _readable_time
     app.jinja_env.filters['status_label'] = lambda value: STATE_LABELS.get(value,value.replace('_',' '))
     previews = threading.BoundedSemaphore(2)
+    csrf_token = secrets.token_urlsafe(32)
+
+    @app.context_processor
+    def control_context():
+        return {'csrf_token': csrf_token}
 
     @app.before_request
-    def local_read_only():
+    def local_requests():
         if request.remote_addr not in ('127.0.0.1', '::1'):
             abort(403)
-        if request.method not in ('GET', 'HEAD'):
+        if request.method not in ('GET', 'HEAD', 'POST'):
             abort(405)
         if request.headers.get('Sec-Fetch-Site') == 'cross-site':
             abort(403)
         if request.headers.get('Origin') and request.headers['Origin'] != request.host_url.rstrip('/'):
             abort(403)
+        if request.method == 'POST':
+            if request.url_rule is None or 'POST' not in request.url_rule.methods:
+                abort(405)
+            if request.headers.get('Origin') != request.host_url.rstrip('/') or not secrets.compare_digest(request.headers.get('X-CSRF-Token', ''), csrf_token):
+                abort(403, description='Reload this dashboard before sending a command.')
+            if not request.is_json:
+                abort(415, description='Commands require application/json.')
 
     @app.after_request
     def headers(response):
@@ -396,12 +427,76 @@ def create_app(config):
         return render_template('detail.html', **_public(data.detail(job_id, number('attempt', 1) if 'attempt' in request.args else None,
                                                                   number('event_page',1))))
 
+    @app.get('/jobs/<int:job_id>/edit')
+    def edit(job_id):
+        view = data.detail(job_id)
+        if view['job']['state']!='completed' or not view['attempt'] or view['attempt']['state']!='completed':
+            abort(409,description='This invoice is not ready for editing. Open its latest completed version.')
+        if not view['data']:
+            abort(409,description='The saved invoice information could not be verified.')
+        if view['data'].get('template_type') not in (None,'BD'):
+            abort(409,description='Editing is currently available for Bangladesh invoices.')
+        return render_template('edit.html',**_public(view),edit_fields=EDIT_FIELDS)
+
     @app.get('/system')
     def system():
         return render_template('system.html', system=data.system())
 
     @app.get('/api/status')
     def status_api(): return jsonify(data.status())
+
+    @app.get('/api/controls')
+    def controls_api():
+        return jsonify(csrf_token=csrf_token, queue=data.store.queue_control())
+
+    def command(action, job_id=None):
+        payload = request.get_json()
+        keys = {'request_id'} if job_id is None else {'request_id', 'attempt_id'}
+        if action == 'edit':
+            keys.add('changes')
+        if not isinstance(payload, dict) or set(payload) != keys:
+            abort(400, description='Invalid command fields.')
+        try:
+            if not isinstance(payload['request_id'], str) or str(UUID(payload['request_id'])) != payload['request_id']:
+                raise ValueError()
+            if job_id is not None and (type(payload['attempt_id']) is not int or payload['attempt_id'] < 1):
+                raise ValueError()
+        except (ValueError, TypeError, AttributeError):
+            abort(400, description='Use a UUID request_id and a positive attempt_id.')
+        writer = JobStore(data.store.path)
+        changes = None
+        if action == 'edit':
+            try:
+                changes = validate_changes(payload['changes'])
+                original = data.store.get_attempt(payload['attempt_id'])
+                if original['job_id'] != job_id or original['state']!='completed':
+                    abort(409,description='Choose a completed invoice from this job.')
+                edited_data(json.loads(_prepared(data.store.get_job(job_id),original,'data')),changes)
+            except ValueError as error:
+                abort(400,description=str(error))
+        try:
+            result = writer.admin_command(payload['request_id'], action, job_id=job_id, attempt_id=payload.get('attempt_id'),changes=changes)
+        except ValueError as error:
+            abort(409, description=str(error))
+        return jsonify(result)
+
+    @app.post('/api/queue/pause')
+    def pause_api(): return command('pause')
+
+    @app.post('/api/queue/resume')
+    def resume_api(): return command('resume')
+
+    @app.post('/api/jobs/<int:job_id>/retry')
+    def retry_api(job_id): return command('retry', job_id)
+
+    @app.post('/api/jobs/<int:job_id>/reprocess')
+    def reprocess_api(job_id): return command('reprocess', job_id)
+
+    @app.post('/api/jobs/<int:job_id>/retry-save')
+    def retry_save_api(job_id): return command('retry_save', job_id)
+
+    @app.post('/api/jobs/<int:job_id>/edit')
+    def edit_api(job_id): return command('edit',job_id)
 
     @app.get('/api/ollama')
     def ollama_api(): return jsonify(data.ollama())

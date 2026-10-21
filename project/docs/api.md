@@ -1,8 +1,8 @@
 # HTTP API reference
 
-Base URL: **http://127.0.0.1:8080**, or the selected --port. [openapi.json](openapi.json) describes all 14 implemented routes and their request/response schemas. It can be opened in an OpenAPI 3.1-compatible viewer; no Swagger service is installed or exposed.
+Base URL: **http://127.0.0.1:8080**, or the selected --port. [openapi.json](openapi.json) describes all 20 implemented routes and their request/response schemas. It can be opened in an OpenAPI 3.1-compatible viewer; no Swagger service is installed or exposed.
 
-This is a local, unauthenticated **read-only** API. GET and HEAD are allowed; other methods are rejected. There is no PDF-upload, conversion-start, pause, retry, settings or delete endpoint. The scanner accepts PDFs from the configured filesystem inbox. All timestamps are UTC unless explicitly described as the PC's local date/time.
+This is a local, unauthenticated dashboard API. GET/HEAD routes read retained state. Stage 6 adds five protected POST commands; there is no upload, settings, delete, forced cancellation or arbitrary command endpoint. The scanner accepts PDFs from the configured filesystem inbox. All timestamps are UTC unless explicitly described as the PC's local date/time.
 
 ## Access and response rules
 
@@ -74,7 +74,7 @@ Preview pages are one-based and must be within retained OCR coverage. Rendering 
 | 400 | Invalid filter/number/date or untrusted Host |
 | 403 | Nonlocal/cross-site/mismatched Origin request |
 | 404 | Unknown job/attempt/event, missing retained file or missing preview document |
-| 405 | Unsupported method; this stage is read-only |
+| 405 | Unsupported method for this route |
 | 409 | State prevents invoice download, or retained path/hash/data verification fails |
 | 429 | Source-preview capacity busy |
 | 503 | Temporary database/filesystem/server-data failure; check local console |
@@ -95,3 +95,27 @@ IDs 12/5188 above illustrate the development demo; discover real IDs from /api/j
 ## Postman
 
 Import the [collection](../development/postman/FOC-Invoice.postman_collection.json) and [local environment](../development/postman/Local.postman_environment.json). See [usage and ID selection](../development/postman/README.md). These development files are not shipped in the production ZIP; OpenAPI remains included.
+
+## Stage 6 commands
+
+GET /api/controls returns csrf_token and queue {paused, updated_at}. GET /api/status also includes queue. Paused is a persisted policy, independent of scanner/worker health. New arrivals still queue; an existing conversion and prepared save retries continue. Resume needs a running worker and does not start a stopped process.
+
+Every POST requires application/json, Origin equal to the exact base URL without a trailing slash, and X-CSRF-Token from this web process. Use a canonical UUID string request_id for each intended action. Reuse the same ID and identical payload to repeat an uncertain request: the original saved result is returned, even after the job changes or the web server restarts. A reused ID with another command/payload conflicts. The command token changes after web restart; fetch it again first. Browser controls handle these values automatically.
+
+| POST route | Body in addition to request_id | Result |
+|---|---|---|
+| /api/queue/pause | none | Block new conversion claims after this transaction |
+| /api/queue/resume | none | Permit new claims |
+| /api/jobs/{job_id}/retry | attempt_id | Queue the latest failed/interrupted job for a new attempt |
+| /api/jobs/{job_id}/reprocess | attempt_id | Queue a completed job using its saved PDF and current settings; keep old results |
+| /api/jobs/{job_id}/retry-save | attempt_id | Record a save retry request; the running worker's next regular pass retries the prepared workbook without OCR |
+
+attempt_id must match the latest eligible attempt in that job. This prevents a stale page or double-click from requeueing a newer failed attempt. Completed reprocessing creates a new attempt when the worker claims it, records current configuration/version fingerprints, and publishes a versioned filename. Historical PDF/evidence/invoice downloads remain available. No inference or publication occurs inside a web request.
+
+All commands return 200 with their accepted result; acceptance does not prove completion. A save request keeps waiting_to_save until publication succeeds. Publication already retries automatically every worker pass; this button records an explicit operator request using that same path. It does not bypass permissions, file locks or integrity checks. Stopped workers cannot perform accepted work.
+
+400 means malformed fields/UUID; 403 means request protection failed; 404 means unknown job; 409 means a stale/ineligible action or mismatched request ID; 415 means unsupported content type. Non-command routes still reject POST with 405. Keep admin_commands audit/idempotency records with the queue backup.
+
+Bangladesh extracted data now includes optional tin_number and import_cover_note from the PDF. Net weight is not applicable to BD and is omitted from printed/audit fields and unresolved-field lists. Other regions retain the shared model property. See [layout update](bd_layout_update.md).
+
+See [manual invoice editing](manual-invoice-editing.md) for the simplified dashboard and safe versioned editing workflow.

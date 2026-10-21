@@ -8,7 +8,7 @@ Start the entire invoice system from the repository/release root:
 project/.venv/Scripts/python.exe project/run_system.py
 ~~~
 
-Open http://127.0.0.1:8080/. One Python process runs the folder scanner, extraction worker and dashboard on separate threads, using one configuration. It initializes/migrates the queue and creates a missing inbox. Drop completed PDFs into project/incoming; invoices appear in project/output. Existing data is preserved. The browser may be closed without stopping processing.
+Open http://127.0.0.1:8080/. One Python process runs the folder scanner, extraction worker and dashboard on separate threads, using one configuration. It initializes/migrates the queue and creates a missing inbox. Drop completed PDFs into project/incoming/bangladesh; invoices appear in project/output/bangladesh. Existing data is preserved. The browser may be closed without stopping processing.
 
 For custom paths/port:
 
@@ -38,7 +38,7 @@ Check scanner, worker and Ollama separately. Queued files need a worker. A recen
 
 waiting_to_save retains a completed prepared workbook. Fix output-folder availability/permissions/free space and let the running worker retry. Saving retries do not rerun OCR. Existing occupied filenames are preserved and versioned rather than overwritten.
 
-Ordinary failed jobs do not retry forever. Internal JobStore retry exists for coordinators, but public admin retry controls remain Stage 6; do not invent an HTTP request or edit SQLite manually.
+Ordinary failed jobs do not retry forever. Use Retry this PDF on the latest failed job detail. Retry saving invoice requests the next normal publication check without OCR. Create another invoice explicitly reprocesses a completed saved PDF while preserving its earlier output. Pause/resume is on Overview; it does not stop an active conversion, intake or prepared saves. Refresh details after a job changes. Do not edit SQLite manually.
 
 ## Backup and restore
 
@@ -78,3 +78,5 @@ Logs/status are printed to each process terminal; OCR diagnostics can mix with J
 The dashboard is loopback-only and unauthenticated; do not expose it to a LAN/reverse proxy. PDFs, parsed JSON, OCR text and model crops contain shipment information. Protect local folders and backups. No cloud document processing is used.
 
 No automatic evidence retention/deletion is enabled. Keep managed artifacts and state together until an explicit archive workflow exists. Do not remove evidence with OCR cache cleanup. Dependency/model caches can be reprovisioned, but clearing them can cause long recomputation/downloads.
+
+See [manual invoice editing](manual-invoice-editing.md) for the simplified dashboard and safe versioned editing workflow.

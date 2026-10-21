@@ -734,6 +734,30 @@ def _consignee_region(ocr):
     return '\n'.join(_cluster_into_lines(selected,tolerance))
 
 
+def _extract_tin(text):
+    matches = re.findall(r'\bT[IL1]N\s*(?:NO\.?|NUMBER|[:#])\s*[:#]?\s*(\d+(?:\s*[-/]\s*[A-Z0-9]+)*)', text, re.I)
+    values = list(dict.fromkeys(re.sub(r'\s*([-/])\s*', r'\1', value) for value in matches
+                                if 7 <= sum(c.isdigit() for c in value) <= 20))
+    return values[0] if len(values) == 1 else None
+
+
+def _extract_import_cover_note(text):
+    lines = text.splitlines()
+    notes = []
+    for index, line in enumerate(lines):
+        if not re.search(r'\bIMPORT\s+(?:OPEN\s+)?COVER\s+NOTE\b', line, re.I):
+            continue
+        note = line.strip()
+        for following in lines[index+1:index+3]:
+            if re.match(r'\s*(?:DATED\b|[A-Z]+/[A-Z0-9/]+)', following, re.I):
+                note += ' ' + following.strip()
+            else:
+                break
+        if re.search(r'[A-Z0-9]+/[A-Z0-9/]+', note, re.I):
+            notes.append(re.sub(r'\s+', ' ', note))
+    return notes[0] if notes and len(set(notes)) == 1 else None
+
+
 def parse_result(ocr_result, source):
     text=ocr_result.content; upper=text.upper()
     data=FOCData(source_file=Path(source).name,template_type='BD')
@@ -763,9 +787,10 @@ def parse_result(ocr_result, source):
     summary='\n'.join(p for p in ocr_result.pages if 'SHIPPER' in p.upper() and 'PACKAGES' in p.upper())
     summary=summary or (ocr_result.pages[0] if ocr_result.pages else text)
     data.gross_weight_kg=_extract_gross_weight(summary)
-    data.net_weight_kg=_extract_net_weight(text)
+    data.tin_number = _extract_tin(text)
+    data.import_cover_note = _extract_import_cover_note(text)
     data.total_value=_extract_total_value(text)
-    for field in ('shipping_marks','gross_weight_kg','net_weight_kg','total_value'):
+    for field in ('shipping_marks','gross_weight_kg','tin_number','import_cover_note','total_value'):
         emit('field_source', field=field, method='explicit_pdf_reading', value=getattr(data,field))
     items,weights,parsed_pages,warnings=_extract_table_data(ocr_result)
     data.warnings.extend(warnings)
@@ -846,6 +871,8 @@ def parse_result(ocr_result, source):
         data.consignee_address='\n'.join(region.splitlines()[1:]) or None
     if not data.destination_country and ('BANGLADESH' in upper or 'DHAKA' in upper):
         data.destination_country='Bangladesh';data.destination_city='DHAKA, BD'
+    if data.template_type != 'BD':
+        data.net_weight_kg = _extract_net_weight(text)
     for attr in ['invoice_number','export_date','consignee','consignee_address','shipping_marks','package_count','gross_weight_kg','total_value']:
         if getattr(data,attr) is None:data.warnings.append(f'{attr} not established from source; review required.')
     if not data.items:data.warnings.append('No goods extracted; invoice is incomplete.')

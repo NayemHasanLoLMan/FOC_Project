@@ -1,5 +1,6 @@
 """Start PDF intake, invoice processing and the local dashboard with one command."""
 import argparse
+import json
 from pathlib import Path
 import signal
 import threading
@@ -12,10 +13,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', type=Path, default=ROOT / 'pipeline_config.json')
     parser.add_argument('--port', type=int, default=8080)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--startup', choices=['install','start','stop','status','uninstall'],
+                      help='Manage the current-user Windows sign-in task')
+    mode.add_argument('--background', action='store_true', help='Run hidden with rotated logs and graceful stop control')
     args = parser.parse_args()
     if not 1 <= args.port <= 65535:
         parser.error('port must be between 1 and 65535')
     config = load_config(args.config)
+    if args.startup:
+        from src.foc_extractor.windows_startup import manage_startup
+        print(json.dumps(manage_startup(args.startup,config,args.config,args.port),indent=2))
+        return
     stop = threading.Event()
 
     def request_stop(number, frame):
@@ -28,7 +37,12 @@ def main():
         stop_signals.append(signal.SIGBREAK)
     previous = {number: signal.signal(number, request_stop) for number in stop_signals}
     try:
-        run_system(config, args.port, stop)
+        if args.background:
+            from src.foc_extractor.windows_startup import background_runtime
+            with background_runtime(config,stop):
+                run_system(config,args.port,stop)
+        else:
+            run_system(config, args.port, stop)
     finally:
         for number, handler in previous.items():
             signal.signal(number, handler)

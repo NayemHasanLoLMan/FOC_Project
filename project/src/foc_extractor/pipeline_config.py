@@ -11,6 +11,16 @@ from . import __version__
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def initialize_folders(config):
+    """Keep reserved regional folders separate; the active queue watches only its configured inbox."""
+    for folder in (config.incoming_dir, config.output_dir):
+        if folder.name == 'bangladesh':
+            for country in ('bangladesh', 'india', 'jordan'):
+                (folder.parent/country).mkdir(parents=True, exist_ok=True)
+        else:
+            folder.mkdir(parents=True, exist_ok=True)
+
+
 @dataclass(frozen=True)
 class PipelineConfig:
     incoming_dir: Path

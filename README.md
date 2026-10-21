@@ -1,6 +1,6 @@
 # Local PDF to invoice
 
-The application lives in **[project](project/README.md)**. It converts shipment PDFs into the shared Excel invoice template using local PaddleOCR and optional local vision, with a durable folder pipeline and read-only dashboard.
+The application lives in **[project](project/README.md)**. It converts shipment PDFs into the shared Excel invoice template using local PaddleOCR and optional local vision, with a durable folder pipeline and local admin dashboard.
 
 - [Full documentation index](project/docs/README.md)
 - [Install and run](project/docs/setup.md) · [User guide](project/docs/user-guide.md)
@@ -16,4 +16,4 @@ From this repository root:
 project/.venv/Scripts/python.exe project/run_system.py
 ~~~
 
-This single command initializes state and starts scanner, worker and dashboard together. Open http://127.0.0.1:8080/ and drop PDFs into project/incoming. Ctrl+C waits for the current invoice before shutting down. BD is the validated development scope; production never reads manual expected invoices. Admin controls and unattended startup remain later stages.
+This single command initializes state and starts scanner, worker and dashboard together. Open http://127.0.0.1:8080/ and drop PDFs into project/incoming/bangladesh. Ctrl+C waits for the current invoice before shutting down. BD is the validated development scope; production never reads manual expected invoices. Stage 6 controls are available; unattended startup remains Stage 7.

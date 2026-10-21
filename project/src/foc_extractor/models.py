@@ -33,6 +33,8 @@ class FOCData:
     package_count: Optional[int] = None
     gross_weight_kg: Optional[float] = None
     net_weight_kg: Optional[float] = None
+    tin_number: Optional[str] = None
+    import_cover_note: Optional[str] = None
     currency: str = "USD"
     total_value: Optional[float] = None
     template_type: Optional[str] = None

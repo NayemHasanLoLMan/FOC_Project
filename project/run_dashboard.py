@@ -1,4 +1,4 @@
-"""Serve the read-only invoice dashboard on this PC."""
+"""Serve the local invoice dashboard on this PC."""
 import argparse
 from pathlib import Path
 
@@ -16,8 +16,8 @@ def main():
     if not 1 <= args.port <= 65535:
         parser.error('port must be between 1 and 65535')
     app = create_app(load_config(args.config))
-    print(f'Read-only dashboard: http://127.0.0.1:{args.port} (Ctrl+C to stop)', flush=True)
-    serve(app, host='127.0.0.1', port=args.port, threads=8, max_request_body_size=1024,
+    print(f'Local dashboard: http://127.0.0.1:{args.port} (Ctrl+C to stop)', flush=True)
+    serve(app, host='127.0.0.1', port=args.port, threads=8, max_request_body_size=65536,
           clear_untrusted_proxy_headers=True)
 
 

@@ -2,7 +2,7 @@
 
 Read shipment PDFs with local PaddleOCR and fill the existing Excel invoice template. Bangladesh is the tested scope. India/Jordan templates, mappings and unique reference documents are retained for later work; they have not been validated by the BD benchmark.
 
-The [continuous folder pipeline and admin dashboard checklist](docs/pipeline_dashboard_plan.md) tracks staged updates. [Stages 1–4](docs/pipeline_stage4.md) provide durable intake/processing and review evidence; [Stage 5](docs/pipeline_stage5.md) adds the read-only local dashboard. Scanner/worker operation remains independent of the browser. Nothing is installed at startup. Current CLI conversion remains unchanged. Each next stage requires user approval after regression checks.
+The [continuous folder pipeline and admin dashboard checklist](docs/pipeline_dashboard_plan.md) tracks staged updates. [Stages 1–4](docs/pipeline_stage4.md) provide durable intake/processing and review evidence; [Stage 5](docs/pipeline_stage5.md) adds the local admin dashboard. Scanner/worker operation remains independent of the browser. Nothing is installed at startup. Current CLI conversion remains unchanged. Each next stage requires user approval after regression checks.
 
 ## Documentation
 
@@ -20,7 +20,7 @@ project/
   init_pipeline.py           Initialize empty pipeline state; no processing
   scan_incoming.py           Continuously queue stable PDFs
   run_worker.py              Process queued PDFs and retry prepared invoice saves
-  run_dashboard.py           Local read-only dashboard; no processing or controls
+  run_dashboard.py           Local local admin dashboard; no processing or controls
   pipeline_config.json       Folder-pipeline configuration
   requirements.txt           Direct runtime dependency constraints
   requirements-lock.txt      Validated Windows/Python dependency snapshot
@@ -54,8 +54,10 @@ project/
   expected_outputs/          Manual references; evaluation only
   templates/                 Blank BD, India and Jordan invoice templates
   docs/diagnosis.md          Accuracy, known errors and next-stage priorities
-  output/                    Generated invoices and batch manifest (ignored)
-  incoming/                  Configured default inbox (ignored)
+  incoming/bangladesh/       Active production PDF inbox
+  output/bangladesh/         Generated invoices and batch manifest
+  incoming/india/, jordan/    Reserved regional input folders
+  output/india/, jordan/      Reserved regional output folders
   reports/                   Latest comparison and verification (ignored)
   runtime/                   Local pipeline database/artifacts (ignored)
   .cache/                    Active OCR evidence and local models (ignored)
@@ -80,7 +82,7 @@ The working environment and the three required OCR models are already installed 
 
 To validate the future folder-worker configuration and initialize its empty database, run `project/.venv/Scripts/python.exe project/init_pipeline.py` from the repository root. Paths in `pipeline_config.json` resolve relative to that file. This command does not watch folders, process PDFs or start a service. See the [Stage 1 report](docs/pipeline_stage1.md).
 
-Process the BD examples into `project/output`:
+Process the BD examples into `project/output/bangladesh`:
 
 ```powershell
 project/.venv/Scripts/python.exe project/run_batch.py
@@ -98,7 +100,7 @@ Convert one document:
 project/.venv/Scripts/python.exe project/main.py --pdf C:/shipments/incoming/document.pdf
 ```
 
-Single-file and batch defaults resolve to this project's output/cache folders, regardless of the current directory. `--template` on the single-file command selects an explicit blank template. `--save-json` saves parsed data beside the single-file invoice. All pages are processed unless the diagnostic `--max-pages` option is supplied. `output/run_manifest.json` records each batch success or failure.
+Single-file and batch defaults resolve to this project's output/cache folders, regardless of the current directory. `--template` on the single-file command selects an explicit blank template. `--save-json` saves parsed data beside the single-file invoice. All pages are processed unless the diagnostic `--max-pages` option is supplied. `output/bangladesh/run_manifest.json` records each batch success or failure.
 
 OCR caches contain source text, coordinates and table cells. Cache keys include the source bytes and OCR settings. A different `--cache-dir` forces fresh OCR. Parser changes reuse existing OCR evidence. Preserve `.cache/paddlex` to avoid downloading model weights again.
 
@@ -110,7 +112,7 @@ Run the scanner from the repository root:
 project/.venv/Scripts/python.exe project/scan_incoming.py
 ```
 
-It checks the folder configured in `pipeline_config.json` (default `project/incoming`), prints JSON status, and continues until Ctrl+C. `--once` scans once and exits; `--config <path>` selects another configuration. New PDFs need matching observations at least one scan interval apart (default five seconds), so the first scan normally reports waiting files. The next scan occurs after the previous scan finishes plus the configured interval.
+It checks the folder configured in `pipeline_config.json` (default `project/incoming/bangladesh`), prints JSON status, and continues until Ctrl+C. `--once` scans once and exits; `--config <path>` selects another configuration. New PDFs need matching observations at least one scan interval apart (default five seconds), so the first scan normally reports waiting files. The next scan occurs after the previous scan finishes plus the configured interval.
 
 The scanner ignores temporary files, symbolic links and subfolders. It checks PDF completion/readability, saves verified original-name snapshots under `runtime/artifacts/inputs`, and queues each source-identity/content version once. Invalid/password-protected/repair-required PDFs remain recorded as rejected; changed bytes are checked again. Missing/locked files do not discard existing snapshots/jobs. A temporary final rename is the preferred producer handoff; no stability heuristic proves a writer has finished.
 
@@ -134,7 +136,7 @@ project/.venv/Scripts/python.exe project/run_dashboard.py
 
 Open **http://127.0.0.1:8080**. Use --config followed by a configuration path to inspect another queue, or --port 8081 for another local port. Install the updated requirements first. Initialize state with init_pipeline.py if necessary; the dashboard never creates/migrates it. Scanner, worker and dashboard must use the same configuration for production arrivals.
 
-Overview shows independent component health and queue counts. Jobs support search/filtering and attempt history; detail pages expose goods, diagnostics, version fingerprints, exact vision inputs and source highlights. PDF/Excel downloads are verified. System shows folders, model defaults, dependencies and disk space. The database is opened read-only; pause/retry/settings controls remain pending. Old standalone/batch files are not automatically imported into the queue.
+Overview shows independent component health and queue counts. Jobs support search/filtering and attempt history; detail pages expose goods, diagnostics, version fingerprints, exact vision inputs and source highlights. PDF/Excel downloads are verified. System shows folders, model defaults, dependencies and disk space. State views stay read-only. Stage 6 adds protected pause/resume, selected retry, save retry and preserved reprocessing; settings remain read-only. Old standalone/batch files are not automatically imported into the queue.
 
 The acceptance preview uses an isolated 20-job test queue; the default production queue remains empty. See [Stage 5 commands, tests and limits](docs/pipeline_stage5.md). No Windows startup task is installed.
 
@@ -151,7 +153,7 @@ The comparison writes `reports/accuracy.md` and `reports/accuracy.json`. It read
 For a native Excel print check, with desktop Excel installed:
 
 ```powershell
-project/tools/export_print_samples.ps1 -Invoices project/output/26S5075-I.xlsx
+project/tools/export_print_samples.ps1 -Invoices project/output/bangladesh/26S5075-I.xlsx
 ```
 
 The tool opens the chosen workbooks read-only with macros disabled and exports their first invoice sheets to `reports/print_check`.
@@ -201,4 +203,6 @@ See [safe deployment boundaries](docs/deployment-boundaries.md) and [Postman usa
 project/.venv/Scripts/python.exe project/run_system.py
 ~~~
 
-Open http://127.0.0.1:8080/. Drop PDFs in project/incoming and find invoices in project/output. Ctrl+C stops intake and waits for the current invoice before exiting. See [operations](docs/operations.md) for custom configuration and maintenance commands.
+Open http://127.0.0.1:8080/. Drop PDFs in project/incoming/bangladesh and find invoices in project/output/bangladesh. Ctrl+C stops intake and waits for the current invoice before exiting. See [operations](docs/operations.md) for custom configuration and maintenance commands.
+
+See [manual invoice editing](docs/manual-invoice-editing.md) for the simplified dashboard and safe versioned editing workflow.

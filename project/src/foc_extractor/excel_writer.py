@@ -14,9 +14,12 @@ from pathlib import Path
 from copy import copy
 from datetime import date
 import math
+import re
 from tempfile import NamedTemporaryFile
 from textwrap import wrap
 from openpyxl import load_workbook
+from openpyxl.cell.rich_text import CellRichText, TextBlock
+from openpyxl.cell.text import InlineFont
 from .models import FOCData
 
 
@@ -70,7 +73,12 @@ def _split_address_lines(address: str | None) -> list[str]:
 
 def _populate_bd(ws, data: FOCData):
     """Populate BD (Bangladesh) customs invoice template."""
-    for coordinate in ('C9', 'H11', 'H12', 'I13', 'B11', 'E21', 'C25', 'B27', 'G27', 'F28', 'G28', 'H28', 'A29', 'G40'):
+    def red(cell):
+        font = copy(cell.font)
+        font.color = 'FFFF0000'
+        cell.font = font
+
+    for coordinate in ('C9', 'H11', 'H12', 'I13', 'B11', 'E21', 'A23', 'C25', 'B27', 'G27', 'F28', 'G28', 'H28', 'A29', 'G40'):
         cell = ws[coordinate]
         _safe_write(ws, cell.row, cell.column, None)
     for row in range(12, 18):
@@ -91,6 +99,10 @@ def _populate_bd(ws, data: FOCData):
     if data.carton_range:
         ws.merge_cells('H13:I13')
         _safe_write(ws, 13, 8, f'C/NO. {data.carton_range}')
+        font = ws['H13'].font
+        ws['H13'].value = CellRichText(
+            TextBlock(InlineFont(rFont=font.name,sz=font.sz,color='FF000000'),'C/NO. '),
+            TextBlock(InlineFont(rFont=font.name,sz=font.sz,color='FFFF0000'),data.carton_range))
         carton_alignment=copy(ws['H13'].alignment)
         carton_alignment.wrap_text=True
         carton_alignment.vertical='top'
@@ -106,6 +118,8 @@ def _populate_bd(ws, data: FOCData):
         ws.row_dimensions[11].height = max(ws.row_dimensions[11].height or 19,
                                            15 * math.ceil(len(data.consignee) / 55))
     addr_lines = _split_address_lines(data.consignee_address)
+    addr_lines = [re.sub(r'^[\[(]?\s*BIN\s*[:#]?\s*([0-9 -]+?)\s*[)\]]?$',
+                         lambda match:'BIN : '+match[1].strip(),line,flags=re.I) for line in addr_lines]
     if len(addr_lines) > 6:
         addr_lines = addr_lines[:5] + ['\n'.join(addr_lines[5:])]
     for row in range(12 + len(addr_lines), 18):
@@ -114,6 +128,8 @@ def _populate_bd(ws, data: FOCData):
     for i, line in enumerate(addr_lines):
         ws.merge_cells(start_row=12+i,start_column=2,end_row=12+i,end_column=6)
         _safe_write(ws, 12 + i, 2, line)
+        if re.search(r'\bBIN\b',line,re.I):
+            red(ws.cell(12+i,2))
         alignment = copy(ws.cell(12 + i, 2).alignment)
         alignment.wrap_text = True
         alignment.vertical='top'
@@ -125,18 +141,21 @@ def _populate_bd(ws, data: FOCData):
         _safe_write(ws, 21, 5, data.destination_country.upper())  # E21
     if data.invoice_number:
         _safe_write(ws, 25, 3, data.invoice_number)  # C25
+    if data.import_cover_note:
+        ws.merge_cells('A23:I23')
+        _safe_write(ws,23,1,data.import_cover_note)
+        ws['A23']._style=copy(ws['A42']._style)
+        red(ws['A23'])
+        alignment=copy(ws['A23'].alignment)
+        alignment.wrap_text=True
+        ws['A23'].alignment=alignment
+        ws.row_dimensions[23].height=max(18,16*math.ceil(len(data.import_cover_note)/105))
     if data.package_count is not None:
         _safe_write(ws, 27, 2, int(data.package_count))  # B27
     if data.gross_weight_kg is not None:
         _safe_write(ws, 27, 7, float(data.gross_weight_kg))  # G27
         ws['G27'].number_format='0.00############'
-    if data.net_weight_kg is not None:
-        for col,value in [(6,'N.W.'),(7,float(data.net_weight_kg)),(8,'KGS')]:
-            ws.cell(28,col)._style = copy(ws.cell(27,col)._style)
-            _safe_write(ws,28,col,value)
-        ws['G28'].number_format='0.00############'
-    else:
-        ws.row_dimensions[28].height = 4
+    ws.row_dimensions[28].height = 4
 
 
     # Preserve the BD design, growing its detail area before totals/footer.
@@ -188,6 +207,7 @@ def _populate_bd(ws, data: FOCData):
         cell=ws.cell(start_row+index,1)
         cell._style=copy(ws.cell(start_row,1)._style)
         _safe_write(ws,cell.row,1,label)
+        red(cell)
         alignment=copy(cell.alignment)
         alignment.wrap_text=True
         alignment.vertical='top'
@@ -196,6 +216,13 @@ def _populate_bd(ws, data: FOCData):
                                                15*math.ceil(len(label)/max(1,ws.column_dimensions['A'].width)))
 
     tot_row = 40 + extra
+    _safe_write(ws,tot_row+1,1,None)
+    if data.tin_number:
+        ws.merge_cells(start_row=tot_row+1,start_column=1,end_row=tot_row+1,end_column=9)
+        _safe_write(ws,tot_row+1,1,'TIN # '+data.tin_number)
+        ws.cell(tot_row+1,1)._style=copy(ws.cell(tot_row+2,1)._style)
+        red(ws.cell(tot_row+1,1))
+        ws.row_dimensions[tot_row+1].height=max(18,ws.row_dimensions[tot_row+1].height or 0)
     _safe_write(ws, tot_row, 6, "TOTAL VALUE:")
     for rng in list(ws.merged_cells.ranges):
         if rng.min_row==tot_row and rng.min_col==7:ws.unmerge_cells(str(rng))
@@ -394,7 +421,7 @@ def populate_template(template: Path, output: Path, data: FOCData):
     audit = wb.create_sheet("Extraction_Audit")
     audit.append(["Field", "Extracted Value"])
     for k, v in data.to_dict().items():
-        if k != "items":
+        if k != "items" and not (selected == 'BD' and k == 'net_weight_kg'):
             audit.append([k, str(v) if v is not None else ""])
 
     if data.items:

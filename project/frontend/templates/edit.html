@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% set document_name = job.filename[:-4] if job.filename.lower().endswith('.pdf') else job.filename %}
+{% block title %}Edit {{ document_name }}{% endblock %}
+{% block breadcrumb %}EDIT INVOICE{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">EDIT INVOICE</p><h1>{{ document_name }}</h1><p>Add missing information or change the invoice below.</p></div><a class="button secondary" href="{{ url_for('detail',job_id=job.id) }}">Back to invoice</a></div>
+<form id="invoice-editor" data-job-id="{{ job.id }}" data-attempt-id="{{ attempt.id }}">
+<section class="panel"><h2>Invoice information</h2><p class="hint">Blank fields stay empty. Saving creates a new invoice version and keeps the current one.</p>
+<div class="editor-fields">
+{% for key,label in edit_fields.items() %}
+<label>{{ label }}
+{% if key in ['consignee_address','import_cover_note'] %}<textarea name="{{ key }}" rows="{{ 4 if key=='consignee_address' else 3 }}" maxlength="2000">{{ data.get(key) if data.get(key) is not none else '' }}</textarea>
+{% else %}<input name="{{ key }}" type="{{ 'date' if key=='export_date' else 'number' if key in ['package_count','gross_weight_kg','total_value'] else 'text' }}" {% if key in ['package_count','gross_weight_kg','total_value'] %}min="{{ 1 if key=='package_count' else 0 }}" max="1000000000000" step="{{ 1 if key=='package_count' else 'any' }}"{% else %}maxlength="2000"{% endif %} value="{{ data.get(key) if data.get(key) is not none else '' }}">{% endif %}
+</label>{% endfor %}
+</div></section>
+<section class="panel"><div class="section-heading"><h2>Goods</h2><button type="button" class="button secondary" id="add-goods">Add goods row</button></div>
+<p class="hint">Changing goods recalculates their values and the rounded total. You can also enter a different total above.</p>
+<div id="editor-goods">
+{% for item in data.get('items',[]) %}
+<div class="editor-good" data-source-index="{{ loop.index0 }}">
+<label class="goods-description">Description<textarea data-field="description" maxlength="1000" rows="2" required>{{ item.description }}</textarea></label>
+<label>Quantity<input data-field="quantity" type="number" min="0" max="1000000000000" step="any" value="{{ item.quantity if item.quantity is not none else '' }}"></label>
+<label>Unit<input data-field="unit" maxlength="20" value="{{ item.unit or '' }}"></label>
+<label>Unit value (USD)<input data-field="unit_price" type="number" min="0" max="1000000000000" step="any" value="{{ item.unit_price if item.unit_price is not none else '' }}"></label>
+<button type="button" class="button secondary remove-goods" aria-label="Remove goods row">Remove</button>
+</div>{% endfor %}
+</div></section>
+<div class="editor-save"><button type="submit" class="button">Save new invoice version</button><a class="button secondary" href="{{ url_for('detail',job_id=job.id) }}">Cancel</a><span id="editor-result" role="status" aria-live="polite"></span></div>
+</form>
+<template id="goods-row-template"><div class="editor-good" data-source-index="">
+<label class="goods-description">Description<textarea data-field="description" maxlength="1000" rows="2" required></textarea></label>
+<label>Quantity<input data-field="quantity" type="number" min="0" max="1000000000000" step="any"></label>
+<label>Unit<input data-field="unit" maxlength="20"></label>
+<label>Unit value (USD)<input data-field="unit_price" type="number" min="0" max="1000000000000" step="any"></label>
+<button type="button" class="button secondary remove-goods" aria-label="Remove goods row">Remove</button>
+</div></template>
+{% endblock %}

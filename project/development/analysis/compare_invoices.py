@@ -123,7 +123,7 @@ def compare(output_dir, expected_dir):
     manifest=json.loads(manifest_path.read_text(encoding='utf-8')) if manifest_path.exists() else None
     written={Path(r['output']).name for r in manifest if r['status']=='written'} if manifest is not None else None
     generated={p.name:read_invoice(p) for p in sorted(output_dir.glob('*.xlsx')) if written is None or p.name in written}
-    fields=['invoice_number','shipping_marks','consignee','package_count','gross_weight_kg','net_weight_kg','total_value','export_date']
+    fields=['invoice_number','shipping_marks','consignee','package_count','gross_weight_kg','total_value','export_date']
     stats={f:{'matched':0,'total':0} for f in fields}
     cases=[]; used=set(); matches=expected_count=generated_count=0
     quantity_matches=quantity_expected=quantity_generated=0
@@ -201,7 +201,7 @@ def write_report(result, destination, baseline=None):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--output-dir',type=Path,default=ROOT/'output')
+    parser.add_argument('--output-dir',type=Path,default=ROOT/'output/bangladesh')
     parser.add_argument('--expected-dir',type=Path,default=ROOT/'expected_outputs')
     parser.add_argument('--report-dir',type=Path,default=ROOT/'reports')
     parser.add_argument('--baseline-dir',type=Path)

@@ -22,7 +22,7 @@ Imports use src.foc_extractor with project/ on sys.path; the existing CLI script
 | queue_worker.py | QueueWorker context manager/run_once; verification, preparation, save retry and crash reconciliation |
 | processing_evidence.py | Optional observations, EvidenceRecorder, model_image and page_preview |
 | system_runner.py | run_system; shared configuration, ownership, scanner/worker/web lifecycle and graceful shutdown |
-| dashboard.py | create_app and DashboardData; read-only view model, local HTTP routes and user-facing summaries |
+| dashboard.py | create_app and DashboardData; read-only view model, guarded admin commands, local HTTP routes and user-facing summaries |
 | frontend/templates / frontend/static (outside backend package) | Jinja pages and local CSS/JavaScript; no extraction logic |
 
 ## Shared conversion API
@@ -42,7 +42,7 @@ output = run(
 )
 ~~~
 
-run(pdf, template=None, output_dir=None, save_json=False, max_pages=None, cache_dir=None, local_model=DEFAULT_MODEL, observer=None) returns the saved workbook Path. Unlike CLI defaults, the Python function's omitted output_dir resolves to output in the current working directory; pass explicit directories for embedding. cache_dir=None disables that cache path. max_pages is a diagnostic positive limit.
+run(pdf, template=None, output_dir=None, save_json=False, max_pages=None, cache_dir=None, local_model=DEFAULT_MODEL, observer=None) returns the saved workbook Path. Unlike CLI defaults, the Python function's omitted output_dir resolves to output/bangladesh in the current working directory; pass explicit directories for embedding. cache_dir=None disables that cache path. max_pages is a diagnostic positive limit.
 
 The optional observer receives callback(event_dict, png=None). Events are plain dictionaries; png is exact image bytes for a vision_request. The observer is scoped through ContextVar and reset after conversion. Its failure raises EvidenceWriteError, deliberately outside the normal model-unavailable fallback exception set. Do not mutate extraction state from an observer.
 
@@ -64,7 +64,7 @@ FolderScanner(config, store).scan_once() returns scanned_at/incoming_dir/folder_
 
 QueueWorker(config, store) must be used as a context manager. It acquires the native lock, recovers owned interrupted attempts and starts an independent heartbeat. run_once() retries owned prepared saves and processes at most one queued job; it returns a newly processed attempt ID or None. None does not mean all pending saves succeeded. Exiting the context stops heartbeats and releases the lock.
 
-create_app(config) returns the read-only Flask WSGI app. Its DashboardData reader is exposed at app.extensions["dashboard_data"] for tests/internal use. Start it with run_dashboard.py / Waitress, not Flask debug mode.
+create_app(config) returns the local Flask WSGI app with read-only views and protected Stage 6 commands. Its DashboardData reader is exposed at app.extensions["dashboard_data"] for tests/internal use. Start it with run_dashboard.py / Waitress, not Flask debug mode.
 
 model_image(store, job_id, event_id) returns verified PNG bytes for a retained vision request. page_preview(store, job_id, page, event_id=None) returns an on-demand PNG after source/OCR artifact verification. Page numbers here are one-based; OCR dataclass page indices are zero-based.
 
@@ -75,3 +75,9 @@ FOCData holds source_file; OCR coverage/backend; invoice number/date; consignee/
 LineItem holds description, quantity, unit, weight_kg, hs_code, unit_price, amount, source_page, confidence and source_refs. Table source references use page:table:row with one-based components; grouping preserves all contributing references. They are audit identifiers, not arbitrary filesystem paths.
 
 OCRResult holds page text, words, tables, coverage, warnings, DPI and page transforms. OCRWord bounds and table/cell boxes are in the transformed rendered page coordinate system. Cell indices/pages are zero-based; dashboard observations convert pages to one-based. See [data and evidence](data-and-evidence.md) and [OpenAPI schemas](openapi.json).
+
+JobStore.queue_control reads persisted pause state. JobStore.admin_command(request_id, action, job_id=None, attempt_id=None) validates and transactionally records pause/resume/retry/reprocess/retry_save commands; duplicate IDs return their saved results. claim_next checks pause before creating an attempt.
+
+See [manual invoice editing](manual-invoice-editing.md) for the simplified dashboard and safe versioned editing workflow.
+
+The dashboard shares one responsive stylesheet, `frontend/static/dashboard.css`, using local system fonts and no remote font or UI dependencies. Job tables become cards below 760px; sidebar navigation moves above content below 850px. Invoice and image tables retain their own scrolling area. Keyboard focus, skip navigation and reduced-motion preferences are supported. Editor saves and all data operations remain in the existing JavaScript/backend.

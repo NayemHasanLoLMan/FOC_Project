@@ -1,8 +1,8 @@
 # Data, state and evidence
 
-## SQLite schema 3
+## SQLite schema 5
 
-The database has application ID 0x464F4349 and user_version 3. Migrations 1/2 to 3 are supported by writable initialization. The dashboard validates an existing schema and never migrates it.
+The database has application ID 0x464F4349 and user_version 5. Migrations 1/2/3/4 to 5 are supported by writable initialization. The dashboard validates an existing schema and never migrates it.
 
 | Table | Key / content |
 |---|---|
@@ -10,6 +10,8 @@ The database has application ID 0x464F4349 and user_version 3. Migrations 1/2 to
 | attempts | Autoincrement id and job_id; owner worker_id, lifecycle timestamps/state, metadata JSON, output/error/issues and optional prepared receipt_path |
 | events | Autoincrement id, job/optional attempt, created_at, event kind and JSON details |
 | intake_files | source_identity key; source path, metadata/content signature, stable_since/last_seen Unix time, readiness state/error/job |
+| queue_control | Singleton pause policy and UTC update time; new queues start resumed |
+| admin_commands | UUID request ID, action, optional job/attempt IDs, time and saved result JSON; durable replay protection/audit |
 | components | scanner/worker name key; owner, PID, state, heartbeat_at, error |
 
 Jobs uniquely identify source identity/content hash. Partial unique indexes enforce one running attempt globally and one unfinished attempt per job. Foreign keys are enabled on connections. Transactions are short; no inference runs inside them.
@@ -68,3 +70,5 @@ BD goods begin at row 33 and expanded rows inherit formatting; the total/footer 
 Retain database, snapshots, attempt artifacts and published invoices together. Do not remove evidence merely because the OCR cache can be rebuilt. Cache cleanup must never target artifact_dir. No automatic cleanup/retention workflow is enabled.
 
 Backing up only the .xlsx loses provenance/restart capability. Backing up only SQLite leaves file references broken. Paths are recorded absolutely; restoring to a different directory/machine requires planned path migration, not blind SQL replacement. See [operations](operations.md).
+
+Manual saves retain the base attempt and validated changes in jobs.manual_edit_json and attempt metadata. See [editing](manual-invoice-editing.md).

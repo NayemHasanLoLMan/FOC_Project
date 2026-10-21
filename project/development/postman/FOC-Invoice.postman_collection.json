@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "FOC Invoice - Local read-only dashboard",
-    "description": "All 14 implemented GET routes. No processing or mutation APIs. Start run_dashboard.py first; configure existing IDs before document/image requests. Imported values contain no customer data.",
+    "name": "FOC Invoice - Local dashboard and admin controls",
+    "description": "All 22 dashboard routes, including guarded manual invoice editing. Fetch getControls first. Manual saves create versioned invoices without OCR; use an isolated test queue.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -32,12 +32,48 @@
       "key": "pdf_page",
       "value": "1",
       "type": "string"
+    },
+    {
+      "key": "csrf_token",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
     {
       "name": "API",
       "item": [
+        {
+          "name": "getControls",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/controls",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "controls"
+              ],
+              "query": []
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Controls available\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) pm.collectionVariables.set(\"csrf_token\", pm.response.json().csrf_token);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
         {
           "name": "getStatus",
           "request": {
@@ -490,6 +526,294 @@
               "query": []
             },
             "description": "Read-only system page.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": []
+        },
+        {
+          "name": "editInvoicePage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/jobs/{{job_id}}/edit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs",
+                "{{job_id}}",
+                "edit"
+              ],
+              "query": []
+            },
+            "description": "Editor for the latest completed Bangladesh invoice."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin controls - changes queue state",
+      "item": [
+        {
+          "name": "pauseQueue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrf_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/queue/pause",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "queue",
+                "pause"
+              ],
+              "query": []
+            },
+            "description": "Pause new conversions; active work and prepared saves may finish. Fetch getControls first. Select current IDs. This request changes queue state. For an uncertain retry, replace {{$guid}} with the original request_id before sending again.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{$guid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "resumeQueue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrf_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/queue/resume",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "queue",
+                "resume"
+              ],
+              "query": []
+            },
+            "description": "Allow new claims by a running worker. Fetch getControls first. Select current IDs. This request changes queue state. For an uncertain retry, replace {{$guid}} with the original request_id before sending again.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{$guid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "retryJob",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrf_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/jobs/{{job_id}}/retry",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "jobs",
+                "{{job_id}}",
+                "retry"
+              ],
+              "query": []
+            },
+            "description": "Queue the latest failed/interrupted job again. Fetch getControls first. Select current IDs. This request changes queue state. For an uncertain retry, replace {{$guid}} with the original request_id before sending again.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{$guid}}\",\n  \"attempt_id\": {{attempt_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "reprocessJob",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrf_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/jobs/{{job_id}}/reprocess",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "jobs",
+                "{{job_id}}",
+                "reprocess"
+              ],
+              "query": []
+            },
+            "description": "Queue a completed PDF for another invoice; preserve earlier results. Fetch getControls first. Select current IDs. This request changes queue state. For an uncertain retry, replace {{$guid}} with the original request_id before sending again.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{$guid}}\",\n  \"attempt_id\": {{attempt_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "retryInvoiceSave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrf_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/jobs/{{job_id}}/retry-save",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "jobs",
+                "{{job_id}}",
+                "retry-save"
+              ],
+              "query": []
+            },
+            "description": "Request the running worker to retry its prepared invoice on the next pass; no OCR rerun. Fetch getControls first. Select current IDs. This request changes queue state. For an uncertain retry, replace {{$guid}} with the original request_id before sending again.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{$guid}}\",\n  \"attempt_id\": {{attempt_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "editInvoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrf_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/jobs/{{job_id}}/edit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "jobs",
+                "{{job_id}}",
+                "edit"
+              ],
+              "query": []
+            },
+            "description": "Save manual invoice changes as a new version through the worker; preserve source readings and previous files. No OCR rerun. Fill changes with intended fields/items before sending; the empty example is rejected. Reuse the same UUID/payload for an uncertain retry.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{$guid}}\",\n  \"attempt_id\": {{attempt_id}},\n  \"changes\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
           },
           "response": []
         }

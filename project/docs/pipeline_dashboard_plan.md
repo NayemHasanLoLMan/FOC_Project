@@ -1,6 +1,6 @@
 # Continuous PDF-to-invoice pipeline and admin dashboard
 
-Status: Stages 1–5 implemented and verified; Stage 6 awaits user approval. Implement one stage at a time, prove its acceptance checks, and ask the user before proceeding. Existing single-file/batch conversion and BD invoice contents/formatting remain supported. See the [Stage 1](pipeline_stage1.md), [Stage 2](pipeline_stage2.md), [Stage 3](pipeline_stage3.md), [Stage 4](pipeline_stage4.md) and [Stage 5](pipeline_stage5.md) acceptance reports.
+Status: Stages 1–6 implemented; Stage 6 acceptance is recorded in pipeline_stage6.md. Stage 7 awaits separate user approval. Implement one stage at a time, prove its acceptance checks, and ask the user before proceeding. Existing single-file/batch conversion and BD invoice contents/formatting remain supported. See the [Stage 1](pipeline_stage1.md), [Stage 2](pipeline_stage2.md), [Stage 3](pipeline_stage3.md), [Stage 4](pipeline_stage4.md) and [Stage 5](pipeline_stage5.md) acceptance reports.
 
 ## Outcome and boundaries
 
@@ -56,7 +56,7 @@ References: [Flask deployment](https://flask.palletsprojects.com/en/stable/deplo
 | 7 | Unattended Windows startup | Background startup, failure restart, single-instance protection and Ollama dependency reporting work without a browser |
 | 8 | End-to-end acceptance and operating guide | Restart/copy/duplicate/locked-file/model-failure cases pass; BD regression and unseen-PDF checks pass; recovery instructions are documented |
 
-Stages 1–5 are complete: durable intake/processing, review evidence and a read-only local dashboard. Neither scanner nor worker is left running. The demo dashboard is available for review. Controls/startup management and Stages 6–8 are not implemented. The user explicitly requires approval before each next stage.
+Stages 1–6 provide durable intake/processing, review evidence and guarded local admin controls. The unified run_system.py command starts the system. Unattended startup and final acceptance remain Stages 7–8. The user explicitly requires approval before each next stage.
 
 ### Stage 1 — configuration and durable state
 
@@ -114,11 +114,11 @@ All 203 tests pass. The worker completed all 20 PDFs during live HTTP polling (8
 
 ### Stage 6 — small, safe admin controls
 
-- [ ] Pause/resume queue consumption. Pausing does not kill the current model call; new arrivals may continue to queue. State the behavior clearly in the UI.
-- [ ] Retry selected failed jobs and waiting-to-save publications. A deliberate reprocess creates a new attempt and records which source/configuration it used; preserve earlier results.
-- [ ] Make commands transactional and idempotent so double-clicks cannot launch duplicate work. Use POST and request protection for mutations even on localhost.
-- [ ] Keep settings read-only initially; validate and apply any later path/model changes between jobs. Do not expose arbitrary shell commands or stop the user's Excel/Ollama processes.
-- [ ] Defer forced active-job cancellation and bulk reprocessing until their recovery behavior is explicitly implemented and tested.
+- [x] Pause/resume queue consumption. Pausing does not kill the current model call; new arrivals may continue to queue. State the behavior clearly in the UI.
+- [x] Retry selected failed jobs and waiting-to-save publications. A deliberate reprocess creates a new attempt and records which source/configuration it used; preserve earlier results.
+- [x] Make commands transactional and idempotent so double-clicks cannot launch duplicate work. Use POST and request protection for mutations even on localhost.
+- [x] Keep settings read-only initially; validate and apply any later path/model changes between jobs. Do not expose arbitrary shell commands or stop the user's Excel/Ollama processes.
+- [x] Defer forced active-job cancellation and bulk reprocessing until their recovery behavior is explicitly implemented and tested.
 
 ### Stage 7 — Windows background operation
 
@@ -143,4 +143,4 @@ No cloud services, additional OCR/model changes, distributed/multi-worker execut
 
 ## Current checkpoint
 
-Stages 1–5 are implemented and verified. Ask the user before Stage 6 (pause/resume and selected retry controls). Do not install startup tasks before their stage. The dashboard should read proven pipeline state rather than becoming a second independent processing implementation.
+Stages 1–6 are implemented and verified. Ask the user before Stage 7 (unattended Windows startup). Do not install startup tasks before their stage. The dashboard should read proven pipeline state rather than becoming a second independent processing implementation.

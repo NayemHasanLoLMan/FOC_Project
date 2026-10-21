@@ -18,7 +18,7 @@ check_outputs.py checks the canonical development outputs against examples and t
 For optional native Excel print QA:
 
 ~~~powershell
-& project/development/analysis/export_print_samples.ps1 -Invoices project/output/26S5166-I.xlsx,project/output/26S5193-I.xlsx
+& project/development/analysis/export_print_samples.ps1 -Invoices project/output/bangladesh/26S5166-I.xlsx,project/output/bangladesh/26S5193-I.xlsx
 ~~~
 
 The script starts its own hidden Excel instance, opens workbooks read-only, exports the first worksheet to PDF and closes that instance. It requires Windows and installed Excel; it does not close the user's existing Excel application. Default PDFs go to project/reports/print_check.
@@ -45,3 +45,5 @@ Do not alter canonical expected workbooks or tune shipment-specific answers to i
 The established BD development checkpoint has 20 invoices / 66 pages / 89 goods rows, strict matches 58/75 expected and 58/82 paired generated rows. These are historical development scores, not acceptance on future PDFs.
 
 Generated reports contain shipment text/images and remain ignored. Historical verification scripts in reports are QA artifacts, not production modules or supported application entry points.
+
+Stage 6 tests cover pause during active conversion, restart persistence, concurrent request replay, stale/foreign attempts, preserved output versions, save-only recovery while paused, schema migration, JSON/Origin/CSRF protection and read-only GET behavior.

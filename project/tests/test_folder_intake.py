@@ -36,7 +36,7 @@ class IntakeTests(unittest.TestCase):
         self.config_path = self.root / 'pipeline_config.json'
         self.config_path.write_bytes((ROOT / 'pipeline_config.json').read_bytes())
         self.config = load_config(self.config_path)
-        self.config.incoming_dir.mkdir()
+        self.config.incoming_dir.mkdir(parents=True)
         self.store = JobStore(self.config.state_dir / 'jobs.sqlite3')
         self.scanner = FolderScanner(self.config, self.store)
 
@@ -95,7 +95,8 @@ class IntakeTests(unittest.TestCase):
         first = self.store.get_job(self.scan(5)['accepted_job_ids'][0])
         original = source.read_bytes()
         timestamp = source.stat().st_mtime_ns
-        replacement = pdf_bytes('TWO')
+        replacement = original.replace(b'4f4e45', b'54574f')
+        self.assertNotEqual(replacement, original)
         self.assertEqual(len(replacement), len(original))
         source.write_bytes(replacement)
         os.utime(source, ns=(timestamp, timestamp))
@@ -174,7 +175,7 @@ class IntakeTests(unittest.TestCase):
     def test_unavailable_folder_and_disappeared_source_preserve_queued_snapshots(self):
         self.config.incoming_dir.rmdir()
         self.assertIsNotNone(self.scan(0)['folder_error'])
-        self.config.incoming_dir.mkdir()
+        self.config.incoming_dir.mkdir(parents=True)
         source = self.source()
         data = source.read_bytes()
         self.scan(5)

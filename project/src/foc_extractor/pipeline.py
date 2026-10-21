@@ -57,7 +57,7 @@ def run(
     if max_pages is not None and max_pages < 1:
         raise ValueError('max_pages must be a positive integer')
     active_template = _resolve_template(template, 'BD')
-    out_dir = Path(output_dir) if output_dir else Path("output")
+    out_dir = Path(output_dir) if output_dir else Path("output/bangladesh")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. OCR
@@ -109,7 +109,9 @@ def run(
     if data.gross_weight_kg is not None and 'weight' in locals() and weight['total_kg'] is not None and any(c.get('method')=='local vision' for c in weight['cells']):
         contributions.append({'field':'gross_weight_kg'})
     unresolved=[field for field in ('invoice_number','export_date','consignee','consignee_address','shipping_marks',
-                'package_count','gross_weight_kg','net_weight_kg','total_value') if getattr(data,field) is None]
+                'package_count','gross_weight_kg','total_value') if getattr(data,field) is None]
+    if data.template_type != 'BD' and data.net_weight_kg is None:
+        unresolved.append('net_weight_kg')
     unresolved.extend(f'goods:{i+1}:{field}' for i,item in enumerate(data.items)
                       for field in ('description','quantity','unit','unit_price') if getattr(item,field) in (None,''))
     if not data.items:unresolved.append('goods')

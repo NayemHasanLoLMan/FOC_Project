@@ -12,6 +12,7 @@ from .dashboard import create_app
 from .folder_intake import FolderScanner
 from .job_store import JobStore
 from .process_lock import process_lock
+from .pipeline_config import initialize_folders
 from .queue_worker import QueueWorker
 
 
@@ -24,14 +25,14 @@ def run_system(config, port=8080, stop=None):
     threads = []
     try:
         server = create_server(create_app(config), host='127.0.0.1', port=port, map=channels,
-                               threads=0, max_request_body_size=1024,
+                               threads=0, max_request_body_size=65536,
                                clear_untrusted_proxy_headers=True, asyncore_loop_timeout=0.2)
         # Avoid orphan HTTP threads when binding the port fails.
         server.task_dispatcher.set_thread_count(8)
         with ExitStack() as stack:
             stack.enter_context(process_lock(config.state_dir / 'scanner.lock'))
             worker = stack.enter_context(QueueWorker(config, store))
-            config.incoming_dir.mkdir(parents=True, exist_ok=True)
+            initialize_folders(config)
             scanner = FolderScanner(config, store)
             owner = 'scanner:' + uuid4().hex
 

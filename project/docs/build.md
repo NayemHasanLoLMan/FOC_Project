@@ -76,8 +76,10 @@ Stop scanner and dashboard; let the worker finish its current conversion and sto
 
 Smoke-test an isolated queue, then start all components with the same approved configuration. Do not carry development demo configurations or manual references into a production inbox.
 
-For rollback, stop components and restore a matching application/environment and consistent state/artifact/output backup. Do not run older code against an unsupported migrated schema. The current organization change does not change schema 3.
+For rollback, stop components and restore a matching application/environment and consistent state/artifact/output backup. Do not run older code against an unsupported migrated schema. Stage 6 migrates schema 3 to schema 4 at writable initialization. Back up state before upgrading; older code cannot open schema 4.
 
 ## Verified scope
 
 The organization/build update is checked with the existing suite, legacy/canonical evaluator parity, protected-file hashes and an extracted-bundle CLI/conversion/dashboard smoke test using the installed environment. It is not a clean-machine dependency install, native executable certification, physical power-loss test or unattended-startup release. See the latest organization QA report for exact results.
+
+The manual editor upgrades schema 4 to 5 at writable initialization. Stop the system and back up the database and retained artifacts before upgrading. Restore a consistent matching backup to roll back.
