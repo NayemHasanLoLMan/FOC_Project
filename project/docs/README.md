@@ -27,3 +27,6 @@ Historical development material is retained without moving its paths:
 - Stage acceptance reports: [1](pipeline_stage1.md), [2](pipeline_stage2.md), [3](pipeline_stage3.md), [4](pipeline_stage4.md), [5](pipeline_stage5.md).
 - [Processing rules](processing_flow.md) and [diagnosis](diagnosis.md): detailed extraction decisions and development-set limitations. Older milestone numbers are historical, not current guarantees.
 - Local project/reports contains ignored generated QA evidence; it is not required by production and is excluded from release bundles.
+
+- [Deployment boundaries](deployment-boundaries.md): required production files and safe cleanup.
+- [Postman collection and usage](../development/postman/README.md): local read-only API checks.

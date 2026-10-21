@@ -19,7 +19,7 @@ flowchart LR
     Excel --> Web
 ~~~
 
-Scanner, worker and web server are separate processes. Long OCR/model inference does not hold a SQLite transaction or block folder scanning. The worker has a separate heartbeat thread. The web server has eight request threads and at most two concurrent on-demand source renders; it never invokes OCR/model generation or claims jobs.
+The normal run_system.py entry point runs scanner, worker and web server as supervised threads in one process. Maintenance commands can still run them as separate processes. The scanner/worker retain their native ownership locks. On shutdown, intake stops and active conversion completes before the web server closes. Long OCR/model inference does not hold a SQLite transaction or block folder scanning. The worker has a separate heartbeat thread. The web server has eight request threads and at most two concurrent on-demand source renders; it never invokes OCR/model generation or claims jobs.
 
 Direct CLI conversion uses the same pipeline but bypasses intake, job history and managed publication. No second extraction implementation exists in the dashboard.
 

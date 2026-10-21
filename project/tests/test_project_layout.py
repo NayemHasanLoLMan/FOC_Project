@@ -27,18 +27,18 @@ class ProjectLayoutTests(unittest.TestCase):
                 self.assertEqual(set(names),{'foc-invoice/'+name for name in manifest['files']}|{'foc-invoice/BUILD_MANIFEST.json'})
                 for name,digest in manifest['files'].items():
                     self.assertEqual(hashlib.sha256(archive.read('foc-invoice/'+name)).hexdigest(),digest)
-                forbidden = {'tests','tools','examples','expected_outputs','reports','runtime','incoming','output','.venv','.cache','.git','__pycache__'}
+                forbidden = {'tests','tools','development','examples','expected_outputs','reports','runtime','incoming','output','.venv','.cache','.git','__pycache__'}
                 self.assertFalse(any(forbidden.intersection(Path(name).parts) for name in names))
                 for name in ENTRY_POINTS:
                     self.assertIn('foc-invoice/project/'+name,names)
-                for name in ('templates/BD_template.xlsx','docs/openapi.json','src/foc_extractor/dashboard_templates/detail.html',
-                             'src/foc_extractor/dashboard_static/dashboard.js','requirements-lock.txt'):
+                for name in ('templates/BD_template.xlsx','docs/openapi.json','frontend/templates/detail.html',
+                             'frontend/static/dashboard.js','requirements-lock.txt'):
                     self.assertIn('foc-invoice/project/'+name,names)
                 for name in names:
                     if not name.endswith('.py'):continue
                     for node in ast.walk(ast.parse(archive.read(name))):
                         imports = [node.module or ''] if isinstance(node,ast.ImportFrom) else [a.name for a in node.names] if isinstance(node,ast.Import) else []
-                        self.assertFalse(any(m.split('.')[0] in ('tests','tools') for m in imports),name)
+                        self.assertFalse(any(m.split('.')[0] in ('tests','tools','development') for m in imports),name)
 
     def test_build_refuses_to_replace_an_existing_artifact(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -49,10 +49,44 @@ class ProjectLayoutTests(unittest.TestCase):
 
     def test_legacy_comparison_imports_use_the_separated_implementation(self):
         from tools import compare_invoices as old
-        from tests.evaluation import compare_invoices as current
-        self.assertIs(old.read_invoice,current.read_invoice)
-        self.assertIs(old.compare,current.compare)
+        from development.analysis import compare_invoices as canonical
+        self.assertIs(old.read_invoice,canonical.read_invoice)
+        self.assertIs(old.compare,canonical.compare)
         self.assertEqual(old.ROOT,ROOT)
+
+    def test_postman_collection_covers_documented_routes(self):
+        collection = json.loads((ROOT/'development/postman/FOC-Invoice.postman_collection.json').read_text())
+        specification = json.loads((ROOT/'docs/openapi.json').read_text())
+        requests = [item['request'] for group in collection['item'] for item in group['item']]
+        routes = []
+        for request in requests:
+            self.assertEqual(request['method'],'GET')
+            route = request['url']['raw'].removeprefix('{{base_url}}')
+            route = re.sub(r'\{\{(\w+)\}\}',lambda m:'{'+('page' if m[1]=='pdf_page' else m[1])+'}',route)
+            routes.append(route)
+            documented = specification['paths'][route]['get'].get('parameters',[])
+            parameters = [specification['components']['parameters'][p['$ref'].split('/')[-1]] if '$ref' in p else p for p in documented]
+            self.assertEqual({p['name'] for p in parameters if p['in']=='query'},
+                             {p['key'] for p in request['url']['query']})
+        self.assertEqual(len(routes),len(set(routes)))
+        self.assertEqual(set(routes),set(specification['paths']))
+        variables = {v['key']:v['value'] for v in collection['variable']}
+        self.assertEqual(variables['base_url'],'http://127.0.0.1:8080')
+
+    def test_frontend_is_separate_with_compatible_static_urls(self):
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory)/'pipeline_config.json'
+            config_path.write_text((ROOT/'pipeline_config.json').read_text())
+            config = load_config(config_path)
+            JobStore(config.state_dir/'jobs.sqlite3')
+            app = create_app(config)
+            self.assertEqual(Path(app.template_folder),ROOT/'frontend/templates')
+            self.assertEqual(Path(app.static_folder),ROOT/'frontend/static')
+            with app.test_client() as client:
+                response = client.get('/dashboard_static/dashboard.js')
+                self.assertEqual(response.status_code,200)
+                self.assertEqual(response.data,(ROOT/'frontend/static/dashboard.js').read_bytes())
+                response.close()
 
     def test_openapi_matches_live_routes_and_all_references_resolve(self):
         specification = json.loads((ROOT/'docs/openapi.json').read_text())

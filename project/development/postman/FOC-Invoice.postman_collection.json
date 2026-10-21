@@ -1,0 +1,499 @@
+{
+  "info": {
+    "name": "FOC Invoice - Local read-only dashboard",
+    "description": "All 14 implemented GET routes. No processing or mutation APIs. Start run_dashboard.py first; configure existing IDs before document/image requests. Imported values contain no customer data.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8080",
+      "type": "string"
+    },
+    {
+      "key": "job_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "attempt_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "event_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "pdf_page",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "API",
+      "item": [
+        {
+          "name": "getStatus",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "status"
+              ],
+              "query": []
+            },
+            "description": "Queue counts, independent health, current progress and today totals.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful JSON response\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "getOllama",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ollama",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ollama"
+              ],
+              "query": []
+            },
+            "description": "Availability/model presence through bounded cached tags lookup; no generation.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful JSON response\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "getSystem",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/system",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "system"
+              ],
+              "query": []
+            },
+            "description": "Current configuration, versions, fingerprints and disk status.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful JSON response\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "listJobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/jobs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "jobs"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Literal substring of filename or recorded invoice number."
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Optional; enable before sending."
+                },
+                {
+                  "key": "date",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Extracted document date YYYY-MM-DD; not arrival date."
+                },
+                {
+                  "key": "issues",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter latest-attempt recorded issues."
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "Job-list page, 25 jobs per page."
+                }
+              ]
+            },
+            "description": "Latest-attempt job listing with literal search and pagination.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful JSON response\", function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "getJob",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/jobs/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "jobs",
+                "{{job_id}}"
+              ],
+              "query": [
+                {
+                  "key": "attempt",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Attempt belonging to this job; latest is selected when omitted."
+                },
+                {
+                  "key": "event_page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "Event-history page, 100 events per page."
+                }
+              ]
+            },
+            "description": "Selected attempt, verified extracted data, reading explanations and events.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": []
+        },
+        {
+          "name": "getJobStatus",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/jobs/{{job_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "jobs",
+                "{{job_id}}",
+                "status"
+              ],
+              "query": []
+            },
+            "description": "Small live status response for detail-page polling.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Documents and images",
+      "item": [
+        {
+          "name": "downloadSource",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/files/jobs/{{job_id}}/source",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "files",
+                "jobs",
+                "{{job_id}}",
+                "source"
+              ],
+              "query": []
+            },
+            "description": "Download the accepted immutable PDF snapshot as an attachment.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": []
+        },
+        {
+          "name": "downloadInvoice",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/files/attempts/{{attempt_id}}/invoice",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "files",
+                "attempts",
+                "{{attempt_id}}",
+                "invoice"
+              ],
+              "query": []
+            },
+            "description": "Download the recorded completed invoice after path/hash verification.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": []
+        },
+        {
+          "name": "getModelImage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/images/jobs/{{job_id}}/events/{{event_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "images",
+                "jobs",
+                "{{job_id}}",
+                "events",
+                "{{event_id}}"
+              ],
+              "query": []
+            },
+            "description": "Exact retained model-input PNG for a vision_request event.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": []
+        },
+        {
+          "name": "getSourcePreview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/images/jobs/{{job_id}}/pages/{{pdf_page}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "images",
+                "jobs",
+                "{{job_id}}",
+                "pages",
+                "{{pdf_page}}"
+              ],
+              "query": [
+                {
+                  "key": "event",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Optional event ID from this job/attempt to highlight."
+                }
+              ]
+            },
+            "description": "On-demand verified transformed source-page PNG, optionally highlighted.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard pages",
+      "item": [
+        {
+          "name": "overviewPage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [],
+              "query": []
+            },
+            "description": "Overview page.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": []
+        },
+        {
+          "name": "jobsPage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/jobs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Literal substring of filename or recorded invoice number."
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Optional; enable before sending."
+                },
+                {
+                  "key": "date",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Extracted document date YYYY-MM-DD; not arrival date."
+                },
+                {
+                  "key": "issues",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Filter latest-attempt recorded issues."
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "Job-list page, 25 jobs per page."
+                },
+                {
+                  "key": "partial",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Return only the escaped jobs table HTML for refresh."
+                }
+              ]
+            },
+            "description": "Searchable jobs page or table fragment.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": []
+        },
+        {
+          "name": "jobPage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/jobs/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs",
+                "{{job_id}}"
+              ],
+              "query": [
+                {
+                  "key": "attempt",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Attempt belonging to this job; latest is selected when omitted."
+                },
+                {
+                  "key": "event_page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "Event-history page, 100 events per page."
+                }
+              ]
+            },
+            "description": "User-friendly detail with optional technical records.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": []
+        },
+        {
+          "name": "systemPage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/system",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "system"
+              ],
+              "query": []
+            },
+            "description": "Read-only system page.\nRead-only. IDs must refer to existing local records; absent records/files return 404. See development/postman/README.md."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

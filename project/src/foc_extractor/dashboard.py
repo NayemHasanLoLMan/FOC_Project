@@ -319,7 +319,8 @@ class DashboardData:
 
 
 def create_app(config):
-    app = Flask(__name__, template_folder='dashboard_templates', static_folder='dashboard_static')
+    app = Flask(__name__, template_folder=str(ROOT/'frontend/templates'),
+                static_folder=str(ROOT/'frontend/static'), static_url_path='/dashboard_static')
     app.config.update(TRUSTED_HOSTS=['127.0.0.1', 'localhost'], MAX_CONTENT_LENGTH=1024)
     data = DashboardData(config)
     app.extensions['dashboard_data'] = data

@@ -8,12 +8,13 @@ The [continuous folder pipeline and admin dashboard checklist](docs/pipeline_das
 
 Start with the [documentation index](docs/README.md). It links setup, user guide, architecture, configuration, all CLI commands, HTTP/OpenAPI and Python references, data/evidence, testing, operations, and the full build/release procedure.
 
-Development evaluation now lives in tests/evaluation; the old tools commands still work. A production ZIP is built by tools/build_release.py and excludes all test/local data. See [structure](docs/project-structure.md) and [build](docs/build.md).
+Development evaluation lives in development/analysis; the old tools commands still work. A production ZIP is built by tools/build_release.py and excludes all test/local data. See [structure](docs/project-structure.md) and [build](docs/build.md).
 
 ## Project layout
 
 ```text
 project/
+  run_system.py              Start scanner, worker and dashboard together
   main.py                    Convert one PDF
   run_batch.py               Convert a folder of PDFs
   init_pipeline.py           Initialize empty pipeline state; no processing
@@ -39,14 +40,16 @@ project/
     queue_worker.py          Existing converter, restart recovery and safe publication
     processing_evidence.py   Optional events, exact model-input images and source previews
     dashboard.py             Read-only views, status and verified downloads
-    dashboard_templates/     Overview, history, evidence detail and system pages
-    dashboard_static/        Local CSS/JavaScript; no frontend build or CDN
+  frontend/templates/        Dashboard HTML; separate from backend
+  frontend/static/           Local CSS/JavaScript; no frontend build or CDN
+  development/analysis/      Comparison, output validation and print QA
+  development/postman/       Read-only API collection and local environment
   tools/
     build_release.py         Production ZIP builder (development only)
-    compare_invoices.py      Legacy forwarder to tests/evaluation
-    check_outputs.py         Legacy forwarder to tests/evaluation
-    export_print_samples.ps1 Legacy forwarder to tests/evaluation
-  tests/                     Unit tests; evaluation/ holds comparison/print QA
+    compare_invoices.py      Legacy analysis compatibility entry point
+    check_outputs.py         Legacy analysis compatibility entry point
+    export_print_samples.ps1 Legacy analysis compatibility entry point
+  tests/                     Automated regression tests
   examples/                  BD PDFs; india/ and jordan/ hold other samples
   expected_outputs/          Manual references; evaluation only
   templates/                 Blank BD, India and Jordan invoice templates
@@ -189,3 +192,13 @@ Weight images include the PDF's KG header and a single physical cell; the model 
 Requests allow 4,096 output tokens, an 8,192-token context and a two-hour timeout. Only completed structured answers are accepted. Cache keys include source-image pixels, model digest, prompt, schema and generation settings. Source coordinates/model provenance are retained in weight/package evidence; diagnostics stay outside the printed invoice. When Ollama is unavailable, supported OCR results remain usable and unresolved fields stay empty. The model must still be available to establish its digest when reusing responses.
 
 The first uncached readings are slow on this CPU; better hardware remains a productivity improvement to benchmark later. Cached responses avoid repeating model generation. [Integration QA and current limitations](reports/local_vision_integration_20261020/RESULTS.md) distinguish field completeness, source agreement and reference agreement. Development test results do not guarantee unseen-handwriting accuracy.
+
+See [safe deployment boundaries](docs/deployment-boundaries.md) and [Postman usage](development/postman/README.md).
+
+## Start everything
+
+~~~powershell
+project/.venv/Scripts/python.exe project/run_system.py
+~~~
+
+Open http://127.0.0.1:8080/. Drop PDFs in project/incoming and find invoices in project/output. Ctrl+C stops intake and waits for the current invoice before exiting. See [operations](docs/operations.md) for custom configuration and maintenance commands.

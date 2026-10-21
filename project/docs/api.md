@@ -91,3 +91,7 @@ Invoke-WebRequest http://127.0.0.1:8080/files/attempts/12/invoice -OutFile C:/sh
 ~~~
 
 IDs 12/5188 above illustrate the development demo; discover real IDs from /api/jobs and /api/jobs/{job_id}. GET examples do not create processing work. [CLI](cli.md) and [Python](code-reference.md) interfaces are documented separately.
+
+## Postman
+
+Import the [collection](../development/postman/FOC-Invoice.postman_collection.json) and [local environment](../development/postman/Local.postman_environment.json). See [usage and ID selection](../development/postman/README.md). These development files are not shipped in the production ZIP; OpenAPI remains included.

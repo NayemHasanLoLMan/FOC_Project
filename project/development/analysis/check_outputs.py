@@ -4,7 +4,7 @@ from pathlib import Path
 import openpyxl,pymupdf
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT))
-from tests.evaluation.compare_invoices import read_invoice
+from development.analysis.compare_invoices import read_invoice
 records=[]
 files=sorted(p for p in (ROOT/'output').glob('*.xlsx') if not p.name.startswith('~$'))
 if not files:raise SystemExit('No sample invoices found in project/output')

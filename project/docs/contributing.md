@@ -7,9 +7,9 @@ Use the smallest shared change that addresses a demonstrated problem:
 3. Prefer the standard library, native platform feature or installed dependency.
 4. Add the minimum clear logic and a small meaningful test.
 
-Production code stays in src/foc_extractor and the six CLI entry points. Unit/evaluation code stays under tests; release/development tooling stays under tools. Production must not import tests/tools, manual references or generated reports.
+Backend code stays in src/foc_extractor and the seven CLI entry points; frontend assets stay in frontend/. Unit tests stay under tests; analysis and Postman files stay under development; release tooling stays under tools. Production must not import tests/tools/development, manual references or generated reports.
 
-Before editing a shared function, search every caller. Preserve direct, batch, worker and dashboard contracts. New route parameters and response changes must update api.md/openapi.json and route-coverage tests. Add documentation to docs/README.md rather than scattering current instructions through historical reports.
+Before editing a shared function, search every caller. Preserve direct, batch, worker and dashboard contracts. New route parameters and response changes must update api.md/openapi.json, the development/postman collection and route-coverage tests. Add documentation to docs/README.md rather than scattering current instructions through historical reports.
 
 Use explicit temporary directories for tests. Preserve canonical PDFs/manual references/templates. Never use an expected invoice as runtime lookup, add shipment-ID answers, infer missing package counts from weight, or print human-intervention wording onto invoices. Source-grounded extraction and approved rates remain the rules.
 

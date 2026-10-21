@@ -2,24 +2,33 @@
 
 ## Daily start
 
-Use one approved configuration for all components. Keep Ollama available under the same account when vision is enabled. Initialize/migrate state before the dashboard:
+Start the entire invoice system from the repository/release root:
 
 ~~~powershell
-project/.venv/Scripts/python.exe project/init_pipeline.py
-project/.venv/Scripts/python.exe project/scan_incoming.py
-project/.venv/Scripts/python.exe project/run_worker.py
-project/.venv/Scripts/python.exe project/run_dashboard.py
+project/.venv/Scripts/python.exe project/run_system.py
 ~~~
 
-The three long-running commands belong in separate terminals. For a custom configuration, supply the same --config path to all four commands. Opening/closing the web page never starts/stops the scanner or worker.
+Open http://127.0.0.1:8080/. One Python process runs the folder scanner, extraction worker and dashboard on separate threads, using one configuration. It initializes/migrates the queue and creates a missing inbox. Drop completed PDFs into project/incoming; invoices appear in project/output. Existing data is preserved. The browser may be closed without stopping processing.
+
+For custom paths/port:
+
+~~~powershell
+project/.venv/Scripts/python.exe project/run_system.py --config C:/shipments/pipeline_config.json --port 8081
+~~~
+
+Keep the installed Ollama service available when local vision is enabled. Models and Python dependencies must be installed before first use; the launcher does not install or download them. Do not run another scanner/worker against the same state, or another web server on the same port. Conflicts fail startup rather than taking over existing owners.
+
+The separate init_pipeline.py, scan_incoming.py, run_worker.py and run_dashboard.py commands remain available for maintenance or independently managed deployments; they are no longer necessary for normal startup. run_dashboard.py starts only the web interface.
 
 No Windows Service or Task Scheduler installation is provided yet. Processes do not automatically start after reboot. The PC must remain awake.
 
 ## Stop and restart
 
-Stop scanner first to stop new intake. Ctrl+C on the worker requests shutdown after its current conversion finishes; keep the terminal alive while it completes. Stop dashboard last. Do not terminate the user's Excel or Ollama to stop this application.
+Press Ctrl+C once in the run_system.py terminal. It stops intake and requests worker shutdown, waits for the current invoice to finish, then closes the web server and releases ownership locks. Long model calls may delay shutdown through the existing two-hour timeout; keep the terminal open. A component failure stops the combined system with a nonzero exit; an ordinary failed PDF remains recorded without stopping the whole queue.
 
-If the worker must be terminated externally, restart through run_worker.py with the same state/configuration. The native lock proves the prior managed owner exited. Prepared workbooks are reused; unprepared attempts are interrupted and can replay from source/cache. Three interrupted attempts mark the job failed. Do not delete lock files or manually change ownership rows to bypass a live process.
+For independently launched maintenance components, stop scanner first, let the worker finish, and stop dashboard last. Do not terminate the user's Excel or Ollama to stop this application.
+
+If the worker must be terminated externally, restart through run_system.py (or the maintenance run_worker.py command) with the same state/configuration. The native lock proves the prior managed owner exited. Prepared workbooks are reused; unprepared attempts are interrupted and can replay from source/cache. Three interrupted attempts mark the job failed. Do not delete lock files or manually change ownership rows to bypass a live process.
 
 Changed application files require a worker restart before it claims another PDF. Stop/edit/validate/restart rather than modifying production code mid-conversion.
 

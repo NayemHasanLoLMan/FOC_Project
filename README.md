@@ -8,12 +8,12 @@ The application lives in **[project](project/README.md)**. It converts shipment 
 - [HTTP API](project/docs/api.md) · [OpenAPI JSON](project/docs/openapi.json) · [Python reference](project/docs/code-reference.md)
 - [Build and release](project/docs/build.md) · [Operations](project/docs/operations.md) · [Testing](project/docs/testing.md)
 
-Production code is in project/src/foc_extractor and the production CLI scripts. Test/evaluation implementations are under project/tests. Canonical sample/reference paths remain compatible; production bundles exclude tests, fixtures, reports, generated data, caches and environments.
+Production code is in project/src/foc_extractor and the production CLI scripts. Frontend assets are in project/frontend. Unit tests are in project/tests; analysis and Postman files are in project/development. Canonical sample/reference paths remain compatible; production bundles exclude tests, fixtures, reports, generated data, caches and environments.
 
 From this repository root:
 
 ~~~powershell
-project/.venv/Scripts/python.exe project/run_dashboard.py
+project/.venv/Scripts/python.exe project/run_system.py
 ~~~
 
-The dashboard needs initialized state and does not start the scanner/worker. See setup/operations for the three-process workflow. BD is the validated development scope; production never reads manual expected invoices. Admin controls and unattended startup remain later stages.
+This single command initializes state and starts scanner, worker and dashboard together. Open http://127.0.0.1:8080/ and drop PDFs into project/incoming. Ctrl+C waits for the current invoice before shutting down. BD is the validated development scope; production never reads manual expected invoices. Admin controls and unattended startup remain later stages.

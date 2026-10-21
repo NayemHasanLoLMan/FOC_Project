@@ -2,13 +2,13 @@
 
 ## Automatic folder processing
 
-1. Start the configured scanner, worker and dashboard; an administrator can use the [operations commands](operations.md).
+1. Run project/.venv/Scripts/python.exe project/run_system.py and open http://127.0.0.1:8080/; see [operations](operations.md).
 2. Place a completed PDF in the configured incoming folder. Prefer copying to a temporary filename and renaming it to .pdf after the copy finishes.
 3. The scanner waits for stable observations, checks the PDF and queues an immutable copy.
 4. The worker creates its Excel invoice using the shared template. The dashboard shows progress and the saved result.
 5. Download the invoice from job detail or use the configured output folder.
 
-The PC must be awake. The current version requires manually launched processes; automatic Windows startup is a later stage. The incoming folder is not watched recursively.
+The PC must be awake. The current version requires one manually launched Python command; automatic Windows startup is a later stage. The incoming folder is not watched recursively.
 
 ## Understand the dashboard
 

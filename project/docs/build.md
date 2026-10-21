@@ -4,7 +4,7 @@
 
 This Python application has no frontend compilation, container, native installer or single-file executable. The supported build is a **production source ZIP** with an SHA-256 manifest. It preserves the existing command layout and runs with a separately installed Python environment, dependencies and local model files.
 
-Build tooling is development-only. Use a development checkout to test/build; an extracted production bundle does not include tests/tools/fixtures. No paid/cloud service is needed for generation.
+Build tooling is development-only. Use a development checkout to test/build; an extracted production bundle does not include tests/tools/development/fixtures. No paid/cloud service is needed for generation.
 
 ## Validate the source checkout
 
@@ -13,8 +13,8 @@ From the repository root:
 ~~~powershell
 project/.venv/Scripts/python.exe -m pip check
 project/.venv/Scripts/python.exe -m unittest discover -s project/tests -q
-project/.venv/Scripts/python.exe project/tests/evaluation/compare_invoices.py
-project/.venv/Scripts/python.exe project/tests/evaluation/check_outputs.py
+project/.venv/Scripts/python.exe project/development/analysis/compare_invoices.py
+project/.venv/Scripts/python.exe project/development/analysis/check_outputs.py
 ~~~
 
 The last two require existing development outputs. Generate them in an isolated QA run if necessary; do not overwrite production invoices to run a release check. Also run the real-PDF/print/unseen acceptance appropriate to the change. Syntax/help smoke tests alone do not establish OCR accuracy.
@@ -32,7 +32,7 @@ project/.venv/Scripts/python.exe project/tools/build_release.py --output project
 Get-FileHash project/dist/foc-invoice-next.zip -Algorithm SHA256
 ~~~
 
-The explicit allowlist contains the root/project README, six production CLI files, production .py/.html/.css/.js files, blank .xlsx templates, current configuration/rates, requirements/lock and .md/.json documentation. It excludes tests, tools, test PDFs, manual expected workbooks, reports, runtime databases/artifacts, incoming/output, caches, models, .venv, .git, secrets and bytecode.
+The explicit allowlist contains the root/project README, seven production CLI files, backend src/**/*.py and frontend HTML/CSS/JavaScript files, blank .xlsx templates, current configuration/rates, requirements/lock and .md/.json documentation. It excludes tests, tools, development, test PDFs, manual expected workbooks, reports, runtime databases/artifacts, incoming/output, caches, models, .venv, .git, secrets and bytecode.
 
 Archive layout begins foc-invoice/project/. BUILD_MANIFEST.json at foc-invoice/ records application/version/build format and every packaged file's relative path/hash. The manifest does not hash itself. Source file bytes are preserved. The ZIP is not signed, not a dependency installer and not a byte-for-byte reproducible-build claim.
 

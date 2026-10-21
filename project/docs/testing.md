@@ -1,14 +1,14 @@
 # Testing and evaluation
 
-All automated tests are in tests/test_*.py. Evaluation implementations live under tests/evaluation/. The project/tools evaluation files remain forwarding entry points so established commands/imports continue to work.
+All automated tests are in tests/test_*.py. Evaluation implementations live under development/analysis/. The project/tools evaluation files remain forwarding entry points so established commands/imports continue to work.
 
 ## Commands
 
 ~~~powershell
 project/.venv/Scripts/python.exe -m unittest discover -s project/tests -q
 project/.venv/Scripts/python.exe -m unittest discover -s project/tests -p test_dashboard.py -v
-project/.venv/Scripts/python.exe project/tests/evaluation/compare_invoices.py
-project/.venv/Scripts/python.exe project/tests/evaluation/check_outputs.py
+project/.venv/Scripts/python.exe project/development/analysis/compare_invoices.py
+project/.venv/Scripts/python.exe project/development/analysis/check_outputs.py
 ~~~
 
 compare_invoices.py accepts --output-dir, --expected-dir, --report-dir and optional --baseline-dir. Defaults preserve project/output, expected_outputs and reports. It reads invoice values rather than trusting audit rows. Comparison writes accuracy.json/accuracy.md under the report directory, not the invoices.
@@ -18,7 +18,7 @@ check_outputs.py checks the canonical development outputs against examples and t
 For optional native Excel print QA:
 
 ~~~powershell
-& project/tests/evaluation/export_print_samples.ps1 -Invoices project/output/26S5166-I.xlsx,project/output/26S5193-I.xlsx
+& project/development/analysis/export_print_samples.ps1 -Invoices project/output/26S5166-I.xlsx,project/output/26S5193-I.xlsx
 ~~~
 
 The script starts its own hidden Excel instance, opens workbooks read-only, exports the first worksheet to PDF and closes that instance. It requires Windows and installed Excel; it does not close the user's existing Excel application. Default PDFs go to project/reports/print_check.

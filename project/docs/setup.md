@@ -46,7 +46,7 @@ project/.venv/Scripts/python.exe project/run_worker.py --once
 
 Use an empty inbox for this smoke test. Initialization creates/migrates state but does not start processing. The one-shot worker may process a queued job if one exists.
 
-Start scanner, worker and dashboard in three terminals using the commands in [operations](operations.md). All must use the same configuration. The dashboard does not start the other two components.
+For normal use, run project/.venv/Scripts/python.exe project/run_system.py. It initializes state and starts scanner, worker and dashboard together; see [operations](operations.md). The one-shot commands above are optional maintenance checks, not required startup steps.
 
 ## First real document / offline readiness
 

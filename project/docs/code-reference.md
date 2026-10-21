@@ -21,8 +21,9 @@ Imports use src.foc_extractor with project/ on sys.path; the existing CLI script
 | process_lock.py | process_lock context manager; native process ownership released by OS |
 | queue_worker.py | QueueWorker context manager/run_once; verification, preparation, save retry and crash reconciliation |
 | processing_evidence.py | Optional observations, EvidenceRecorder, model_image and page_preview |
+| system_runner.py | run_system; shared configuration, ownership, scanner/worker/web lifecycle and graceful shutdown |
 | dashboard.py | create_app and DashboardData; read-only view model, local HTTP routes and user-facing summaries |
-| dashboard_templates / dashboard_static | Jinja pages and local CSS/JavaScript; no extraction logic |
+| frontend/templates / frontend/static (outside backend package) | Jinja pages and local CSS/JavaScript; no extraction logic |
 
 ## Shared conversion API
 

@@ -7,13 +7,13 @@ from pathlib import Path
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-ENTRY_POINTS = ('main.py', 'run_batch.py', 'init_pipeline.py', 'scan_incoming.py', 'run_worker.py', 'run_dashboard.py')
+ENTRY_POINTS = ('run_system.py', 'main.py', 'run_batch.py', 'init_pipeline.py', 'scan_incoming.py', 'run_worker.py', 'run_dashboard.py')
 
 
 def release_files(root=ROOT):
     fixed = [root.parent/'README.md', root/'README.md', root/'requirements.txt', root/'requirements-lock.txt',
              root/'pipeline_config.json', root/'valuation_rates.json', *(root/name for name in ENTRY_POINTS)]
-    selected = fixed + [p for folder, suffixes in [('src', {'.py','.html','.css','.js'}),
+    selected = fixed + [p for folder, suffixes in [('src', {'.py'}), ('frontend', {'.html','.css','.js'}),
                                                   ('templates',{'.xlsx'}), ('docs',{'.md','.json'})]
                         for p in (root/folder).rglob('*') if p.is_file() and p.suffix in suffixes and '__pycache__' not in p.parts]
     for path in selected:

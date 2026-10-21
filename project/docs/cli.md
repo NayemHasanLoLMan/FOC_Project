@@ -1,9 +1,10 @@
 # Command-line reference
 
-Run from the repository/release root using project/.venv/Scripts/python.exe. --help is supported by the six production commands. Paths below are relative to project unless noted.
+Run from the repository/release root using project/.venv/Scripts/python.exe. --help is supported by the seven production commands. Paths below are relative to project unless noted.
 
 | Script | Purpose / options |
 |---|---|
+| run_system.py | Entire system: initialize state, scan PDFs, process invoices and serve dashboard; --config, --port (default 8080) |
 | main.py | One PDF; required --pdf PATH. Optional --template, --output-dir, --cache-dir, --save-json, --max-pages, --local-model, --no-local-vision |
 | run_batch.py | Each top-level *.pdf in --input-dir; optional --output-dir, --cache-dir, --max-pages, --local-model, --no-local-vision |
 | init_pipeline.py | Validate --config and create/migrate durable state; never starts extraction |
@@ -32,10 +33,12 @@ project/.venv/Scripts/python.exe project/run_worker.py --config C:/shipments/pip
 project/.venv/Scripts/python.exe project/run_dashboard.py --config C:/shipments/pipeline_config.json --port 8081
 ~~~
 
-Defaults for the four managed commands select project/pipeline_config.json regardless of current directory. A custom file must provide all six keys. The dashboard requires an initialized schema-3 database and never migrates it.
+Defaults for the five managed commands select project/pipeline_config.json regardless of current directory. A custom file must provide all six keys. The dashboard requires an initialized schema-3 database and never migrates it.
 
 ## Exit and output conventions
 
 Successful one-shot commands normally return 0. Argument validation uses argparse code 2. Batch reports each written/failed source and exits 1 if any source failed. A direct conversion prints its output path; an uncaught conversion/configuration error exits nonzero. Scanner/worker print JSON lifecycle/count status, while underlying OCR/model diagnostics can also appear on stdout; do not treat the whole stream as one JSON document.
 
 Development commands are documented in [testing](testing.md) and [build](build.md). They are not included in production archives.
+
+run_system.py is the normal entry point. Ctrl+C waits for active processing before exiting. A port/ownership conflict or component failure exits nonzero; PDF-level failures remain in job history. It does not start a Windows service or install/download OCR/Ollama dependencies.
