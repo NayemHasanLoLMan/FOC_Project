@@ -37,6 +37,14 @@
       "key": "csrf_token",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "incoming_dir",
+      "value": ""
+    },
+    {
+      "key": "output_dir",
+      "value": ""
     }
   ],
   "item": [
@@ -808,6 +816,122 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"request_id\": \"{{$guid}}\",\n  \"attempt_id\": {{attempt_id}},\n  \"changes\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Invoice preview and development tools",
+      "item": [
+        {
+          "name": "Preview invoice worksheet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/invoices/attempts/{{attempt_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "invoices",
+                "attempts",
+                "{{attempt_id}}"
+              ],
+              "query": []
+            },
+            "description": "Read-only local preview; formulas are not recalculated."
+          },
+          "response": []
+        },
+        {
+          "name": "Clear workspace data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrf_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/development/reset",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "development",
+                "reset"
+              ],
+              "query": []
+            },
+            "description": "Clears current workspace jobs and archives generated invoices/evidence. Available on the main coordinated launcher at port 8080 and isolated development launcher. Inputs, templates, settings and caches are preserved. Remaining inbox PDFs are automatically rediscovered and processing resumes after clearing. Use only when you intend to clear the current history and regenerate invoices; busy operations return 409.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{$guid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Processing settings",
+      "item": [
+        {
+          "name": "Save processing settings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrf_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "settings"
+              ],
+              "query": []
+            },
+            "description": "Save while scanner/worker are idle. Set incoming_dir/output_dir collection variables to dedicated full absolute paths first. Settings persist across restarts; existing files are not moved. CSRF and Origin protection required.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": \"{{$guid}}\",\n  \"changes\": {\n    \"local_model\": \"qwen3-vl:latest\",\n    \"scan_interval_seconds\": 5,\n    \"vision_output_tokens\": 4096,\n    \"vision_context_tokens\": 8192,\n    \"vision_timeout_seconds\": 7200,\n    \"incoming_dir\": \"{{incoming_dir}}\",\n    \"output_dir\": \"{{output_dir}}\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"

@@ -17,10 +17,16 @@ def main():
     mode.add_argument('--startup', choices=['install','start','stop','status','uninstall'],
                       help='Manage the current-user Windows sign-in task')
     mode.add_argument('--background', action='store_true', help='Run hidden with rotated logs and graceful stop control')
+    mode.add_argument('--development', action='store_true', help='Use an isolated test workspace with recoverable Clear data tools')
     args = parser.parse_args()
     if not 1 <= args.port <= 65535:
         parser.error('port must be between 1 and 65535')
     config = load_config(args.config)
+    if args.development:
+        if args.config.resolve() != (ROOT/'pipeline_config.json').resolve():
+            parser.error('--development uses its own isolated workspace; do not pass --config')
+        from src.foc_extractor.development_reset import development_config
+        config = development_config(config)
     if args.startup:
         from src.foc_extractor.windows_startup import manage_startup
         print(json.dumps(manage_startup(args.startup,config,args.config,args.port),indent=2))
@@ -42,7 +48,7 @@ def main():
             with background_runtime(config,stop):
                 run_system(config,args.port,stop)
         else:
-            run_system(config, args.port, stop)
+            run_system(config, args.port, stop, development=args.development)
     finally:
         for number, handler in previous.items():
             signal.signal(number, handler)

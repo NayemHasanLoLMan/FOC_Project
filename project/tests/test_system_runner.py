@@ -143,6 +143,57 @@ class SystemRunnerTests(unittest.TestCase):
         calls = server.mock_calls
         self.assertLess(calls.index(call.task_dispatcher.shutdown()),calls.index(call.close()))
 
+    def test_main_coordinator_enables_clear_callback_without_development_mode(self):
+        from unittest.mock import MagicMock
+        from src.foc_extractor import development_reset
+        self.stop.set()
+        with patch.object(development_reset,'validate_workspace'), patch.object(development_reset,'clear_workspace') as clear, \
+             patch.object(system_runner,'create_app',return_value=MagicMock()) as app, \
+             patch.object(system_runner,'create_server',return_value=MagicMock()):
+            system_runner.run_system(self.config,port=0,stop=self.stop)
+            self.assertFalse(app.call_args.kwargs['development_mode'])
+            app.call_args.kwargs['development_reset']('test-request')
+            self.assertEqual(clear.call_args.args[0],self.config)
+            self.assertEqual(clear.call_args.args[3],'test-request')
+            self.assertFalse(clear.call_args.kwargs['development'])
+
+    def test_saved_folders_apply_to_live_scanner_worker_and_survive_reload(self):
+        import urllib.request
+        import urllib.error
+        from uuid import uuid4
+        from src.foc_extractor.runtime_settings import editable_settings,load_runtime_settings
+        self.root=self.root.resolve()
+        servers=[];create=system_runner.create_server
+        def capture(*args,**kwargs):
+            server=create(*args,**kwargs);servers.append(server);return server
+        with patch.object(system_runner,'create_server',side_effect=capture),patch.object(queue_worker,'run',side_effect=self.convert):
+            self.start()
+            self.wait_for(lambda:servers and len(JobStore(self.config.state_dir/'jobs.sqlite3').components())==2)
+            base='http://127.0.0.1:'+str(servers[0].effective_port)
+            with urllib.request.urlopen(base+'/api/controls') as response:token=json.load(response)['csrf_token']
+            changes={**editable_settings(self.config),'incoming_dir':str(self.root/'new-incoming'),'output_dir':str(self.root/'new-output'),
+                     'vision_output_tokens':1024,'vision_context_tokens':2048,'vision_timeout_seconds':99}
+            payload=json.dumps({'request_id':str(uuid4()),'changes':changes}).encode()
+            def save():
+                request=urllib.request.Request(base+'/api/settings',data=payload,headers={'Origin':base,'X-CSRF-Token':token,'Content-Type':'application/json'})
+                try:
+                    with urllib.request.urlopen(request) as response:return response.status==200
+                except urllib.error.HTTPError as error:
+                    if error.code!=409:raise
+                    return False
+            self.wait_for(save)
+            with urllib.request.urlopen(base+'/api/system') as response:self.assertEqual(json.load(response)['settings'],changes)
+            source=Path(changes['incoming_dir'])/'new.pdf'
+            with pymupdf.open() as document:
+                document.new_page().insert_text((40,40),'NEW INBOX');document.save(source)
+            store=JobStore(self.config.state_dir/'jobs.sqlite3')
+            self.wait_for(lambda:store.counts()['completed']==1)
+            self.assertEqual(len(list(Path(changes['output_dir']).glob('*.xlsx'))),1)
+            self.assertFalse(self.config.output_dir.exists() and list(self.config.output_dir.glob('*.xlsx')))
+            self.finish()
+        self.assertEqual(self.errors,[])
+        self.assertEqual(editable_settings(load_runtime_settings(self.config)),changes)
+
 
 if __name__=='__main__':
     unittest.main()

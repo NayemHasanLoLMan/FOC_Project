@@ -199,6 +199,26 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(probe.call_args.kwargs['timeout'],2)
         self.assertTrue(probe.call_args.args[0].endswith('/api/tags'))
 
+    def test_installed_model_list_is_available_even_with_vision_disabled(self):
+        from dataclasses import replace
+        self.app.extensions['dashboard_data'].config=replace(self.config,local_model=None)
+        response=unittest.mock.MagicMock()
+        response.__enter__.return_value.read.return_value=json.dumps({'models':[
+            {'name':'z-model:latest','digest':'z'},{'name':'a-model:latest','digest':'a'},
+            {'name':'a-model:latest','digest':'a'}]}).encode()
+        with patch.object(dashboard.urllib.request,'urlopen',return_value=response):
+            result=self.client.get('/api/ollama').get_json()
+        self.assertEqual(result['state'],'disabled')
+        self.assertEqual(result['models'],['a-model:latest','z-model:latest'])
+        self.assertTrue(result['model_list_available'])
+
+    def test_model_list_failure_keeps_configured_model(self):
+        with patch.object(dashboard.urllib.request,'urlopen',side_effect=OSError('Offline')):
+            result=self.client.get('/api/ollama').get_json()
+        self.assertEqual(result['model'],self.config.local_model)
+        self.assertEqual(result['models'],[])
+        self.assertFalse(result['model_list_available'])
+
     def test_output_tampering_and_outside_paths_are_not_served(self):
         attempt = self.complete()
         path = Path(self.store.get_attempt(attempt)['output_path'])

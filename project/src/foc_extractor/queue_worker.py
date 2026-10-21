@@ -249,9 +249,11 @@ class QueueWorker:
                     unresolved.append('goods')
                 observer({'kind':'invoice_evidence','vision_contributions':[], 'unresolved_fields':unresolved})
             else:
-                workbook = Path(run(source, template=ROOT / 'templates/BD_template.xlsx', output_dir=folder,
-                                    save_json=True, cache_dir=ROOT / '.cache/ocr', local_model=self.config.local_model,
-                                    observer=observer)).resolve()
+                from .local_vision import vision_limits
+                with vision_limits(self.config):
+                    workbook = Path(run(source, template=ROOT / 'templates/BD_template.xlsx', output_dir=folder,
+                                        save_json=True, cache_dir=ROOT / '.cache/ocr', local_model=self.config.local_model,
+                                        observer=observer)).resolve()
             if workbook.parent != folder or workbook.suffix.lower() != '.xlsx':
                 raise ValueError('Converter returned an unexpected output path')
             data_path = folder / f'{source.stem}.json'

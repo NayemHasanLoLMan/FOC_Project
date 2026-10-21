@@ -1,10 +1,11 @@
 """Configuration for the future folder worker; loading it has no side effects."""
-from dataclasses import asdict, dataclass, fields
+from dataclasses import MISSING, asdict, dataclass, fields
 import hashlib
 import json
 import math
 from pathlib import Path
 import platform
+from threading import TIMEOUT_MAX
 
 from . import __version__
 
@@ -29,6 +30,9 @@ class PipelineConfig:
     artifact_dir: Path
     scan_interval_seconds: float
     local_model: str | None
+    vision_output_tokens: int = 4096
+    vision_context_tokens: int = 8192
+    vision_timeout_seconds: int = 7200
 
     def to_dict(self):
         return {key: str(value) if isinstance(value, Path) else value
@@ -38,15 +42,20 @@ class PipelineConfig:
 def load_config(path: Path = ROOT / 'pipeline_config.json') -> PipelineConfig:
     path = Path(path).resolve()
     raw = json.loads(path.read_text(encoding='utf-8'))
+    return parse_config(raw,path.parent)
+
+
+def parse_config(raw, base: Path) -> PipelineConfig:
     expected = {field.name for field in fields(PipelineConfig)}
-    if not isinstance(raw, dict) or set(raw) != expected:
-        raise ValueError('Configuration must contain exactly: ' + ', '.join(sorted(expected)))
+    required = {field.name for field in fields(PipelineConfig) if field.default is MISSING}
+    if not isinstance(raw, dict) or not required <= set(raw) or set(raw)-expected:
+        raise ValueError('Configuration has missing or unknown fields')
     directories = {}
     for key in ('incoming_dir', 'output_dir', 'state_dir', 'artifact_dir'):
         value = raw[key]
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f'{key} must be a nonempty directory path')
-        directories[key] = (path.parent / value).resolve()
+        directories[key] = (base / value).resolve()
         if directories[key].exists() and not directories[key].is_dir():
             raise ValueError(f'{key} points to a file')
     paths = list(directories.values())
@@ -55,12 +64,18 @@ def load_config(path: Path = ROOT / 'pipeline_config.json') -> PipelineConfig:
             if first == second or first in second.parents or second in first.parents:
                 raise ValueError('Incoming, output, state and artifact directories must not overlap')
     interval = raw['scan_interval_seconds']
-    if type(interval) not in (int, float) or not math.isfinite(interval) or interval <= 0:
-        raise ValueError('scan_interval_seconds must be a finite positive number')
+    if type(interval) not in (int, float) or not math.isfinite(interval) or not 0 < interval <= TIMEOUT_MAX:
+        raise ValueError('scan_interval_seconds must be positive and within the platform timer limit')
     model = raw['local_model']
     if model is not None and (not isinstance(model, str) or not model.strip()):
         raise ValueError('local_model must be a nonempty model name or null for OCR-only')
-    return PipelineConfig(**directories, scan_interval_seconds=interval, local_model=model)
+    vision={field.name:raw.get(field.name,field.default) for field in fields(PipelineConfig) if field.name.startswith('vision_')}
+    for key,value in vision.items():
+        if type(value) is not int or not 1 <= value <= 2147483647:
+            raise ValueError(f'{key} must be a positive whole number')
+    if vision['vision_output_tokens'] > vision['vision_context_tokens']:
+        raise ValueError('Vision context must be at least as large as the output token limit')
+    return PipelineConfig(**directories, scan_interval_seconds=interval, local_model=model, **vision)
 
 
 def attempt_metadata(config: PipelineConfig) -> dict:

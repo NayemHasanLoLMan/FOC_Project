@@ -10,6 +10,7 @@ import shutil
 import secrets
 from uuid import UUID
 from .invoice_edits import EDIT_FIELDS, validate_changes, edited_data
+from .invoice_preview import invoice_sheet
 import threading
 import time
 import urllib.request
@@ -124,7 +125,7 @@ def _file_bytes(path, root, digest):
     return content
 
 
-def _prepared(job, attempt, kind):
+def _prepared(job, attempt, kind, *, with_name=False):
     base = Path(attempt['metadata']['configuration']['artifact_dir'])
     folder = base / 'jobs' / str(job['id']) / f"attempt-{attempt['id']}"
     receipt = folder / 'ready.json'
@@ -145,7 +146,8 @@ def _prepared(job, attempt, kind):
             raise ValueError('Invoice is outside its recorded output folder')
     else:
         root, path = folder, folder / name
-    return _file_bytes(path, root, ready[key+'_sha256'])
+    content = _file_bytes(path, root, ready[key+'_sha256'])
+    return (content,name) if with_name else content
 
 
 def _public(value):
@@ -243,19 +245,20 @@ class DashboardData:
                                   for r in intakes if r['state'] in ('rejected', 'waiting_for_file') and r['error']][-10:]}
 
     def ollama(self):
-        if self.config.local_model is None:
-            return {'state': 'disabled', 'model': None}
         with self._ollama_lock:
             if self._ollama is not None and time.monotonic()-self._ollama_checked < 10:
                 return self._ollama
             try:
                 with urllib.request.urlopen('http://127.0.0.1:11434/api/tags', timeout=2) as response:
                     models = json.load(response)['models']
-                installed = next((m for m in models if m['name'] in (self.config.local_model, self.config.local_model+':latest')), None)
-                result = {'state': 'available' if installed else 'model_missing', 'model': self.config.local_model,
-                          'digest': installed['digest'] if installed else None}
+                names=sorted({m['name'] for m in models if isinstance(m['name'],str) and m['name']})
+                model=self.config.local_model
+                installed = next((m for m in models if model and m['name'] in (model,model+':latest')), None)
+                result = {'state': 'disabled' if model is None else 'available' if installed else 'model_missing', 'model': model,
+                          'digest': installed['digest'] if installed else None, 'models':names, 'model_list_available':True}
             except (OSError, ValueError, KeyError, TypeError):
-                result = {'state': 'unavailable', 'model': self.config.local_model}
+                result = {'state': 'disabled' if self.config.local_model is None else 'unavailable', 'model': self.config.local_model,
+                          'models':[], 'model_list_available':False}
             self._ollama_checked = time.monotonic()
             self._ollama = {**result, 'checked_at': datetime.now(timezone.utc).isoformat()}
             return self._ollama
@@ -280,7 +283,8 @@ class DashboardData:
         return {'folders': folders, 'versions': versions, 'application_version': __version__,
                 'python': platform.python_version(), 'platform': platform.platform(),
                 'template': str(ROOT/'templates/BD_template.xlsx'), 'fingerprints': attempt_metadata(self.config),
-                'model': self.config.local_model, 'model_defaults': {'num_predict':4096, 'num_ctx':8192, 'timeout_seconds':7200},
+                'model': self.config.local_model, 'model_defaults': {'num_predict':self.config.vision_output_tokens, 'num_ctx':self.config.vision_context_tokens, 'timeout_seconds':self.config.vision_timeout_seconds},
+                'settings': {key:self.config.to_dict()[key] for key in ('local_model','scan_interval_seconds','vision_output_tokens','vision_context_tokens','vision_timeout_seconds','incoming_dir','output_dir')},
                 'scan_interval_seconds': self.config.scan_interval_seconds}
 
     def detail(self, job_id, attempt_id=None, event_page=1):
@@ -337,7 +341,7 @@ class DashboardData:
                 'event_page':event_page, 'event_pages':max(1,(len(events)+99)//100)}
 
 
-def create_app(config):
+def create_app(config, *, development_reset=None, development_mode=False, update_settings=None):
     app = Flask(__name__, template_folder=str(ROOT/'frontend/templates'),
                 static_folder=str(ROOT/'frontend/static'), static_url_path='/dashboard_static')
     app.config.update(TRUSTED_HOSTS=['127.0.0.1', 'localhost'], MAX_CONTENT_LENGTH=65536)
@@ -351,7 +355,7 @@ def create_app(config):
 
     @app.context_processor
     def control_context():
-        return {'csrf_token': csrf_token}
+        return {'csrf_token': csrf_token, 'development_mode':development_mode, 'reset_available':development_reset is not None, 'settings_available':update_settings is not None}
 
     @app.before_request
     def local_requests():
@@ -376,6 +380,9 @@ def create_app(config):
         response.headers.update({'Cache-Control':'no-store', 'X-Content-Type-Options':'nosniff',
             'X-Frame-Options':'DENY', 'Referrer-Policy':'no-referrer',
             'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"})
+        nonce = request.environ.get('invoice_preview_nonce')
+        if nonce:
+            response.headers['Content-Security-Policy'] = response.headers['Content-Security-Policy'].replace("style-src 'self'", "style-src 'self' 'nonce-"+nonce+"'")
         return response
 
     @app.errorhandler(Exception)
@@ -450,9 +457,13 @@ def create_app(config):
         return jsonify(csrf_token=csrf_token, queue=data.store.queue_control())
 
     def command(action, job_id=None):
+        if action == 'settings' and update_settings is None:
+            abort(403,description='Settings can be changed only through the combined system launcher.')
+        if action == 'development_reset' and development_reset is None:
+            abort(403,description='Clear data is not enabled for this dashboard instance.')
         payload = request.get_json()
         keys = {'request_id'} if job_id is None else {'request_id', 'attempt_id'}
-        if action == 'edit':
+        if action in ('edit','settings'):
             keys.add('changes')
         if not isinstance(payload, dict) or set(payload) != keys:
             abort(400, description='Invalid command fields.')
@@ -463,6 +474,12 @@ def create_app(config):
                 raise ValueError()
         except (ValueError, TypeError, AttributeError):
             abort(400, description='Use a UUID request_id and a positive attempt_id.')
+        if action == 'development_reset':
+            try:return jsonify(development_reset(payload['request_id']))
+            except ValueError as error:abort(409,description=str(error))
+        if action == 'settings':
+            try:return jsonify(update_settings(payload['request_id'],payload['changes']))
+            except ValueError as error:abort(409,description=str(error))
         writer = JobStore(data.store.path)
         changes = None
         if action == 'edit':
@@ -498,6 +515,12 @@ def create_app(config):
     @app.post('/api/jobs/<int:job_id>/edit')
     def edit_api(job_id): return command('edit',job_id)
 
+    @app.post('/api/development/reset')
+    def development_reset_api(): return command('development_reset')
+
+    @app.post('/api/settings')
+    def settings_api(): return command('settings')
+
     @app.get('/api/ollama')
     def ollama_api(): return jsonify(data.ollama())
 
@@ -530,9 +553,22 @@ def create_app(config):
         attempt = data.store.get_attempt(attempt_id)
         if attempt['state'] != 'completed': abort(409, description='This attempt has no published invoice.')
         job = data.store.get_job(attempt['job_id'])
-        content = _prepared(job, attempt, 'invoice')
+        content, name = _prepared(job, attempt, 'invoice',with_name=True)
         return send_file(io.BytesIO(content), mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                         as_attachment=True, download_name=Path(attempt['output_path']).name)
+                         as_attachment=True, download_name=name)
+
+    @app.get('/invoices/attempts/<int:attempt_id>')
+    def invoice_preview(attempt_id):
+        attempt = data.store.get_attempt(attempt_id)
+        if attempt['state']!='completed':abort(409,description='This invoice is not ready for preview.')
+        job = data.store.get_job(attempt['job_id'])
+        content,name = _prepared(job,attempt,'invoice',with_name=True)
+        if not previews.acquire(blocking=False):abort(429,description='Other previews are rendering. Try again shortly.')
+        try:
+            nonce=secrets.token_urlsafe(24);request.environ['invoice_preview_nonce']=nonce
+            return render_template('invoice_preview.html',job=job,attempt=attempt,filename=name,
+                                   sheet=invoice_sheet(content),preview_nonce=nonce)
+        finally:previews.release()
 
     @app.get('/images/jobs/<int:job_id>/events/<int:event_id>')
     def image(job_id, event_id):

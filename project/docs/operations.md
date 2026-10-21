@@ -80,3 +80,5 @@ The dashboard is loopback-only and unauthenticated; do not expose it to a LAN/re
 No automatic evidence retention/deletion is enabled. Keep managed artifacts and state together until an explicit archive workflow exists. Do not remove evidence with OCR cache cleanup. Dependency/model caches can be reprovisioned, but clearing them can cause long recomputation/downloads.
 
 See [manual invoice editing](manual-invoice-editing.md) for the simplified dashboard and safe versioned editing workflow.
+
+See [invoice downloads, web preview and development reset](invoice-web-tools.md) for clean filenames, local viewing and the isolated Clear data option.

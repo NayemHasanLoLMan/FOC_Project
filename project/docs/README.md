@@ -36,3 +36,5 @@ Historical development material is retained without moving its paths:
 - [Country folders and Bangladesh layout update](bd_layout_update.md): source-only TIN/cover note, red identifiers and no Bangladesh net weight.
 
 See [manual invoice editing](manual-invoice-editing.md) for the simplified dashboard and safe versioned editing workflow.
+
+See [invoice downloads, web preview and development reset](invoice-web-tools.md) for clean filenames, local viewing and the isolated Clear data option.

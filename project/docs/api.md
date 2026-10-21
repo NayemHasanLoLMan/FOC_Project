@@ -2,7 +2,7 @@
 
 Base URL: **http://127.0.0.1:8080**, or the selected --port. [openapi.json](openapi.json) describes all 20 implemented routes and their request/response schemas. It can be opened in an OpenAPI 3.1-compatible viewer; no Swagger service is installed or exposed.
 
-This is a local, unauthenticated dashboard API. GET/HEAD routes read retained state. Stage 6 adds five protected POST commands; there is no upload, settings, delete, forced cancellation or arbitrary command endpoint. The scanner accepts PDFs from the configured filesystem inbox. All timestamps are UTC unless explicitly described as the PC's local date/time.
+This is a local, unauthenticated dashboard API. GET/HEAD routes read retained state. Stage 6 adds five protected POST commands; later additions provide guarded settings, editing and recoverable Clear data commands. There is no upload, forced cancellation or arbitrary shell-command endpoint. The scanner accepts PDFs from the configured filesystem inbox. All timestamps are UTC unless explicitly described as the PC's local date/time.
 
 ## Access and response rules
 
@@ -119,3 +119,7 @@ All commands return 200 with their accepted result; acceptance does not prove co
 Bangladesh extracted data now includes optional tin_number and import_cover_note from the PDF. Net weight is not applicable to BD and is omitted from printed/audit fields and unresolved-field lists. Other regions retain the shared model property. See [layout update](bd_layout_update.md).
 
 See [manual invoice editing](manual-invoice-editing.md) for the simplified dashboard and safe versioned editing workflow.
+
+See [invoice downloads, web preview and development reset](invoice-web-tools.md) for clean filenames, local viewing and the Clear data option on the main or isolated launcher.
+
+See [editable processing settings](configuration.md#editable-dashboard-settings) for POST `/api/settings`, its seven fields, persistence, validation and idle-only application.

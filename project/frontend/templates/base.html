@@ -6,6 +6,7 @@
   <title>{% block title %}Invoice dashboard{% endblock %} · FOC Operations</title>
   <link rel="stylesheet" href="{{ url_for('static',filename='dashboard.css',v='20261021-ui') }}">
   <script src="{{ url_for('static',filename='dashboard.js') }}" defer></script>
+  {% block extra_head %}{% endblock %}
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -20,7 +21,7 @@
 </aside>
 <div class="workspace">
   <header class="topbar"><span>OPERATIONS / {% block breadcrumb %}OVERVIEW{% endblock %}</span><span id="web-status" class="web-status" role="status">Web available</span></header>
-  <main id="main-content"><p id="command-result" role="status" aria-live="polite"></p>{% block content %}{% endblock %}</main>
+  <main id="main-content">{% if development_mode %}<p class="development-banner">Development workspace · Test data is separate from production.</p>{% endif %}<p id="command-result" role="status" aria-live="polite"></p>{% block content %}{% endblock %}</main>
   <footer>FOC Operations · Local invoice processing <span id="refreshed">Refreshing status…</span></footer>
 </div>
 </body></html>

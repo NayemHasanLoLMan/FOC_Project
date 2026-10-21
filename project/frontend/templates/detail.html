@@ -10,7 +10,7 @@
   </div>
   <div class="actions">
     <a class="button secondary" href="{{ url_for('source',job_id=job.id) }}">Download original PDF ↓</a>
-    {% if attempt and attempt.state=='completed' %}<a class="button" href="{{ url_for('invoice',attempt_id=attempt.id) }}">Download invoice ↓</a>{% endif %}
+    {% if attempt and attempt.state=='completed' %}<a class="button secondary" href="{{ url_for('invoice_preview',attempt_id=attempt.id) }}">Preview Excel</a><a class="button" href="{{ url_for('invoice',attempt_id=attempt.id) }}">Download invoice ↓</a>{% endif %}
   </div>
 </div>
 {% if attempt and attempts and attempt.id==attempts[-1].id and attempt.state==job.state and job.state in ['failed','interrupted','waiting_to_save','completed'] %}

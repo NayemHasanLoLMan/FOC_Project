@@ -90,6 +90,9 @@ class ProjectLayoutTests(unittest.TestCase):
 
     def test_openapi_matches_live_routes_and_all_references_resolve(self):
         specification = json.loads((ROOT/'docs/openapi.json').read_text())
+        operation_ids = [operation['operationId'] for item in specification['paths'].values()
+                         for method,operation in item.items() if method in ('get','post')]
+        self.assertEqual(len(operation_ids),len(set(operation_ids)))
         with tempfile.TemporaryDirectory() as directory:
             config_path = Path(directory)/'pipeline_config.json'
             config_path.write_text((ROOT/'pipeline_config.json').read_text())

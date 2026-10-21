@@ -56,7 +56,7 @@
     "/api/ollama": {
       "get": {
         "operationId": "getOllama",
-        "summary": "Availability/model presence through bounded cached tags lookup; no generation.",
+        "summary": "Availability and installed model list through bounded cached tags lookup; no generation.",
         "tags": [
           "Read-only API"
         ],
@@ -370,7 +370,8 @@
           "503": {
             "$ref": "#/components/responses/Error503"
           }
-        }
+        },
+        "description": "Download the verified saved invoice using its canonical workbook filename, without internal job/attempt suffixes. Stored versioned filenames and hashes are preserved."
       }
     },
     "/images/jobs/{job_id}/events/{event_id}": {
@@ -1860,6 +1861,410 @@
           }
         }
       }
+    },
+    "/invoices/attempts/{attempt_id}": {
+      "get": {
+        "operationId": "previewInvoice",
+        "summary": "Preview the saved invoice worksheet locally",
+        "tags": [
+          "Files"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/attempt_id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice sheet HTML preview",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error400"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error403"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error404"
+          },
+          "405": {
+            "$ref": "#/components/responses/Error405"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error409"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error503"
+          }
+        },
+        "description": "Read-only HTML preview of the verified invoice worksheet. Preserves merged cells, text, colors and borders; does not recalculate formulas or reproduce every Excel feature."
+      }
+    },
+    "/api/development/reset": {
+      "post": {
+        "operationId": "resetDevelopmentData",
+        "summary": "Clear current workspace jobs and archive generated files",
+        "tags": [
+          "Admin controls"
+        ],
+        "security": [
+          {
+            "CsrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact base URL, for example http://127.0.0.1:8080 (no trailing slash)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "request_id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "request_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "New UUID for each intended command. Reuse the identical ID and payload when repeating an uncertain request."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recoverable development reset result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "request_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "action": {
+                      "const": "development_reset"
+                    },
+                    "cleared_jobs": {
+                      "type": "integer"
+                    },
+                    "archive": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid command JSON/fields/UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Reset is unavailable for this dashboard instance, or invalid Origin/CSRF token."
+          },
+          "404": {
+            "description": "Job does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A scan/invoice is active, paths are unsupported, or request ID belongs to another command.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "application/json is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Available in the main coordinated launcher on port 8080 and the optional isolated development launcher. Requires standard workspace paths and idle scanner/worker. The endpoint name is retained for compatibility. Inputs, templates, settings and caches are preserved. A successful reset clears intake observations and resumes processing; remaining inbox PDFs are rediscovered through stable-file checks and their invoices recreated. Replaying the same UUID does not reset later work."
+      }
+    },
+    "/api/settings": {
+      "post": {
+        "operationId": "saveSettings",
+        "summary": "Save processing settings and input/output folders",
+        "tags": [
+          "Admin controls"
+        ],
+        "security": [
+          {
+            "CsrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact base URL, for example http://127.0.0.1:8080 (no trailing slash)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "request_id",
+                  "changes"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "request_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "changes": {
+                    "type": "object",
+                    "required": [
+                      "local_model",
+                      "scan_interval_seconds",
+                      "vision_output_tokens",
+                      "vision_context_tokens",
+                      "vision_timeout_seconds",
+                      "incoming_dir",
+                      "output_dir"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "local_model": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 200
+                      },
+                      "scan_interval_seconds": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "vision_output_tokens": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "vision_context_tokens": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "vision_timeout_seconds": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "incoming_dir": {
+                        "type": "string",
+                        "description": "Full absolute path to a dedicated PDF inbox."
+                      },
+                      "output_dir": {
+                        "type": "string",
+                        "description": "Full absolute path to a dedicated invoice output folder."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Settings saved, or original accepted result replayed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "request_id": {
+                      "type": "string"
+                    },
+                    "action": {
+                      "const": "settings"
+                    },
+                    "settings": {
+                      "type": "object",
+                      "required": [
+                        "local_model",
+                        "scan_interval_seconds",
+                        "vision_output_tokens",
+                        "vision_context_tokens",
+                        "vision_timeout_seconds",
+                        "incoming_dir",
+                        "output_dir"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "local_model": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 200
+                        },
+                        "scan_interval_seconds": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "vision_output_tokens": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "vision_context_tokens": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "vision_timeout_seconds": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "incoming_dir": {
+                          "type": "string",
+                          "description": "Full absolute path to a dedicated PDF inbox."
+                        },
+                        "output_dir": {
+                          "type": "string",
+                          "description": "Full absolute path to a dedicated invoice output folder."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid command JSON/fields/UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Standalone dashboard or invalid Origin/CSRF token."
+          },
+          "404": {
+            "description": "Job does not exist.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Active scan/invoice, invalid settings, unsafe folders or conflicting command ID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "application/json is required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "Combined launcher only. Applies atomically while scanner and worker are idle. Persists under the fixed state directory for restart; old jobs and invoice paths remain unchanged. State/artifact folders are not editable. A blank UI model saves null (OCR only). Context must be at least the output limit. Use an installed vision-capable Ollama model; this does not install models."
+      }
     }
   },
   "components": {
@@ -2853,6 +3258,17 @@
           },
           "checked_at": {
             "type": "string"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Sorted unique installed Ollama model names, including when vision is disabled."
+          },
+          "model_list_available": {
+            "type": "boolean",
+            "description": "Whether the installed-model lookup succeeded; false preserves the current UI selection."
           }
         },
         "required": [

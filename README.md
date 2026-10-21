@@ -16,4 +16,4 @@ From this repository root:
 project/.venv/Scripts/python.exe project/run_system.py
 ~~~
 
-This single command initializes state and starts scanner, worker and dashboard together. Open http://127.0.0.1:8080/ and drop PDFs into project/incoming/bangladesh. Ctrl+C waits for the current invoice before shutting down. BD is the validated development scope; production never reads manual expected invoices. Stage 6 controls are available; unattended startup remains Stage 7.
+This single command initializes state and starts scanner, worker and dashboard together. Open http://127.0.0.1:8080/ and drop PDFs into project/incoming/bangladesh. Ctrl+C waits for the current invoice before shutting down. BD is the validated development scope; production never reads manual expected invoices. Stages 1–7 are implemented, including guarded controls and current-user background startup. Final Stage 8 acceptance remains pending. Clear data archives generated files and automatically recreates invoices from remaining inbox PDFs.

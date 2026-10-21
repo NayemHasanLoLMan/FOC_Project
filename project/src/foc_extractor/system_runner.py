@@ -16,15 +16,37 @@ from .pipeline_config import initialize_folders
 from .queue_worker import QueueWorker
 
 
-def run_system(config, port=8080, stop=None):
+def run_system(config, port=8080, stop=None, *, development=False):
+    from .runtime_settings import load_runtime_settings, save_runtime_settings
+    config = load_runtime_settings(config,development=development)
     stop = stop if stop is not None else threading.Event()
     store = JobStore(config.state_dir / 'jobs.sqlite3')
+    reset = None
+    reset_locks = (threading.Lock(), threading.Lock())
+    from .development_reset import validate_workspace, clear_workspace
+    try:
+        validate_workspace(config,development=development)
+    except ValueError:
+        if development:raise
+    else:
+        reset = lambda request_id: clear_workspace(config,store,reset_locks,request_id,development=development)
     channels = {}
     server = None
     failures = SimpleQueue()
     threads = []
+    def update_settings(request_id,changes):
+        def apply(updated):
+            nonlocal config
+            config=updated
+            scanner.config=worker.config=updated
+            reader=app.extensions['dashboard_data']
+            with reader._ollama_lock:
+                reader.config=updated
+                reader._ollama=None
+        return save_runtime_settings(config,store,reset_locks,request_id,changes,apply,development=development)
     try:
-        server = create_server(create_app(config), host='127.0.0.1', port=port, map=channels,
+        app = create_app(config,development_reset=reset,development_mode=development,update_settings=update_settings)
+        server = create_server(app, host='127.0.0.1', port=port, map=channels,
                                threads=0, max_request_body_size=65536,
                                clear_untrusted_proxy_headers=True, asyncore_loop_timeout=0.2)
         # Avoid orphan HTTP threads when binding the port fails.
@@ -40,7 +62,8 @@ def run_system(config, port=8080, stop=None):
                 failure = None
                 try:
                     while not stop.is_set():
-                        result = scanner.scan_once()
+                        with reset_locks[0]:
+                            result = scanner.scan_once()
                         store.component('scanner', owner, os.getpid(),
                                         'degraded' if result['folder_error'] else 'running', result['folder_error'])
                         if stop.wait(config.scan_interval_seconds):
@@ -53,7 +76,8 @@ def run_system(config, port=8080, stop=None):
 
             def process():
                 while not stop.is_set() and not worker.stop_requested.is_set():
-                    attempt = worker.run_once()
+                    with reset_locks[1]:
+                        attempt = worker.run_once()
                     if attempt is not None:
                         print(json.dumps({'attempt_id': attempt, 'jobs': store.counts()}), flush=True)
                     else:

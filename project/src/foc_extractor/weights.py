@@ -10,6 +10,7 @@ from pathlib import Path
 from .processing_evidence import emit, region
 from .ocr_engine import _cached_page_image, _paddle_readers, _column_regions
 from .parser import NUM, _number, _table_fields
+from .local_vision import vision_cache_settings
 
 
 WEIGHT_PROMPT = ('The column header in this image establishes kilograms. Read the final visible weight NUMBER '
@@ -87,7 +88,7 @@ def packing_weight(ocr, pdf, cache_dir=None, local_model=None):
         evidence['reason'] = 'Not every source page is an established packing list'
         return evidence
     key = hashlib.sha256(Path(pdf).read_bytes()+json.dumps({
-        'version': 6, 'dpi': ocr.dpi, 'transforms': ocr.page_transforms,
+        'version': 6, 'dpi': ocr.dpi, 'transforms': ocr.page_transforms, **vision_cache_settings(local_model),
         'tables': [asdict(t) for t in ocr.tables], 'words': [asdict(w) for w in ocr.words]}, sort_keys=True).encode()).hexdigest()
     cache = Path(cache_dir)/'weights'/(key+'.json') if cache_dir else None
     if cache and cache.exists():

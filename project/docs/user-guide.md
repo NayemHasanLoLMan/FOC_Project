@@ -35,3 +35,5 @@ The queue preserves occupied output files and chooses a versioned filename when 
 Do not rename, edit or delete internal job snapshots/evidence to repair a result. Use the original PDF and approved future retry controls. Use Pause processing / Resume processing on Overview. Pause lets the current invoice finish while new PDFs continue to queue. On the latest eligible job detail, use Retry this PDF, Retry saving invoice, or Create another invoice. Earlier outputs stay available. A stopped worker must be started with run_system.py before queued requests can run.
 
 Direct main.py/run_batch.py conversion remains available, but it is outside the durable queue. Its outputs do not automatically become dashboard jobs, and it does not provide queue-style historical collision protection. Prefer the folder pipeline for managed operations.
+
+See [invoice downloads, web preview and development reset](invoice-web-tools.md) for clean filenames, local viewing and the isolated Clear data option.

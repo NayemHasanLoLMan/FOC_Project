@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}Preview {{ filename[:-5] }}{% endblock %}
+{% block breadcrumb %}INVOICE PREVIEW{% endblock %}
+{% block extra_head %}<style nonce="{{ preview_nonce }}">{% for name,rules in sheet.styles.items() %}.invoice-sheet .{{ name }} { {{ rules }} }{% endfor %}</style>{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">EXCEL PREVIEW</p><h1>{{ filename[:-5] }}</h1><p>Read-only preview of the saved invoice sheet.</p></div><div class="actions"><a class="button secondary" href="{{ url_for('detail',job_id=job.id,attempt=attempt.id) }}">Back to invoice</a><a class="button" href="{{ url_for('invoice',attempt_id=attempt.id) }}">Download Excel</a></div></div>
+<p class="hint preview-note">Merged cells, text, colors and borders come from the workbook. Layout and printing may differ slightly from Excel; formulas are not recalculated here.</p>
+<div class="invoice-paper"><table class="invoice-sheet" aria-label="{{ sheet.sheet_name }}"><colgroup>{% for name in sheet.columns %}<col class="{{ name }}">{% endfor %}</colgroup><tbody>
+{% for row in sheet.rows %}<tr class="{{ row['class'] }}">{% for cell in row.cells %}<td class="{{ cell['class'] }}" colspan="{{ cell.colspan }}" rowspan="{{ cell.rowspan }}">{% for part in cell.parts %}<span class="{{ part['class'] }}">{{ part.text }}</span>{% endfor %}</td>{% endfor %}</tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

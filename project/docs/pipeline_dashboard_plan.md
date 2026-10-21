@@ -8,7 +8,7 @@ Watch one configured local folder for incoming PDFs, process stable arrivals aut
 
 Start with one extraction worker on this PC. The existing vision allowance (4,096 output tokens, 8,192 context and two-hour request timeout) stays unchanged. Long inference must not block folder scanning, dashboard responses or service heartbeats. The PC must be awake; stopped services discover missed arrivals on their next scan.
 
-## Existing capabilities and missing pieces
+## Original starting point (historical)
 
 | Area | Exists now | Addition needed |
 |---|---|---|
@@ -117,8 +117,9 @@ All 203 tests pass. The worker completed all 20 PDFs during live HTTP polling (8
 - [x] Pause/resume queue consumption. Pausing does not kill the current model call; new arrivals may continue to queue. State the behavior clearly in the UI.
 - [x] Retry selected failed jobs and waiting-to-save publications. A deliberate reprocess creates a new attempt and records which source/configuration it used; preserve earlier results.
 - [x] Make commands transactional and idempotent so double-clicks cannot launch duplicate work. Use POST and request protection for mutations even on localhost.
-- [x] Keep settings read-only initially; validate and apply any later path/model changes between jobs. Do not expose arbitrary shell commands or stop the user's Excel/Ollama processes.
-- [x] Defer forced active-job cancellation and bulk reprocessing until their recovery behavior is explicitly implemented and tested.
+- [x] Provide validated, persistent model, scan, vision limits/timeout and incoming/output settings on System. Apply changes only while scanner/worker are idle; preserve recorded historical destinations and fixed state/artifact roots. Do not expose arbitrary shell commands or stop the user's Excel/Ollama processes.
+- [x] Keep forced active-job cancellation deferred. Clear data now provides an explicit, confirmed workspace reset with a recovery archive and automatic reprocessing of remaining inbox PDFs; it is tested separately from per-job retry.
+- [x] Add manual invoice editing/additions, canonical download names, local Excel preview and Clear data on the main System page. These later user-requested additions reuse the existing worker, versioning and guarded command flow.
 
 ### Stage 7 — Windows background operation
 
@@ -139,8 +140,40 @@ All 203 tests pass. The worker completed all 20 PDFs during live HTTP polling (8
 
 ## Deferred scope
 
-No cloud services, additional OCR/model changes, distributed/multi-worker execution, LAN exposure, mandatory manual approval, invoice editing UI, emails or external notifications in the first release. These can be separate requests after the local pipeline is stable.
+Cloud services, additional OCR/model changes, distributed/multi-worker execution, LAN exposure/authentication, mandatory manual approval, forced active-job cancellation, emails and external notifications remain outside this local pipeline scope. Manual invoice editing and workspace reset/reprocessing were subsequently requested and implemented. India and Jordan folders are reserved; their extraction/templates still require separate validation.
 
-## Current checkpoint
+## Current checkpoint — 21 October 2026
 
-Stages 1–7 are implemented. Ask the user before Stage 8, especially before sign-out/reboot acceptance. The dashboard should read proven pipeline state rather than becoming a second independent processing implementation.
+Stages 1–7 are implemented. The original plan also includes Stage 8 as a separate final acceptance gate; implementing seven stages does not complete that gate. Current full regression: **282 tests passed**, plus dashboard status JavaScript checks. The clear/reprocess fix is recorded in `reports/clear_reprocess_20261021/`; editable processing/folder settings are verified in `reports/dynamic_settings_20261021/`.
+
+| Stage | Current outcome | Status |
+|---|---|---|
+| 1 | Configuration, durable SQLite jobs/attempts, migrations and ownership | Implemented |
+| 2 | Stable PDF discovery, snapshots, duplicate prevention and changed-file versions | Implemented |
+| 3 | One worker, existing converter, collision-safe publication, retry/save and restart recovery | Implemented |
+| 4 | OCR/vision/cache provenance, events and exact model-input images | Implemented |
+| 5 | Live overview, searchable jobs, details, issues, source/image review and system health | Implemented; UI subsequently simplified and styled |
+| 6 | Pause/resume, selected retry/reprocess, save recovery and protected commands | Implemented; editing, Excel preview/download naming and recoverable Clear data added |
+| 7 | Current-user Task Scheduler startup, periodic recovery, single-instance protection, graceful stop and rotated logs | Implemented; real reboot acceptance still pending |
+| 8 | Final release acceptance on the current build | Pending separate approval |
+
+### Clear data behavior verified now
+
+- [x] Clear job history and archive generated invoices/evidence with a database backup.
+- [x] Preserve input PDFs, templates, settings and model/OCR caches.
+- [x] Reset intake observations and resume processing; unchanged inbox PDFs automatically pass readiness checks and recreate invoices once.
+- [x] Recover observations orphaned by the previous clear implementation without copying PDFs again.
+- [x] Keep reset request replay idempotent, refuse active work and roll back a failed folder move.
+- [x] Verify the browser reset and real invoice regeneration in the isolated workspace; recover all 20 already-cleared main jobs through the normal scanner. All 20 completed without failures and their workbook content/styles match the archived versions.
+
+### What remains before final acceptance
+
+- [ ] Run the final full BD comparison on the accepted build: PDF-supported fields, goods/quantities, valuation and workbook formatting. Prior stage comparisons remain historical evidence, not a new accuracy score.
+- [ ] Test fresh/unseen PDFs with cold OCR/model paths, beyond the existing sample set and warm caches.
+- [ ] Repeat the end-to-end failure matrix on the release candidate: copy interrupted mid-file, duplicate arrivals, Excel locks, process interruption/restart, unavailable/rejected model responses and consistent recovery.
+- [ ] Coordinate a real sign-out/reboot and verify automatic startup, Ollama availability, missed-file discovery and browser-independent processing afterward.
+- [ ] Exercise the documented backup/restore and clean-machine installation/build process; confirm retention and the intended boundary for Clear data before wider deployment.
+- [ ] Obtain approval to begin Stage 8. No sign-out or reboot is performed as part of this fix.
+
+Daily-operation, API/Postman, build, backup and rollback documentation already exists. The remaining work is final verification and acceptance, rather than building another pipeline. The dashboard continues to use the proven scanner/worker state.
+

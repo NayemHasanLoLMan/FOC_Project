@@ -156,6 +156,7 @@ class JobStore:
         with self._connection(write=True) as db:
             row = db.execute('SELECT * FROM intake_files WHERE source_identity=?', (identity,)).fetchone()
             if (row is None or row['signature'] != signature or row['state'] == 'missing'
+                    or (row['state'] == 'queued' and row['job_id'] is None)
                     or error is not None or seen_at < row['last_seen']):
                 db.execute('''INSERT INTO intake_files(source_identity,source_path,signature,stable_since,last_seen,state,error)
                     VALUES(?,?,?,?,?,'waiting_for_file',?) ON CONFLICT(source_identity) DO UPDATE SET
