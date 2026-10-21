@@ -54,6 +54,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visibl
 .brand { display: flex; align-items: center; gap: 12px; padding: 0 12px; color: #fff; font-size: 26px; font-weight: 700; letter-spacing: .5px; }
 .brand:hover { text-decoration: none; }
 .brand-icon { display: grid; place-items: center; width: 40px; height: 44px; flex: 0 0 auto; background: #537ce0; border-radius: 10px; box-shadow: inset 0 1px 0 #ffffff30; }
+.brand-icon svg { width: 28px; height: 28px; }
 .brand-sub { display: block; color: #b5c7e1; font-size: 8px; letter-spacing: 1px; margin-top: 1px; white-space: nowrap; }
 nav { display: grid; gap: 8px; margin-top: 44px; }
 nav a { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 12px 14px; border-radius: 8px; color: #c3d0e3; font-size: 14px; font-weight: 500; }

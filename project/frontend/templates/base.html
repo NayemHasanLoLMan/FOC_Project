@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token }}">
-  <title>{% block title %}Invoice dashboard{% endblock %} · FOC Operations</title>
+  <title>{% block title %}Invoice dashboard{% endblock %} · FOC Invoice Automation</title>
   <link rel="stylesheet" href="{{ url_for('static',filename='dashboard.css',v='20261021-ui') }}">
   <script src="{{ url_for('static',filename='dashboard.js') }}" defer></script>
   {% block extra_head %}{% endblock %}
@@ -11,7 +11,7 @@
 <body>
 <a class="skip-link" href="#main-content">Skip to main content</a>
 <aside class="sidebar">
-  <a class="brand" href="{{ url_for('overview') }}"><span class="brand-icon">F</span><span>FOC<span class="brand-sub">INVOICE OPERATIONS</span></span></a>
+  <a class="brand" href="{{ url_for('overview') }}" aria-label="FOC Invoice Automation"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20 8a8.5 8.5 0 0 0-14-3L3 8m0-5v5h5M4 16a8.5 8.5 0 0 0 14 3l3-3m0 5v-5h-5"/><path d="m13 8-4 5h3l-1 3 4-5h-3z" fill="currentColor" stroke="none"/></svg></span><span>FOC<span class="brand-sub">INVOICE AUTOMATION</span></span></a>
   <nav aria-label="Main navigation">
     <a {% if request.path=='/' %}aria-current="page"{% endif %} href="{{ url_for('overview') }}"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Overview</span></a>
     <a {% if request.path.startswith('/jobs') %}aria-current="page"{% endif %} href="{{ url_for('jobs') }}"><svg class="nav-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg><span>Jobs &amp; evidence</span></a>
@@ -22,6 +22,6 @@
 <div class="workspace">
   <header class="topbar"><span>OPERATIONS / {% block breadcrumb %}OVERVIEW{% endblock %}</span><span id="web-status" class="web-status" role="status">Web available</span></header>
   <main id="main-content">{% if development_mode %}<p class="development-banner">Development workspace · Test data is separate from production.</p>{% endif %}<p id="command-result" role="status" aria-live="polite"></p>{% block content %}{% endblock %}</main>
-  <footer>FOC Operations · Local invoice processing <span id="refreshed">Refreshing status…</span></footer>
+  <footer>FOC Invoice Automation · Local invoice processing <span id="refreshed">Refreshing status…</span></footer>
 </div>
 </body></html>
