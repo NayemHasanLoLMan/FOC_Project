@@ -1,6 +1,6 @@
 # Stage 6 - local admin controls and recovery
 
-Implemented and verified on 21 October 2026. Stage 7 unattended startup still needs user approval. Normal startup remains one command:
+Implemented and verified on 21 October 2026. This is the historical Stage 6 acceptance record; [Stage 7 startup](pipeline_stage7.md) is now approved and implemented. Normal startup remains one command:
 
 ~~~powershell
 project/.venv/Scripts/python.exe project/run_system.py

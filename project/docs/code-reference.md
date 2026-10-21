@@ -81,3 +81,5 @@ JobStore.queue_control reads persisted pause state. JobStore.admin_command(reque
 See [manual invoice editing](manual-invoice-editing.md) for the simplified dashboard and safe versioned editing workflow.
 
 The dashboard shares one responsive stylesheet, `frontend/static/dashboard.css`, using local system fonts and no remote font or UI dependencies. Job tables become cards below 760px; sidebar navigation moves above content below 850px. Invoice and image tables retain their own scrolling area. Keyboard focus, skip navigation and reduced-motion preferences are supported. Editor saves and all data operations remain in the existing JavaScript/backend.
+
+`src/foc_extractor/windows_startup.py` owns current-user Task Scheduler registration, status/management, native stop events and rotated background logs. It calls the existing launcher and never replaces extraction or queue recovery. Task management uses encoded PowerShell arguments and an ownership marker; install refuses replacement and uninstall refuses a running task.

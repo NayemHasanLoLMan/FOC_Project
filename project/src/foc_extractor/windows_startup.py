@@ -1,6 +1,7 @@
 """Current-user Windows startup using the existing single-process launcher."""
 from base64 import b64encode
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
+from datetime import datetime, timedelta, timezone
 import ctypes
 from ctypes import wintypes
 import hashlib
@@ -54,8 +55,15 @@ def task_xml(config_path, pythonw, sid, port=8080):
         return child
     info = add(root, 'RegistrationInfo')
     add(info, 'Description', 'FOC invoice pipeline | ' + str(Path(config_path).resolve()))
-    trigger = add(add(root, 'Triggers'), 'LogonTrigger')
+    triggers = add(root, 'Triggers')
+    trigger = add(triggers, 'LogonTrigger')
     add(trigger, 'Enabled', 'true'); add(trigger, 'UserId', sid); add(trigger, 'Delay', 'PT30S')
+    # Native failure restart did not recover an externally killed process on this PC.
+    recovery = add(triggers, 'TimeTrigger')
+    repetition = add(recovery, 'Repetition')
+    add(repetition,'Interval','PT1M'); add(repetition,'StopAtDurationEnd','false')
+    add(recovery,'StartBoundary',(datetime.now(timezone.utc)+timedelta(minutes=1)).isoformat(timespec='seconds'))
+    add(recovery,'Enabled','true')
     principal = add(add(root, 'Principals'), 'Principal'); principal.set('id','Author')
     add(principal, 'UserId', sid); add(principal, 'LogonType', 'InteractiveToken')
     add(principal, 'RunLevel', 'LeastPrivilege')
@@ -79,7 +87,8 @@ def task_xml(config_path, pythonw, sid, port=8080):
 def manage_startup(action, config, config_path, port=8080):
     name = task_name(config)
     marker = 'FOC invoice pipeline | '+str(Path(config_path).resolve())
-    query = '$task=Get-ScheduledTask -TaskName '+_quote(name)+' -ErrorAction SilentlyContinue;'
+    query = ('try{$task=Get-ScheduledTask -TaskName '+_quote(name)+
+        " -ErrorAction Stop}catch{if($_.CategoryInfo.Category -eq 'ObjectNotFound'){$task=$null}else{throw}};")
     owned = ("if(!$task){throw 'Startup task is not installed'};if($task.Description -ne "+_quote(marker)+
         "){throw 'Task belongs to another configuration; no change made'};")
     if action == 'install':
@@ -92,21 +101,23 @@ def manage_startup(action, config, config_path, port=8080):
             handle.write(task_xml(config_path,pythonw,sid,port))
         try:
             return _powershell(query+"if($task){throw 'Task already exists; use status or uninstall first'};"
-                'Register-ScheduledTask -TaskName '+_quote(name)+' -Xml (Get-Content -Raw -LiteralPath '+
+                'Register-ScheduledTask -TaskName '+_quote(name)+' -Xml (Get-Content -Encoding UTF8 -Raw -LiteralPath '+
                 _quote(path)+') | Out-Null;@{installed=$true;task_name='+_quote(name)+'} | ConvertTo-Json')
         finally:
             path.unlink(missing_ok=True)
     if action == 'status':
         return _powershell(query+"if(!$task){@{installed=$false} | ConvertTo-Json;exit};"+owned+
             '$info=$task | Get-ScheduledTaskInfo;@{installed=$true;task_name=$task.TaskName;state=[string]$task.State;'
-            'account=$task.Principal.UserId;last_result=$info.LastTaskResult;last_run=[string]$info.LastRunTime;'
+            'enabled=$task.Settings.Enabled;account=$task.Principal.UserId;last_result=$info.LastTaskResult;last_run=[string]$info.LastRunTime;'
             'program=$task.Actions.Execute;arguments=$task.Actions.Arguments;working_directory=$task.Actions.WorkingDirectory;'
             'restart_count=$task.Settings.RestartCount;restart_interval=$task.Settings.RestartInterval;'
             'execution_time_limit=$task.Settings.ExecutionTimeLimit} | ConvertTo-Json')
     if action == 'start':
-        return _powershell(query+owned+'$task | Start-ScheduledTask;@{start_requested=$true} | ConvertTo-Json')
+        return _powershell(query+owned+'$task | Enable-ScheduledTask | Out-Null;$task | Start-ScheduledTask;@{start_requested=$true} | ConvertTo-Json')
     if action == 'stop':
-        return {'stop_requested':request_stop(config),'message':'An active invoice is allowed to finish before exit.'}
+        result = _powershell(query+'if($task){'+owned+'$task | Disable-ScheduledTask | Out-Null};@{automatic_start_disabled=[bool]$task} | ConvertTo-Json')
+        return {**result,'stop_requested':request_stop(config),
+                'message':'Automatic starts are disabled. An active invoice is allowed to finish before exit. Use start to enable again.'}
     if action == 'uninstall':
         return _powershell(query+owned+"if($task.State -eq 'Running'){throw 'Stop the pipeline and wait for exit before uninstalling'};"
             '$task | Unregister-ScheduledTask -Confirm:$false;@{installed=$false} | ConvertTo-Json')
@@ -193,7 +204,7 @@ def background_runtime(config, stop):
         watcher = threading.Thread(target=watch,name='invoice-stop-control',daemon=True)
         watcher.start()
         try:
-            with redirect_stdout(_LogStream(logger,logging.INFO)), redirect_stderr(_LogStream(logger,logging.ERROR)):
+            with redirect_stdout(_LogStream(logger,logging.INFO)), redirect_stderr(_LogStream(logger,logging.WARNING)):
                 logger.info('Background pipeline starting. PID=%s; input=%s; output=%s',os.getpid(),config.incoming_dir,config.output_dir)
                 try:
                     yield

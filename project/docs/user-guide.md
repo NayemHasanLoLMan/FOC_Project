@@ -8,7 +8,7 @@
 4. The worker creates its Excel invoice using the shared template. The dashboard shows progress and the saved result.
 5. Download the invoice from job detail or use the configured output folder.
 
-The PC must be awake. The current version requires one manually launched Python command; automatic Windows startup is a later stage. The incoming folder is not watched recursively.
+The PC must be awake. With Stage 7 installed, processing starts in the background after Windows sign-in; a browser is not required. The same Python command remains available for foreground use. See [background operation](pipeline_stage7.md). The incoming folder is not watched recursively.
 
 ## Understand the dashboard
 

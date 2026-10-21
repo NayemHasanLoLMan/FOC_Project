@@ -42,3 +42,7 @@ Successful one-shot commands normally return 0. Argument validation uses argpars
 Development commands are documented in [testing](testing.md) and [build](build.md). They are not included in production archives.
 
 run_system.py is the normal entry point. Ctrl+C waits for active processing before exiting. A port/ownership conflict or component failure exits nonzero; PDF-level failures remain in job history. It does not start a Windows service or install/download OCR/Ollama dependencies.
+
+## Windows background task
+
+`run_system.py --startup install|start|stop|status|uninstall` manages the current-user sign-in task for its configuration. The internal `--background` mode redirects Python output into rotated logs and accepts a graceful native stop signal. See [Stage 7](pipeline_stage7.md) for operation, log paths and limits.

@@ -1,6 +1,6 @@
 # Project documentation
 
-Current scope: local PDF-to-BD-invoice conversion, a durable folder queue and a local admin dashboard. Stages 1–6 are implemented. Unattended Windows startup and the final production acceptance gate remain pending.
+Current scope: local PDF-to-BD-invoice conversion, a durable folder queue and a local admin dashboard. Stages 1–7 are implemented. Current-user background startup is documented in [Stage 7](pipeline_stage7.md); final production/reboot acceptance remains Stage 8.
 
 | Guide | Audience / purpose |
 |---|---|

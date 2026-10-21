@@ -134,6 +134,15 @@ class SystemRunnerTests(unittest.TestCase):
                     system_runner.run_system(self.config,port=port)
                 worker.assert_not_called()
 
+    def test_shutdown_drains_http_workers_before_closing_their_trigger(self):
+        from unittest.mock import MagicMock, call
+        server = MagicMock()
+        self.stop.set()
+        with patch.object(system_runner,'create_server',return_value=server):
+            system_runner.run_system(self.config,port=0,stop=self.stop)
+        calls = server.mock_calls
+        self.assertLess(calls.index(call.task_dispatcher.shutdown()),calls.index(call.close()))
+
 
 if __name__=='__main__':
     unittest.main()

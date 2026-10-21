@@ -1,6 +1,6 @@
 # Continuous PDF-to-invoice pipeline and admin dashboard
 
-Status: Stages 1–6 implemented; Stage 6 acceptance is recorded in pipeline_stage6.md. Stage 7 awaits separate user approval. Implement one stage at a time, prove its acceptance checks, and ask the user before proceeding. Existing single-file/batch conversion and BD invoice contents/formatting remain supported. See the [Stage 1](pipeline_stage1.md), [Stage 2](pipeline_stage2.md), [Stage 3](pipeline_stage3.md), [Stage 4](pipeline_stage4.md) and [Stage 5](pipeline_stage5.md) acceptance reports.
+Status: Stage 7 is approved and implemented; see [Stage 7 operation and acceptance](pipeline_stage7.md). Stage 8 awaits separate user approval. Implement one stage at a time, prove its acceptance checks, and ask the user before proceeding. Existing single-file/batch conversion and BD invoice contents/formatting remain supported. See the [Stage 1](pipeline_stage1.md), [Stage 2](pipeline_stage2.md), [Stage 3](pipeline_stage3.md), [Stage 4](pipeline_stage4.md) and [Stage 5](pipeline_stage5.md) acceptance reports.
 
 ## Outcome and boundaries
 
@@ -56,7 +56,7 @@ References: [Flask deployment](https://flask.palletsprojects.com/en/stable/deplo
 | 7 | Unattended Windows startup | Background startup, failure restart, single-instance protection and Ollama dependency reporting work without a browser |
 | 8 | End-to-end acceptance and operating guide | Restart/copy/duplicate/locked-file/model-failure cases pass; BD regression and unseen-PDF checks pass; recovery instructions are documented |
 
-Stages 1–6 provide durable intake/processing, review evidence and guarded local admin controls. The unified run_system.py command starts the system. Unattended startup and final acceptance remain Stages 7–8. The user explicitly requires approval before each next stage.
+Stages 1–7 provide durable intake/processing, review evidence, guarded local admin controls and current-user background startup. The unified run_system.py command starts the system. Final acceptance remains Stage 8. The user explicitly requires approval before each next stage.
 
 ### Stage 1 — configuration and durable state
 
@@ -122,11 +122,11 @@ All 203 tests pass. The worker completed all 20 PDFs during live HTTP polling (8
 
 ### Stage 7 — Windows background operation
 
-- [ ] Provide explicit install/start/stop/status instructions and hidden startup via native Task Scheduler. Do not install or enable auto-start during earlier stages.
-- [ ] Select the correct user account, local paths and working directory; confirm model/cache/folder permissions. Verify Ollama availability under that account after reboot, not only in the current desktop session.
-- [ ] Enable failure restart and single-instance protection. A stopped browser is not a stopped pipeline. A paused worker, missing folder, down Ollama and crashed worker must have distinct dashboard states.
-- [ ] Preserve the two-hour generation allowance. Graceful stop finishes/checkpoints current work; an OS termination is handled by interrupted-attempt recovery. Do not label a long request stalled solely because it has no token progress.
-- [ ] Rotate logs and document database/artifact backup/restore. Keep runtime state ignored by version control.
+- [x] Provide install/start/stop/status/uninstall through run_system.py and hidden current-user sign-in startup via native Task Scheduler.
+- [x] Select the current user, production folders and absolute working directory; verify model/cache/folder access through a real background PDF run. Post-reboot Ollama verification remains Stage 8.
+- [x] Enable native periodic crash recovery, launch-failure restart and single-instance protection. Browser-independent execution and existing distinct queue/component/dependency states are retained.
+- [x] Preserve generation allowances. Native graceful-stop control drains current work; forced termination uses existing interrupted-attempt recovery. No scheduler execution-time limit is imposed.
+- [x] Rotate background logs under ignored runtime state and document coordinated database/artifact/output backup and restore.
 
 ### Stage 8 — release gate
 
@@ -143,4 +143,4 @@ No cloud services, additional OCR/model changes, distributed/multi-worker execut
 
 ## Current checkpoint
 
-Stages 1–6 are implemented and verified. Ask the user before Stage 7 (unattended Windows startup). Do not install startup tasks before their stage. The dashboard should read proven pipeline state rather than becoming a second independent processing implementation.
+Stages 1–7 are implemented. Ask the user before Stage 8, especially before sign-out/reboot acceptance. The dashboard should read proven pipeline state rather than becoming a second independent processing implementation.

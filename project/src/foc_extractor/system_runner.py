@@ -98,8 +98,8 @@ def run_system(config, port=8080, stop=None):
     finally:
         stop.set()
         if server is not None:
-            server.close()
             server.task_dispatcher.shutdown()
+            server.close()
         wasyncore.close_all(map=channels)
         for thread in threads:
             if thread.name == 'invoice-web':

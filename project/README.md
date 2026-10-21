@@ -2,7 +2,7 @@
 
 Read shipment PDFs with local PaddleOCR and fill the existing Excel invoice template. Bangladesh is the tested scope. India/Jordan templates, mappings and unique reference documents are retained for later work; they have not been validated by the BD benchmark.
 
-The [continuous folder pipeline and admin dashboard checklist](docs/pipeline_dashboard_plan.md) tracks staged updates. [Stages 1–4](docs/pipeline_stage4.md) provide durable intake/processing and review evidence; [Stage 5](docs/pipeline_stage5.md) adds the local admin dashboard. Scanner/worker operation remains independent of the browser. Nothing is installed at startup. Current CLI conversion remains unchanged. Each next stage requires user approval after regression checks.
+The [continuous folder pipeline and admin dashboard checklist](docs/pipeline_dashboard_plan.md) tracks staged updates. [Stages 1–4](docs/pipeline_stage4.md) provide durable intake/processing and review evidence; [Stage 5](docs/pipeline_stage5.md) adds the local admin dashboard. Scanner/worker operation remains independent of the browser. Stage 7 provides current-user background startup through Task Scheduler. Current CLI conversion remains unchanged. Each next stage requires user approval after regression checks.
 
 ## Documentation
 
@@ -138,7 +138,7 @@ Open **http://127.0.0.1:8080**. Use --config followed by a configuration path to
 
 Overview shows independent component health and queue counts. Jobs support search/filtering and attempt history; detail pages expose goods, diagnostics, version fingerprints, exact vision inputs and source highlights. PDF/Excel downloads are verified. System shows folders, model defaults, dependencies and disk space. State views stay read-only. Stage 6 adds protected pause/resume, selected retry, save retry and preserved reprocessing; settings remain read-only. Old standalone/batch files are not automatically imported into the queue.
 
-The acceptance preview uses an isolated 20-job test queue; the default production queue remains empty. See [Stage 5 commands, tests and limits](docs/pipeline_stage5.md). No Windows startup task is installed.
+The earlier acceptance preview used an isolated 20-job test queue, preserved in its original report folders. Stage 7 now runs the production folders in the background; that queue starts empty until new PDFs arrive. See [Stage 7 operation](docs/pipeline_stage7.md).
 
 ## Verification
 
@@ -206,3 +206,5 @@ project/.venv/Scripts/python.exe project/run_system.py
 Open http://127.0.0.1:8080/. Drop PDFs in project/incoming/bangladesh and find invoices in project/output/bangladesh. Ctrl+C stops intake and waits for the current invoice before exiting. See [operations](docs/operations.md) for custom configuration and maintenance commands.
 
 See [manual invoice editing](docs/manual-invoice-editing.md) for the simplified dashboard and safe versioned editing workflow.
+
+Windows background startup is available through `run_system.py --startup install` and `--startup start`, with graceful stop/status/uninstall commands. See [Stage 7](docs/pipeline_stage7.md). This runs after the current user signs in, not before sign-in.

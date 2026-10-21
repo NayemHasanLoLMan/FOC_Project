@@ -24,6 +24,6 @@ For a code/logic change:
 
 Use requirements.txt for direct constraints. Validate dependency updates in a separate environment, run acceptance, then update requirements-lock.txt. Do not silently upgrade the working OCR stack as part of unrelated changes. The lock is platform-specific and not an offline installation bundle.
 
-Stage 6 admin controls are approved and implemented. No startup-task stage is approved by that authorization. Follow the staged roadmap and ask before advancing to the next implementation stage.
+Stages 6 and 7 are approved. Stage 7 adds current-user sign-in startup using the existing launcher. Final Stage 8 acceptance still requires separate user approval; do not reboot the PC without coordinating with the user.
 
 Do not commit .venv, .cache, incoming PDFs, runtime state, generated invoices, reports, build ZIPs or secrets. Historical reports are private local QA artifacts; they are not product code.

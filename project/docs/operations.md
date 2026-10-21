@@ -20,7 +20,7 @@ Keep the installed Ollama service available when local vision is enabled. Models
 
 The separate init_pipeline.py, scan_incoming.py, run_worker.py and run_dashboard.py commands remain available for maintenance or independently managed deployments; they are no longer necessary for normal startup. run_dashboard.py starts only the web interface.
 
-No Windows Service or Task Scheduler installation is provided yet. Processes do not automatically start after reboot. The PC must remain awake.
+Stage 7 adds a current-user Windows Task Scheduler task. It starts after sign-in and runs hidden through the same launcher. See [background startup and stop commands](pipeline_stage7.md). The PC must remain awake.
 
 ## Stop and restart
 
@@ -71,7 +71,7 @@ Restore matching data together to their recorded paths while processes are stopp
 | Worker exits after code change | Restart with completed code/configuration; unfinished work follows normal recovery |
 | Reference score differs | Distinguish source-correct PDF differences, grouping/unit policy and actual extraction loss; never copy expected values into production |
 
-Logs/status are printed to each process terminal; OCR diagnostics can mix with JSON status. There is no centralized rotated log service yet. Keep support records outside printed invoices.
+Foreground logs/status remain in the terminal. Background startup writes rotated Python logs under the configured state directory in logs/system.log; see [Stage 7](pipeline_stage7.md). Keep support records outside printed invoices.
 
 ## Privacy and cleanup
 

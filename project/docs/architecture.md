@@ -65,7 +65,7 @@ The dashboard opens SQLite in read-only mode and serves artifacts only through j
 
 ## Current limits
 
-BD is the validated development scope, not arbitrary layouts or all unreadable handwriting. Cached development-set checks do not establish unseen accuracy. No cloud OCR, universal autonomous correction, speculative completion ETA, admin controls or scheduled startup is implemented. The [roadmap](pipeline_dashboard_plan.md) preserves the approval boundary for those stages.
+BD is the validated development scope, not arbitrary layouts or all unreadable handwriting. Cached development-set checks do not establish unseen accuracy. No cloud OCR, universal autonomous correction or speculative completion ETA is implemented. Local admin controls and current-user scheduled startup are supported. The [roadmap](pipeline_dashboard_plan.md) preserves the approval boundary for those stages.
 
 ## Admin transaction boundary
 

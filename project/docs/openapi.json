@@ -3,7 +3,7 @@
   "info": {
     "title": "FOC local invoice dashboard",
     "version": "0.1.0",
-    "description": "Local invoice dashboard with Stage 6 admin controls. Loopback only. GET routes are read-only. Protected POST commands pause/resume queue consumption and retry/reprocess selected jobs without editing invoices. Startup management remains Stage 7. Manual invoice editing creates preserved versions through the worker without repeating OCR."
+    "description": "Local invoice dashboard with Stage 6 admin controls. Loopback only. GET routes are read-only. Protected POST commands pause/resume queue consumption and retry/reprocess selected jobs without editing invoices. Startup management is provided by the local run_system.py CLI, outside the HTTP API. Manual invoice editing creates preserved versions through the worker without repeating OCR."
   },
   "servers": [
     {

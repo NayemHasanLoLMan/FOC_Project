@@ -28,13 +28,15 @@ class StartupTests(unittest.TestCase):
         self.config = load_config(self.path)
 
     def test_task_uses_current_user_hidden_python_and_safe_restart_limits(self):
-        program = self.root/'Python with spaces'/'pythonw.exe'
+        program = self.root/'Python & spaces 字'/'pythonw.exe'
         document = ET.fromstring(task_xml(self.path,program,'S-1-5-21-123',8082))
         ns = {'t':'http://schemas.microsoft.com/windows/2004/02/mit/task'}
         def value(path):return document.find(path,ns).text
         self.assertEqual(value('t:Principals/t:Principal/t:LogonType'),'InteractiveToken')
         self.assertEqual(value('t:Principals/t:Principal/t:RunLevel'),'LeastPrivilege')
         self.assertEqual(value('t:Triggers/t:LogonTrigger/t:UserId'),'S-1-5-21-123')
+        self.assertEqual(value('t:Triggers/t:TimeTrigger/t:Repetition/t:Interval'),'PT1M')
+        self.assertIsNone(document.find('t:Triggers/t:TimeTrigger/t:Repetition/t:Duration',ns))
         self.assertEqual(value('t:Settings/t:MultipleInstancesPolicy'),'IgnoreNew')
         self.assertEqual(value('t:Settings/t:ExecutionTimeLimit'),'PT0S')
         self.assertEqual(value('t:Settings/t:RestartOnFailure/t:Interval'),'PT1M')
@@ -42,7 +44,7 @@ class StartupTests(unittest.TestCase):
         self.assertEqual(value('t:Actions/t:Exec/t:Command'),str(program))
         self.assertEqual(value('t:Actions/t:Exec/t:WorkingDirectory'),str(ROOT))
         arguments = value('t:Actions/t:Exec/t:Arguments')
-        self.assertIn(subprocess.list2cmdline([str(self.path)]),arguments)
+        self.assertIn(subprocess.list2cmdline([str(self.path.resolve())]),arguments)
         self.assertIn('--background',arguments);self.assertIn('--port 8082',arguments)
         self.assertNotIn('Password',ET.tostring(document,encoding='unicode'))
 
@@ -63,10 +65,24 @@ class StartupTests(unittest.TestCase):
         with patch('src.foc_extractor.windows_startup.subprocess.run',return_value=subprocess.CompletedProcess([],1,'','Denied')):
             with self.assertRaisesRegex(RuntimeError,'Denied'):_powershell('bad')
 
+    def test_start_enables_and_stop_disables_automatic_recovery(self):
+        from src.foc_extractor.windows_startup import manage_startup
+        with patch('src.foc_extractor.windows_startup._powershell',return_value={'automatic_start_disabled':True}) as call:
+            with patch('src.foc_extractor.windows_startup.request_stop',return_value=True):
+                result=manage_startup('stop',self.config,self.path)
+            self.assertTrue(result['stop_requested']);self.assertTrue(result['automatic_start_disabled'])
+            self.assertIn('Disable-ScheduledTask',call.call_args.args[0])
+            self.assertNotIn('Unregister-ScheduledTask',call.call_args.args[0])
+        with patch('src.foc_extractor.windows_startup._powershell',return_value={}) as call:
+            manage_startup('start',self.config,self.path)
+            command=call.call_args.args[0]
+            self.assertLess(command.index('Enable-ScheduledTask'),command.index('Start-ScheduledTask'))
+
     @unittest.skipUnless(os.name=='nt','Windows native controls')
     def test_native_stop_event_logs_and_cleanup_allow_restart(self):
         stop = threading.Event()
         self.assertFalse(request_stop(self.config))
+
         with background_runtime(self.config,stop):
             print('background log sample')
             self.assertTrue(request_stop(self.config))
