@@ -21,6 +21,7 @@ from openpyxl import load_workbook
 from openpyxl.cell.rich_text import CellRichText, TextBlock
 from openpyxl.cell.text import InlineFont
 from .models import FOCData
+from .regions import select_region, template_region
 
 
 def _safe_write(ws, r: int, c: int, val):
@@ -372,13 +373,12 @@ def populate_template(template: Path, output: Path, data: FOCData):
     """
     Populate a customs invoice template with extracted FOC data.
     """
+    selected = select_region(data)
+    if template_region(template) not in (None, selected):
+        raise ValueError('Template does not match the selected invoice region')
     wb = load_workbook(template)
     ws = wb.active
 
-    tname = Path(template).name.upper()
-    ttype = (data.template_type or "").upper()
-
-    selected = next((region for region in ('BD','INDIA','JORDAN') if region in tname), ttype)
     if selected == "BD":
         _populate_bd(ws, data)
     elif selected == "INDIA":

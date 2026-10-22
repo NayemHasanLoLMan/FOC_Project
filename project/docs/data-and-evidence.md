@@ -1,12 +1,12 @@
 # Data, state and evidence
 
-## SQLite schema 5
+## SQLite schema 6
 
-The database has application ID 0x464F4349 and user_version 5. Migrations 1/2/3/4 to 5 are supported by writable initialization. The dashboard validates an existing schema and never migrates it.
+The database has application ID 0x464F4349 and user_version 6. Migrations 1/2/3/4/5 to 6 are supported by writable initialization. The dashboard validates an existing schema and never migrates it. Schema 6 adds jobs.region (BD/INDIA/JORDAN), defaulting retained jobs to BD without moving snapshots/output or rewriting historical attempts.
 
 | Table | Key / content |
 |---|---|
-| jobs | Autoincrement id; source_path, normalized source_identity, source_sha256, immutable snapshot_path, state and created/updated UTC timestamps |
+| jobs | Autoincrement id; source_path, normalized source_identity, source_sha256, immutable snapshot_path, region, state, manual_edit_json and created/updated UTC timestamps |
 | attempts | Autoincrement id and job_id; owner worker_id, lifecycle timestamps/state, metadata JSON, output/error/issues and optional prepared receipt_path |
 | events | Autoincrement id, job/optional attempt, created_at, event kind and JSON details |
 | intake_files | source_identity key; source path, metadata/content signature, stable_since/last_seen Unix time, readiness state/error/job |
@@ -16,7 +16,7 @@ The database has application ID 0x464F4349 and user_version 5. Migrations 1/2/3/
 
 Jobs uniquely identify source identity/content hash. Partial unique indexes enforce one running attempt globally and one unfinished attempt per job. Foreign keys are enabled on connections. Transactions are short; no inference runs inside them.
 
-Attempt metadata includes configuration, application version/hash, Python version, template/rates hashes, configured model, resolved model digest when known, native worker lock/PID and a compact processing summary. Issues are strings independent of success/failure; missing:net_weight_kg does not mean conversion failed.
+Attempt metadata includes configuration, application version/hash, Python version, region, actual template path/hash, rates hash, configured model, resolved model digest when known, native worker lock/PID and a compact processing summary. Historical BD attempts/receipts without region remain readable as BD. New receipts record region and recovery checks it against the job. The same accepted path/content cannot be reassigned to a different region. Issues are strings independent of success/failure; an old missing:net_weight_kg issue does not mean conversion failed. Net weight is no longer required merely because the invoice is non-BD.
 
 Processing summary counts vision attempts, fresh calls/responses, cached responses and accepted cells. vision_contributions is null until the final decision, [] for no linked contribution, or field/source-reference entries. Legacy cached evidence may lack exact historical model/image telemetry: keep unknown values unknown.
 

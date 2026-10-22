@@ -19,6 +19,8 @@ from .invoice_edits import edited_data
 from .pipeline_config import ROOT, PipelineConfig, attempt_metadata
 from .process_lock import process_lock
 from .processing_evidence import EvidenceRecorder
+from .workbook_verification import verify_workbook as _verify_workbook
+from .pipeline import _resolve_template
 
 HEARTBEAT_SECONDS = 5
 
@@ -56,29 +58,6 @@ def _publish_copy(source, target, expected_digest):
             os.link(temporary, target)
     finally:
         temporary.unlink(missing_ok=True)
-
-
-def _verify_workbook(workbook, data, source):
-    if data.get('source_file') != source.name or not isinstance(data.get('items'), list):
-        raise ValueError('Converter result does not identify this input snapshot')
-    with pymupdf.open(source) as pdf:
-        pages = len(pdf)
-    if data.get('pages_processed') != pages or data.get('pages_total') != pages:
-        raise ValueError('Refusing to publish an invoice with incomplete source-page coverage')
-    book = load_workbook(workbook)
-    try:
-        audit = dict(book['Extraction_Audit'].iter_rows(min_row=2, max_col=2, values_only=True))
-        if audit.get('source_file') != source.name or audit.get('pages_processed') != str(pages):
-            raise ValueError('Workbook audit does not match the conversion result')
-        sheet = book.active
-        total_row = next(row for row in range(33, sheet.max_row + 1) if sheet.cell(row, 6).value == 'TOTAL VALUE:')
-        actual = [(sheet.cell(row, 2).value, sheet.cell(row, 7).value, sheet.cell(row, 8).value)
-                  for row in range(33, total_row) if sheet.cell(row, 2).value is not None]
-        expected = [(item['description'], item.get('quantity'), item.get('unit') or None) for item in data['items']]
-        if actual != expected:
-            raise ValueError('Printed goods do not match the conversion result')
-    finally:
-        book.close()
 
 
 class QueueWorker:
@@ -153,6 +132,9 @@ class QueueWorker:
             raise ValueError('Prepared destination escapes its output directory')
         if _digest(job['snapshot_path']) != job['source_sha256']:
             raise ValueError('Source snapshot has changed since intake')
+        region = attempt['metadata'].get('region', 'BD')
+        if region != job['region'] or ready.get('region', 'BD') != region:
+            raise ValueError('Prepared invoice region does not match its job')
         return path, ready, prepared
 
     def _recover(self):
@@ -213,13 +195,18 @@ class QueueWorker:
         metadata = attempt_metadata(self.config)
         if metadata['application_sha256'] != self._startup_metadata['application_sha256']:
             raise RuntimeError('Application files changed; restart the worker before processing')
-        metadata.update(worker_lock=str(self.lock_path), worker_pid=os.getpid())
-        attempt = self.store.claim_next(self.owner, metadata)
+        attempt = self.store.claim_next(self.owner, lambda job: {
+            **attempt_metadata(self.config, job['region']),
+            'worker_lock': str(self.lock_path), 'worker_pid': os.getpid()})
         if attempt is None:
             return None
         metadata = attempt['metadata']
         job = self.store.get_job(attempt['job_id'])
         try:
+            region = job['region']
+            template = _resolve_template(None, region)
+            if metadata['region'] != region or metadata['template_path'] != str(template):
+                raise ValueError('Attempt template does not match its queued region')
             source = Path(job['snapshot_path'])
             if source.name != Path(job['source_path']).name or _digest(source) != job['source_sha256']:
                 raise ValueError('Input snapshot filename or SHA-256 does not match its queued source')
@@ -239,7 +226,7 @@ class QueueWorker:
                 original = json.loads((base_receipt.parent/previous['data_name']).read_text(encoding='utf-8'))
                 data = edited_data(original,edit['changes'])
                 workbook = folder/previous['workbook_name']
-                populate_template(ROOT/'templates/BD_template.xlsx',workbook,data)
+                populate_template(template,workbook,data)
                 _write_json(folder/(source.stem+'.json'),data.to_dict())
                 for field in edit['changes']:
                     observer({'kind':'field_source','field':field,'method':'manual_edit','value':getattr(data,field) if field!='items' else [i.__dict__ for i in data.items]})
@@ -251,20 +238,20 @@ class QueueWorker:
             else:
                 from .local_vision import vision_limits
                 with vision_limits(self.config):
-                    workbook = Path(run(source, template=ROOT / 'templates/BD_template.xlsx', output_dir=folder,
+                    workbook = Path(run(source, template=template, region=region, output_dir=folder,
                                         save_json=True, cache_dir=ROOT / '.cache/ocr', local_model=self.config.local_model,
                                         observer=observer)).resolve()
             if workbook.parent != folder or workbook.suffix.lower() != '.xlsx':
                 raise ValueError('Converter returned an unexpected output path')
             data_path = folder / f'{source.stem}.json'
             data = json.loads(data_path.read_text(encoding='utf-8'))
-            _verify_workbook(workbook, data, source)
-            after = attempt_metadata(self.config)
+            _verify_workbook(workbook, data, source, region)
+            after = attempt_metadata(self.config, region)
             if (_digest(source) != job['source_sha256'] or any(after[key] != metadata[key]
                     for key in ('template_sha256', 'rates_sha256', 'application_sha256'))):
                 raise ValueError('Source, template, rates or application changed during conversion')
             target = _output_name(self.config.output_dir, workbook.name, job['id'], attempt['id'])
-            _write_json(receipt, {'job_id': job['id'], 'attempt_id': attempt['id'], 'source_sha256': job['source_sha256'],
+            _write_json(receipt, {'job_id': job['id'], 'attempt_id': attempt['id'], 'source_sha256': job['source_sha256'], 'region':region,
                                  'workbook_name': workbook.name, 'workbook_sha256': _digest(workbook),
                                  'data_name': data_path.name, 'data_sha256': _digest(data_path), 'destination': str(target)})
         except Exception as exc:

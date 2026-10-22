@@ -43,7 +43,8 @@ class WorkerTests(unittest.TestCase):
             document.save(snapshot)
         return self.store.enqueue(original, hashlib.sha256(snapshot.read_bytes()).hexdigest(), snapshot)
 
-    def convert(self, source, *, template, output_dir, save_json, cache_dir, local_model, observer=None):
+    def convert(self, source, *, template, output_dir, save_json, cache_dir, local_model, observer=None, region='BD'):
+        self.assertEqual(region, 'BD')
         self.assertEqual(template, ROOT / 'templates/BD_template.xlsx')
         self.assertEqual(cache_dir, ROOT / '.cache/ocr')
         self.assertTrue(save_json)

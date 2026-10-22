@@ -138,6 +138,7 @@ class AdminControlTests(unittest.TestCase):
             db.execute('DROP TABLE admin_commands')
             db.execute('DROP TABLE queue_control')
             db.execute('ALTER TABLE jobs DROP COLUMN manual_edit_json')
+            db.execute('ALTER TABLE jobs DROP COLUMN region')
             db.execute('PRAGMA user_version=3')
         with self.assertRaises(ValueError):
             JobStore(self.store.path,read_only=True)

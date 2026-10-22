@@ -15,6 +15,8 @@ Imports use src.foc_extractor with project/ on sys.path; the existing CLI script
 | valuation.py | apply_valuation; approved approximate product/unit rules and Decimal rounding |
 | excel_writer.py | populate_template; safe literal text, BD layout/style inheritance, audit sheets and atomic save |
 | pipeline.py | run; the shared direct/batch/worker conversion sequence |
+| regions.py | Three supported layout mappings, validated country codes and destination/template identity checks |
+| workbook_verification.py | verify_workbook; independent region-specific printed goods, audit, source coverage and regional print bounds checks |
 | pipeline_config.py | PipelineConfig, load_config, attempt_metadata; validated paths and version snapshots |
 | job_store.py | JobStore; short SQLite transactions, ownership, history, readiness, recovery and read-only access |
 | folder_intake.py | FolderScanner.scan_once; verified stable snapshots; SourceChangedError/InvalidPDFError |

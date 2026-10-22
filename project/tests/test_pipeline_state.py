@@ -145,7 +145,7 @@ class JobStoreTests(unittest.TestCase):
         next_attempt = JobStore(self.database).claim_next('replacement-worker', {'template': 'new'})
         self.assertNotEqual(next_attempt['id'], attempt['id'])
         self.assertEqual([a['state'] for a in self.store.attempts(job)], ['interrupted', 'running'])
-        self.assertEqual(next_attempt['metadata'], {'template': 'new'})
+        self.assertEqual(next_attempt['metadata'], {'template': 'new', 'region': 'BD'})
         with self.assertRaises(ValueError):
             self.store.heartbeat(attempt['id'], 'original-worker')
 

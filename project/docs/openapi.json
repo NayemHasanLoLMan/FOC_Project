@@ -2453,6 +2453,19 @@
           },
           "processing": {
             "$ref": "#/components/schemas/Processing"
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "BD",
+              "INDIA",
+              "JORDAN"
+            ],
+            "description": "Immutable job region. Legacy attempt metadata may omit this field; retained jobs migrate as BD."
+          },
+          "template_path": {
+            "type": "string",
+            "description": "Actual selected template path captured for this attempt; absent in historical attempts."
           }
         },
         "required": []
@@ -2539,6 +2552,15 @@
               "string",
               "null"
             ]
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "BD",
+              "INDIA",
+              "JORDAN"
+            ],
+            "description": "Immutable job region. Legacy attempt metadata may omit this field; retained jobs migrate as BD."
           }
         },
         "required": [

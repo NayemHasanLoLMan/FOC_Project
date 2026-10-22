@@ -2,6 +2,7 @@ from dataclasses import asdict
 import json
 import re
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from .processing_evidence import emit, observed, track, accepted_vision_refs
 from .ocr_engine import analyze_pdf
@@ -9,11 +10,24 @@ from .parser import parse_result
 from .excel_writer import populate_template
 from .valuation import apply_valuation
 from .local_vision import DEFAULT_MODEL
+from .regions import REGIONS, region_code, select_region, template_region
+
+
+def _check_output_directory(output):
+    target = Path(output).resolve()
+    root = Path(__file__).resolve().parents[2]
+    for name in ('expected_output', 'expected_outputs'):
+        reference = root / name
+        if target == reference or target.is_relative_to(reference) or reference.is_relative_to(target):
+            raise ValueError('Output must not overlap manual reference folders')
 
 
 def _resolve_template(template: Path | None, template_type: str | None) -> Path:
     """Resolve the template path. If none is passed, use the matching blank template."""
+    selected_region = region_code(template_type or 'BD')
     if template:
+        if template_region(template) not in (None, selected_region):
+            raise ValueError('Template does not match the selected invoice region')
         if not Path(template).is_file():
             raise FileNotFoundError(f'Template does not exist: {template}')
         return Path(template)
@@ -24,7 +38,7 @@ def _resolve_template(template: Path | None, template_type: str | None) -> Path:
         "INDIA": base_dir / "INDIA_template.xlsx",
         "JORDAN": base_dir / "JORDAN_template.xlsx",
     }
-    selected = mapping.get(template_type or "BD", mapping["BD"])
+    selected = mapping[selected_region]
     if not selected.exists():
         # Fallback to templates in current working directory
         cwd_template = Path("templates") / f"{template_type or 'BD'}_template.xlsx"
@@ -44,6 +58,7 @@ def run(
     cache_dir: Path | None = None,
     local_model: str | None = DEFAULT_MODEL,
     observer=None,
+    region: str | None = None,
 ):
     """
     Execute end-to-end extraction pipeline:
@@ -56,8 +71,12 @@ def run(
         raise FileNotFoundError(f'PDF does not exist: {pdf_path}')
     if max_pages is not None and max_pages < 1:
         raise ValueError('max_pages must be a positive integer')
-    active_template = _resolve_template(template, 'BD')
-    out_dir = Path(output_dir) if output_dir else Path("output/bangladesh")
+    if region is not None:
+        region_code(region)
+    initial_region = region or (template_region(template) if template else None) or 'BD'
+    active_template = _resolve_template(template, initial_region)
+    out_dir = Path(output_dir) if output_dir else Path('output') / REGIONS[initial_region]['folder']
+    _check_output_directory(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. OCR
@@ -69,6 +88,14 @@ def run(
 
     # 2. Parse structured data
     data = track('parse', parse_result, result, pdf_path)
+    selected = select_region(data, region or (template_region(template) if template else None),
+                             (result.pages or [result.content])[0])
+    active_template = _resolve_template(template, selected)
+    if output_dir is None:
+        out_dir = Path('output') / REGIONS[selected]['folder']
+        out_dir.mkdir(parents=True, exist_ok=True)
+    emit('field_source', field='template_type', method='selected_invoice_region', value=selected,
+         template=str(active_template))
     from .packages import packing_packages
     package_evidence=track('packages', packing_packages, result,data.carton_range,pdf_path,cache_dir,local_model=local_model)
     emit('field_evidence', field='package_count', evidence=package_evidence)
@@ -110,8 +137,6 @@ def run(
         contributions.append({'field':'gross_weight_kg'})
     unresolved=[field for field in ('invoice_number','export_date','consignee','consignee_address','shipping_marks',
                 'package_count','gross_weight_kg','total_value') if getattr(data,field) is None]
-    if data.template_type != 'BD' and data.net_weight_kg is None:
-        unresolved.append('net_weight_kg')
     unresolved.extend(f'goods:{i+1}:{field}' for i,item in enumerate(data.items)
                       for field in ('description','quantity','unit','unit_price') if getattr(item,field) in (None,''))
     if not data.items:unresolved.append('goods')
@@ -119,11 +144,17 @@ def run(
          goods=[asdict(item) for item in data.items], diagnostics=data.warnings)
 
     # 3. Resolve template and populate Excel
-    if not template:
-        active_template = _resolve_template(None, data.template_type)
     out_name = pdf_path.name.replace("-D.pdf", "-I.xlsx") if "-D.pdf" in pdf_path.name else f"{pdf_path.stem}.xlsx"
     xlsx_path = out_dir / out_name
-    track('workbook', populate_template, active_template, xlsx_path, data)
+    if selected == 'BD':
+        track('workbook', populate_template, active_template, xlsx_path, data)
+    else:
+        from .workbook_verification import verify_workbook
+        with TemporaryDirectory(dir=out_dir) as staging:
+            prepared = Path(staging) / out_name
+            track('workbook', populate_template, active_template, prepared, data)
+            verify_workbook(prepared, data.to_dict(), pdf_path, selected)
+            prepared.replace(xlsx_path)
     if save_json:
         json_path = out_dir / f"{pdf_path.stem}.json"
         temporary = json_path.with_suffix('.json.tmp')

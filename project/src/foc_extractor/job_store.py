@@ -11,7 +11,7 @@ from uuid import UUID
 
 STATES = ('waiting_for_file', 'queued', 'running', 'waiting_to_save', 'completed', 'failed', 'interrupted')
 APPLICATION_ID = 0x464F4349
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 SCHEMA = (
     """CREATE TABLE jobs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,7 +86,7 @@ class JobStore:
                     db.execute(statement)
                 db.execute(f'PRAGMA application_id={APPLICATION_ID}')
                 db.execute('PRAGMA user_version=1')
-            elif version not in (1, 2, 3, 4, SCHEMA_VERSION) or application_id != APPLICATION_ID:
+            elif version not in (1, 2, 3, 4, 5, SCHEMA_VERSION) or application_id != APPLICATION_ID:
                 raise ValueError('Unsupported pipeline database identity or schema version')
             if version < 2:
                 db.execute(INTAKE_SCHEMA)
@@ -105,6 +105,8 @@ class JobStore:
                     attempt_id INTEGER REFERENCES attempts(id), created_at TEXT NOT NULL, result_json TEXT NOT NULL)''')
             if version < 5:
                 db.execute('ALTER TABLE jobs ADD COLUMN manual_edit_json TEXT')
+            if version < 6:
+                db.execute("ALTER TABLE jobs ADD COLUMN region TEXT NOT NULL DEFAULT 'BD' CHECK(region IN ('BD','INDIA','JORDAN'))")
             if version < SCHEMA_VERSION:
                 db.execute(f'PRAGMA user_version={SCHEMA_VERSION}')
 
@@ -127,8 +129,10 @@ class JobStore:
         db.execute('INSERT INTO events(job_id,attempt_id,created_at,kind,details_json) VALUES(?,?,?,?,?)',
                    (job_id, attempt_id, _now(), kind, json.dumps(details, allow_nan=False)))
 
-    def enqueue(self, source_path: Path, source_sha256: str, snapshot_path: Path) -> int:
+    def enqueue(self, source_path: Path, source_sha256: str, snapshot_path: Path, *, region='BD') -> int:
         """Accept an intake-validated snapshot; the scanner will validate PDF bytes."""
+        from .regions import region_code
+        region_code(region)
         source = Path(source_path).resolve()
         snapshot = Path(snapshot_path).resolve()
         if source.suffix.lower() != '.pdf' or snapshot.name != source.name:
@@ -139,11 +143,14 @@ class JobStore:
         digest = source_sha256.lower()
         now = _now()
         with self._connection(write=True) as db:
-            inserted = db.execute('''INSERT INTO jobs(source_path,source_identity,source_sha256,snapshot_path,state,created_at,updated_at)
-                VALUES(?,?,?,?,'queued',?,?) ON CONFLICT(source_identity,source_sha256) DO NOTHING''',
-                (str(source), identity, digest, str(snapshot), now, now)).rowcount
-            job_id = db.execute('SELECT id FROM jobs WHERE source_identity=? AND source_sha256=?',
-                                (identity, digest)).fetchone()[0]
+            inserted = db.execute('''INSERT INTO jobs(source_path,source_identity,source_sha256,snapshot_path,state,created_at,updated_at,region)
+                VALUES(?,?,?,?,'queued',?,?,?) ON CONFLICT(source_identity,source_sha256) DO NOTHING''',
+                (str(source), identity, digest, str(snapshot), now, now, region)).rowcount
+            existing = db.execute('SELECT id,region FROM jobs WHERE source_identity=? AND source_sha256=?',
+                                  (identity, digest)).fetchone()
+            if existing['region'] != region:
+                raise ValueError('This source was already accepted for another region; existing jobs cannot be reassigned')
+            job_id = existing['id']
             if inserted:
                 same_content = [row[0] for row in db.execute(
                     'SELECT id FROM jobs WHERE source_sha256=? AND source_identity<>? ORDER BY id', (digest, identity))]
@@ -201,19 +208,23 @@ class JobStore:
         with self._connection() as db:
             return {**dict.fromkeys(STATES, 0), **dict(db.execute('SELECT state,COUNT(*) FROM jobs GROUP BY state'))}
 
-    def claim_next(self, worker_id: str, metadata: dict) -> dict | None:
+    def claim_next(self, worker_id: str, metadata) -> dict | None:
         worker_id = _text(worker_id, 'worker_id')
-        if not isinstance(metadata, dict):
+        if not isinstance(metadata, dict) and not callable(metadata):
             raise ValueError('Attempt metadata must be a dictionary')
-        serialized = json.dumps(metadata, allow_nan=False, sort_keys=True)
         with self._connection(write=True) as db:
             if db.execute('SELECT paused FROM queue_control WHERE id=1').fetchone()[0]:
                 return None
             if db.execute("SELECT 1 FROM attempts WHERE state='running'").fetchone():
                 return None
-            job = db.execute("SELECT id,manual_edit_json FROM jobs WHERE state='queued' ORDER BY id LIMIT 1").fetchone()
+            job = db.execute("SELECT id,manual_edit_json,region FROM jobs WHERE state='queued' ORDER BY id LIMIT 1").fetchone()
             if job is None:
                 return None
+            metadata = metadata(dict(job)) if callable(metadata) else dict(metadata)
+            if metadata.get('region', job['region']) != job['region']:
+                raise ValueError('Attempt region does not match the queued job')
+            metadata['region'] = job['region']
+            serialized = json.dumps(metadata, allow_nan=False, sort_keys=True)
             now = _now()
             if job['manual_edit_json']:
                 metadata = {**metadata,'manual_edit':json.loads(job['manual_edit_json'])}

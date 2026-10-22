@@ -113,7 +113,8 @@ class InvoiceEditTests(unittest.TestCase):
     def test_schema_four_migration_keeps_existing_invoices(self):
         old=self.complete()
         with closing(sqlite3.connect(self.store.path)) as db,db:
-            db.execute('ALTER TABLE jobs DROP COLUMN manual_edit_json');db.execute('PRAGMA user_version=4')
+            db.execute('ALTER TABLE jobs DROP COLUMN manual_edit_json')
+            db.execute('ALTER TABLE jobs DROP COLUMN region');db.execute('PRAGMA user_version=4')
         migrated=JobStore(self.store.path)
         self.assertEqual(migrated.get_attempt(old)['state'],'completed')
         with migrated._connection() as db:self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],SCHEMA_VERSION)

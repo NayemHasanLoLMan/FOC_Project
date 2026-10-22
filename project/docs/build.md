@@ -83,3 +83,5 @@ For rollback, stop components and restore a matching application/environment and
 The organization/build update is checked with the existing suite, legacy/canonical evaluator parity, protected-file hashes and an extracted-bundle CLI/conversion/dashboard smoke test using the installed environment. It is not a clean-machine dependency install, native executable certification, physical power-loss test or unattended-startup release. See the latest organization QA report for exact results.
 
 The manual editor upgrades schema 4 to 5 at writable initialization. Stop the system and back up the database and retained artifacts before upgrading. Restore a consistent matching backup to roll back.
+
+India/Jordan Stage 2 adds schema 6 (immutable job region). Stop/drain before upgrade and preserve a schema-5 backup with its matching application/artifacts/output. Writable initialization migrates old jobs to BD without rewriting old attempts or relocating files. Older application builds cannot open schema 6; rollback restores the matching older database as well as code. See [Stage 2](india_jordan_stage2.md).

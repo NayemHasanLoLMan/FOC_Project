@@ -17,7 +17,7 @@ def editable_settings(config):
 
 def validate_setting_paths(config, *, development=False):
     protected=[config.state_dir,config.artifact_dir,*[ROOT/name for name in
-        ('src','frontend','templates','.cache','.venv','docs','tools','tests','reports','development','examples','expected_output')]]
+        ('src','frontend','templates','.cache','.venv','docs','tools','tests','reports','development','examples','expected_output','expected_outputs')]]
     for folder in (config.incoming_dir,config.output_dir):
         if development:
             from .development_reset import DEVELOPMENT_ROOT

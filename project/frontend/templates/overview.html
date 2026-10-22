@@ -3,10 +3,16 @@
 <div class="page-heading"><div><p class="eyebrow">PDF TO EXCEL</p><h1>Invoice dashboard</h1><p>Follow your PDFs and open, edit or download each invoice.</p></div><a class="button secondary" href="{{ url_for('jobs') }}">View all jobs ↗</a></div>
 <section class="panel"><div class="section-heading"><h2 id="queue-state">{% if status.queue.paused %}Processing paused{% else %}Ready to process{% endif %}</h2><button type="button" class="button" data-queue-control data-command="/api/queue/{{ 'resume' if status.queue.paused else 'pause' }}">{{ 'Resume processing' if status.queue.paused else 'Pause processing' }}</button></div><p class="hint">Pause lets the current invoice finish. New PDFs wait until you resume processing.</p></section>
 <section class="stats" aria-label="Queue counts">
-  {% for name,label in [('queued','Queued'),('running','Running'),('waiting_to_save','Waiting to save'),('completed','Completed'),('failed','Failed')] %}
-  <article class="stat"><span>{{ label }}</span><strong data-count="{{ name }}">{{ status.counts[name] }}</strong><small>{% if name=='completed' %}Invoices ready{% elif name=='running' %}In progress{% elif name=='waiting_to_save' %}Ready; file could not be saved{% else %}Jobs{% endif %}</small></article>
+  {% for name,label,hint in [('queued','Queued','Ready for processing'),('running','Running','Invoices in progress'),('waiting_to_save','Waiting to save','Generated; save needs retry'),('completed','Completed','Invoices ready to download'),('failed','Failed','Processing needs attention'),('settling','Files settling','Checking PDF readiness')] %}
+  <article class="stat stat-{{ name }}"><div class="stat-header"><span>{{ label }}</span><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+  {% if name=='queued' %}<path d="M4 6h12M4 12h8M4 18h8m4-6 4 4-4 4m-3-4h7"/>
+  {% elif name=='running' %}<path d="M20 8a8 8 0 0 0-13-3L4 8m0-5v5h5M4 16a8 8 0 0 0 13 3l3-3m0 5v-5h-5"/>
+  {% elif name=='waiting_to_save' %}<path d="M7 18H5a3 3 0 0 1-1-5.8A7 7 0 0 1 17.8 10 4 4 0 0 1 19 18h-2M12 12v9m-3-3 3 3 3-3"/>
+  {% elif name=='completed' %}<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>
+  {% elif name=='failed' %}<circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 4h.01"/>
+  {% else %}<path d="M7 3h10M7 21h10M8 3v4l4 5-4 5v4m8-18v4l-4 5 4 5v4M9 7h6m-6 10h6"/>{% endif %}
+  </svg></span></div><strong {% if name=='settling' %}data-intake="waiting_for_file"{% else %}data-count="{{ name }}"{% endif %}>{{ status.intake_counts.waiting_for_file if name=='settling' else status.counts[name] }}</strong><small>{{ hint }}</small></article>
   {% endfor %}
-  <article class="stat"><span>Files settling</span><strong data-intake="waiting_for_file">{{ status.intake_counts.waiting_for_file }}</strong><small>Before PDF intake</small></article>
 </section>
 <div class="columns">
 <section class="panel"><div class="section-heading"><h2>System status</h2></div>

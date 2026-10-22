@@ -18,6 +18,9 @@ Current scope: local PDF-to-BD-invoice conversion, a durable folder queue and a 
 | [Operations](operations.md) | Start/stop, backup, recovery, privacy and troubleshooting |
 | [Testing](testing.md) | Unit tests, evaluation tools, fixtures and result interpretation |
 | [Contributing](contributing.md) | Small-change rules and required checks |
+| [India / Jordan staged plan](india_jordan_implementation_plan.md) | Regional implementation sequence and review gates |
+| [India / Jordan Stage 1](india_jordan_stage1.md) | Verified BD baseline, rollback instructions and all-page source checklist |
+| [India / Jordan Stage 2](india_jordan_stage2.md) | Explicit country identity, schema migration, template provenance and verification |
 
 The source code is authoritative. The API reference describes implemented read-only views and protected Stage 6 commands; it does not promise future controls. Null values mean unavailable data, not zero. Production conversion never reads manual expected invoices.
 

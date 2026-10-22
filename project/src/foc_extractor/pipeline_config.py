@@ -78,8 +78,12 @@ def parse_config(raw, base: Path) -> PipelineConfig:
     return PipelineConfig(**directories, scan_interval_seconds=interval, local_model=model, **vision)
 
 
-def attempt_metadata(config: PipelineConfig) -> dict:
+def attempt_metadata(config: PipelineConfig, region='BD') -> dict:
     """Capture local versions without contacting Ollama or importing OCR models."""
+    from .pipeline import _resolve_template
+    from .regions import region_code
+    region_code(region)
+    template = _resolve_template(None, region)
     application = hashlib.sha256()
     for path in sorted((ROOT / 'src/foc_extractor').glob('*.py')) + [ROOT / 'main.py', ROOT / 'run_batch.py']:
         application.update(path.relative_to(ROOT).as_posix().encode() + b'\0' + path.read_bytes() + b'\0')
@@ -88,7 +92,9 @@ def attempt_metadata(config: PipelineConfig) -> dict:
         'application_version': __version__,
         'application_sha256': application.hexdigest(),
         'python_version': platform.python_version(),
-        'template_sha256': hashlib.sha256((ROOT / 'templates/BD_template.xlsx').read_bytes()).hexdigest(),
+        'region': region,
+        'template_path': str(template),
+        'template_sha256': hashlib.sha256(template.read_bytes()).hexdigest(),
         'rates_sha256': hashlib.sha256((ROOT / 'valuation_rates.json').read_bytes()).hexdigest(),
         'local_model': config.local_model,
         'model_digest': None,  # Resolved by processing, not assumed from the configured model name.
