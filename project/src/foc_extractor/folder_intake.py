@@ -82,12 +82,24 @@ class FolderScanner:
         return target
 
     def scan_once(self):
+        scans = {region: self._scan_folder(folder, region) for region, folder in self.config.inboxes().items()}
+        result = dict(scans['BD'])
+        result['folders'] = scans
+        result['accepted_job_ids'] = [job for scan in scans.values() for job in scan['accepted_job_ids']]
+        result['errors'] = [error for scan in scans.values() for error in scan['errors']]
+        result['folder_error'] = '; '.join(region + ': ' + scan['folder_error'] for region, scan in scans.items()
+                                          if scan['folder_error']) or None
+        result['intake_counts'] = dict(sum((Counter(scan['intake_counts']) for scan in scans.values()), Counter()))
+        result['jobs'] = self.store.counts()
+        return result
+
+    def _scan_folder(self, folder, region):
         now = time.time()
         result = {'scanned_at': datetime.fromtimestamp(now, timezone.utc).isoformat(),
-                  'incoming_dir': str(self.config.incoming_dir), 'folder_error': None,
+                  'incoming_dir': str(folder), 'region': region, 'folder_error': None,
                   'accepted_job_ids': [], 'errors': []}
         try:
-            entries = sorted(self.config.incoming_dir.iterdir(), key=lambda path: path.name.casefold())
+            entries = sorted(folder.iterdir(), key=lambda path: path.name.casefold())
         except OSError as exc:
             result['folder_error'] = str(exc)
             entries = None
@@ -114,21 +126,23 @@ class FolderScanner:
                         raise SourceChangedError('Source changed during hashing; waiting for stable bytes')
                     signature = json.dumps([fingerprint, digest])
                     record = self.store.observe_intake(source, signature, now)
+                    if record['job_id'] and self.store.get_job(record['job_id'])['region'] != region:
+                        raise ValueError('This input folder contains jobs accepted for another country')
                     if record['state'] in ('queued', 'rejected') or now - record['stable_since'] < self.config.scan_interval_seconds:
                         continue
                     snapshot = self._snapshot(source, digest, fingerprint)
                     _validate_pdf(snapshot)
-                    job_id = self.store.enqueue(source, digest, snapshot)
+                    job_id = self.store.enqueue(source, digest, snapshot, region=region)
                     if self.store.finish_intake(source, signature, 'queued', job_id=job_id):
                         result['accepted_job_ids'].append(job_id)
                 except InvalidPDFError as exc:
                     self.store.finish_intake(source, signature, 'rejected', error=str(exc))
                     result['errors'].append({'source': source.name, 'error': str(exc)})
-                except (OSError, RuntimeError) as exc:
+                except (OSError, RuntimeError, ValueError) as exc:
                     if identity is not None:
                         self.store.observe_intake(source, None, now, error=str(exc))
                     result['errors'].append({'source': source.name, 'error': str(exc)})
-            self.store.mark_missing_intakes(self.config.incoming_dir, seen)
-        result['intake_counts'] = dict(Counter(record['state'] for record in self.store.intake_files(self.config.incoming_dir)))
+            self.store.mark_missing_intakes(folder, seen)
+        result['intake_counts'] = dict(Counter(record['state'] for record in self.store.intake_files(folder)))
         result['jobs'] = self.store.counts()
         return result

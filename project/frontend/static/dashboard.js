@@ -210,6 +210,8 @@ if (settingsEditor) settingsEditor.addEventListener('submit', async event => {
   if (button.disabled) return;
   const changes = Object.fromEntries(new FormData(settingsEditor));
   changes.local_model = changes.local_model.trim() || null;
+  changes.india_enabled = changes.india_enabled === 'true';
+  for (const field of ['india_incoming_dir','india_output_dir']) changes[field] = changes[field].trim() || null;
   for (const field of ['scan_interval_seconds','vision_output_tokens','vision_context_tokens','vision_timeout_seconds']) changes[field] = Number(changes[field]);
   const signature = JSON.stringify(changes);
   if (settingsEditor.dataset.signature !== signature) {

@@ -1,8 +1,14 @@
-# Development only
+# Development workspace
 
-- analysis/: comparison against manual invoices, output validation and optional Excel print QA.
-- postman/: importable collection/environment for all existing read-only HTTP routes.
+Nothing here is required by the production source ZIP.
 
-Automated regression tests remain in ../tests/. Samples and manual references remain at ../examples/ and ../expected_outputs/ so saved commands and reports stay valid. Generated QA evidence stays in ../reports/. None of these folders is included in the production ZIP.
+| Folder | Purpose |
+|---|---|
+| `analysis/` | Canonical invoice comparison, output checks and optional Excel print QA |
+| `postman/` | API collection and local environment; see [usage](postman/README.md) |
+| `archive/` | Completed milestone notes and retired wrapper source |
+| `runtime/` | Preserved isolated development workspace; local data, not disposable code |
 
-Use [build instructions](../docs/build.md) to create the clean production package. See [safe removal boundaries](../docs/deployment-boundaries.md) before cleaning an existing checkout; a demo configuration may reference reports.
+Regression tests live in `project/tests/`. Test PDFs and manual references remain in `project/examples/` and `project/expected_outputs/`; preserve these for regression checks and upcoming Jordan work. Generated QA runs and historical evidence archives live in ignored `project/reports/`.
+
+Use [testing](../docs/testing.md) and [build](../docs/build.md). Run analysis tools directly from `development/analysis/`; obsolete `tools/` forwarding files were retired. Application imports, entry points and production data locations stay unchanged.

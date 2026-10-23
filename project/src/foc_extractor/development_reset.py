@@ -14,6 +14,8 @@ DEVELOPMENT_ROOT=ROOT/'development/runtime'
 def development_config(config):
     base=DEVELOPMENT_ROOT
     return replace(config,incoming_dir=base/'incoming/bangladesh',output_dir=base/'output/bangladesh',
+                   india_incoming_dir=base/'incoming/india' if config.india_incoming_dir else None,
+                   india_output_dir=base/'output/india' if config.india_output_dir else None,
                    state_dir=base/'state',artifact_dir=base/'artifacts')
 
 
@@ -64,14 +66,16 @@ def clear_workspace(config,store,locks,request_id, *, development=False):
                 if archive.resolve()!=archive or not archive.resolve().is_relative_to(base):
                     raise ValueError('The recovery archive escapes the workspace')
                 if archive.exists():raise ValueError('A previous reset archive exists; inspect it before retrying with a new request')
-                for folder in (config.artifact_dir,config.output_dir):
+                generated=[(config.artifact_dir,'artifacts'),(config.output_dir,'output')]
+                if config.india_output_dir:generated.append((config.india_output_dir,'output-india'))
+                for folder,_ in generated:
                     for path in [folder,*folder.rglob('*')]:
                         if path.is_symlink() or path.resolve()!=path or not path.resolve().is_relative_to(folder):
                             raise ValueError('Generated files contain a link or escape their workspace')
                 archive.mkdir(parents=True)
                 with store._connection() as source, closing(sqlite3.connect(archive/'jobs.sqlite3')) as backup:
                     source.backup(backup)
-                for folder,name in ((config.artifact_dir,'artifacts'),(config.output_dir,'output')):
+                for folder,name in generated:
                     if folder.exists():
                         target=archive/name
                         if folder.stat().st_dev!=archive.stat().st_dev:
@@ -80,7 +84,7 @@ def clear_workspace(config,store,locks,request_id, *, development=False):
                             if target.resolve()!=target or not target.is_relative_to(folder.parent) or target.exists():
                                 raise ValueError('The output recovery folder is redirected or already exists')
                             target.parent.mkdir(parents=True,exist_ok=True)
-                            (archive/'external-output.json').write_text(json.dumps({'original':str(folder),'archived':str(target)}),encoding='utf-8')
+                            (archive/('external-output-india.json' if name=='output-india' else 'external-output.json')).write_text(json.dumps({'original':str(folder),'archived':str(target)}),encoding='utf-8')
                         folder.rename(target);moved.append((folder,target))
                     folder.mkdir(parents=True,exist_ok=True)
                 # Rediscover remaining PDFs through the normal stable-file checks after clearing.

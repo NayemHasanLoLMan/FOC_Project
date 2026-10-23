@@ -1,6 +1,6 @@
 # Testing and evaluation
 
-All automated tests are in tests/test_*.py. Evaluation implementations live under development/analysis/. The project/tools evaluation files remain forwarding entry points so established commands/imports continue to work.
+All automated tests are in tests/test_*.py. Evaluation implementations live under development/analysis/. Use these canonical paths; obsolete tools/ forwarding files are archived.
 
 ## Commands
 
@@ -29,7 +29,7 @@ Parser/source-goods/number tests cover supported extraction rules. OCR tests cov
 
 State/intake/worker tests cover schema migration, ownership, duplicates, partial input, process locks, crash checkpoints, publication races, blocked saves and recovery. Evidence tests cover exact PNG bytes, model/cache distinction, rejected/failed calls, provenance and safe previews. Dashboard tests cover read-only behavior, routes/filters/downloads, stale health, concurrency, security boundaries and plain-language explanations.
 
-The suite largely uses isolated temporary directories and controlled OCR/model responses. It is not a full fresh-model benchmark. Canonical PDFs/manual Excel references stay in examples/ and expected_outputs/ to keep existing tools/reports stable; India/Jordan samples are retained but unvalidated.
+The suite largely uses isolated temporary directories and controlled OCR/model responses. It is not a full fresh-model benchmark. Canonical PDFs/manual Excel references stay in examples/ and expected_outputs/ to keep existing tools/reports stable; India has one verified real shipment; unseen India PDFs and Jordan acceptance remain pending.
 
 ## Meaningful real-PDF acceptance
 
@@ -42,7 +42,7 @@ The suite largely uses isolated temporary directories and controlled OCR/model r
 
 Do not alter canonical expected workbooks or tune shipment-specific answers to improve a score. PDF-correct differences may be valid. Strict goods recall/precision, field matches, coverage and print layout measure different things; there is no single proven universal invoice accuracy percentage.
 
-The established BD development checkpoint has 20 invoices / 66 pages / 89 goods rows, strict matches 58/75 expected and 58/82 paired generated rows. These are historical development scores, not acceptance on future PDFs.
+The latest available-sample release gate passed 454 tests and preserved all 21 original production invoices (20 Bangladesh, one India). Older goods-match percentages are historical milestones, not a current universal accuracy score. See [readiness](readiness.md).
 
 Generated reports contain shipment text/images and remain ignored. Historical verification scripts in reports are QA artifacts, not production modules or supported application entry points.
 

@@ -2,7 +2,7 @@
 
 ## Supported baseline
 
-The validated environment is Windows x64 with Python 3.12, local CPU PaddleOCR and an installed Ollama vision model. BD packing-list layouts and the BD template are the tested scope. Other platforms and India/Jordan extraction are not release acceptance claims.
+The validated environment is Windows x64 with Python 3.12, local CPU PaddleOCR and an installed Ollama vision model. Bangladesh and one real India shipment have passed available-sample acceptance. Additional unseen India PDFs, Jordan processing and other platforms remain unverified; see [readiness](readiness.md).
 
 Microsoft Excel is not required to generate .xlsx files or run the dashboard. It is required only for the optional native print-layout test. No Azure subscription or paid cloud document service is required.
 
@@ -65,4 +65,4 @@ See [build](build.md) for a deployable source bundle, dependency wheel provision
 
 ### Optional India invoice-header fallback
 
-India Fix 3 can use the already installed `qwen3.5:4b` only after an invalid primary invoice-header reading. On a new machine, provision it explicitly with `ollama pull qwen3.5:4b` if this fallback is wanted. The application does not download models. The primary model setting remains unchanged; this does not approve switching Bangladesh extraction to another model. Without the optional reader, the existing source-OCR/filename fallback still works, but unreadable handwriting may remain unresolved. See [Fix 3 acceptance](india_fix3_invoice_number.md) for the model comparison and limits.
+India can use `qwen3.5:4b` only after an invalid primary invoice-header reading. On a new machine, provision it explicitly with `ollama pull qwen3.5:4b` if this fallback is wanted. The application does not download models. The primary model setting remains unchanged; this does not switch Bangladesh extraction to another model. Without the optional reader, the existing source-OCR/filename fallback still works, but unreadable handwriting may remain unresolved. Historical model comparisons are archived; current limits are in [readiness](readiness.md).

@@ -2134,8 +2134,57 @@
                       "output_dir": {
                         "type": "string",
                         "description": "Full absolute path to a dedicated invoice output folder."
+                      },
+                      "india_enabled": {
+                        "type": "boolean",
+                        "description": "Enable new India intake; already queued jobs continue."
+                      },
+                      "india_incoming_dir": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Full absolute India inbox path; paired with india_output_dir."
+                      },
+                      "india_output_dir": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Full absolute dedicated India output path; retained when intake is disabled."
                       }
-                    }
+                    },
+                    "oneOf": [
+                      {
+                        "required": [
+                          "india_enabled",
+                          "india_incoming_dir",
+                          "india_output_dir"
+                        ]
+                      },
+                      {
+                        "not": {
+                          "anyOf": [
+                            {
+                              "required": [
+                                "india_enabled"
+                              ]
+                            },
+                            {
+                              "required": [
+                                "india_incoming_dir"
+                              ]
+                            },
+                            {
+                              "required": [
+                                "india_output_dir"
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "description": "Submit all ten fields, or exactly the legacy seven to preserve India settings. Both India paths or neither; enabling requires both."
                   }
                 }
               }
@@ -2199,6 +2248,24 @@
                         "output_dir": {
                           "type": "string",
                           "description": "Full absolute path to a dedicated invoice output folder."
+                        },
+                        "india_enabled": {
+                          "type": "boolean",
+                          "description": "Enable new India intake; already queued jobs continue."
+                        },
+                        "india_incoming_dir": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Full absolute India inbox path; paired with india_output_dir."
+                        },
+                        "india_output_dir": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Full absolute dedicated India output path; retained when intake is disabled."
                         }
                       }
                     }
@@ -2415,6 +2482,24 @@
               "string",
               "null"
             ]
+          },
+          "india_enabled": {
+            "type": "boolean",
+            "description": "Enable new India intake; already queued jobs continue."
+          },
+          "india_incoming_dir": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Full absolute India inbox path; paired with india_output_dir."
+          },
+          "india_output_dir": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Full absolute dedicated India output path; retained when intake is disabled."
           }
         },
         "required": [
@@ -2474,6 +2559,10 @@
           "template_path": {
             "type": "string",
             "description": "Actual selected template path captured for this attempt; absent in historical attempts."
+          },
+          "output_dir": {
+            "type": "string",
+            "description": "Actual regional publication root; legacy attempts use configuration.output_dir."
           }
         },
         "required": []

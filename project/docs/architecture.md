@@ -14,7 +14,7 @@ flowchart LR
     Prepared --> Publish[Verified publication without overwrite]
     Publish --> Excel[Versioned Excel output]
     Worker --> DB
-    DB --> Web[Read-only Flask / Waitress dashboard]
+    DB --> Web[Flask / Waitress dashboard]
     Prepared --> Web
     Excel --> Web
 ~~~
@@ -35,7 +35,7 @@ Direct CLI conversion uses the same pipeline but bypasses intake, job history an
 8. Apply approved approximate USD product/unit rates only when appropriate; preserve source quantities and explicit values.
 9. Fill the shared template and audit/item sheets, save atomically, optionally write parsed JSON.
 
-Queued processing adds verified source/template/rate/application fingerprints, complete page/workbook checks, durable evidence and publication receipts around this same converter. Detailed business rules remain in [processing_flow.md](processing_flow.md).
+Queued processing adds verified source/template/rate/application fingerprints, complete page/workbook checks, durable evidence and publication receipts around this same converter. Current business rules are described in [configuration](configuration.md). Completed experiments are archived outside the production documentation.
 
 ## Queue lifecycle
 
@@ -65,7 +65,7 @@ The dashboard opens SQLite in read-only mode and serves artifacts only through j
 
 ## Current limits
 
-BD is the validated development scope, not arbitrary layouts or all unreadable handwriting. Cached development-set checks do not establish unseen accuracy. No cloud OCR, universal autonomous correction or speculative completion ETA is implemented. Local admin controls and current-user scheduled startup are supported. The [roadmap](pipeline_dashboard_plan.md) preserves the approval boundary for those stages.
+Bangladesh and one real India shipment have passed available-sample acceptance; arbitrary layouts, unseen India PDFs and all unreadable handwriting have not. Cached checks do not establish unseen accuracy. No cloud OCR, universal autonomous correction or speculative completion ETA is implemented. Local admin controls and current-user scheduled startup are supported. The [readiness checklist](readiness.md) records remaining gates.
 
 ## Admin transaction boundary
 

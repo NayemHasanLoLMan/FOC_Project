@@ -20,14 +20,11 @@ project/
   valuation_rates.json            Approved approximate rates; production input
   requirements.txt                Supported direct dependency constraints
   requirements-lock.txt           Working Windows/Python environment pins
-  docs/                           Current manuals, API specification and historical notes
+  docs/                           Current manuals and API specification
   tests/
     test_*.py                     Automated regression tests
   tools/
     build_release.py              Development-only production bundle builder
-    compare_invoices.py           Legacy evaluation compatibility entry point
-    check_outputs.py              Legacy evaluation compatibility entry point
-    export_print_samples.ps1      Legacy evaluation compatibility entry point
   examples/                       Canonical test PDFs, including regional subfolders
   expected_outputs/               Manually prepared reference invoices; test-only
   reports/                        Ignored QA reports and isolated test runs
@@ -38,7 +35,7 @@ project/
   dist/                           Ignored production ZIPs
 ~~~
 
-Unit tests live under tests/; analysis implementations live under development/analysis/. The three old evaluation paths under tools/ forward to development/analysis/ so existing commands and Python comparison imports still work. Native Excel print export also forwards to the same separated implementation. The build tool itself is development tooling, not application runtime.
+Unit tests live under tests/; analysis implementations live under development/analysis/. Retired evaluation forwarding files are archived; use the canonical development/analysis/ commands. Completed documentation and old QA runs are archived outside the production tree. The build tool itself is development tooling, not application runtime.
 
 Production depends on src, frontend, production CLI files, blank templates, rates, configuration and installed dependencies/models. No production module imports tests or evaluation tools. Source PDFs, manual reference invoices and generated QA reports never become runtime truth.
 
@@ -48,6 +45,6 @@ Runtime/evidence paths are deliberately not reorganized: SQLite attempts and rec
 
 The production archive preserves the same repository-style command layout under foc-invoice/project/. It contains no environment, models, customer documents, live database or prior outputs. See [build](build.md) for the exact allowlist and verification.
 
-See [safe removal boundaries](deployment-boundaries.md) and [Postman instructions](../development/postman/README.md).
+See [safe removal boundaries](deployment-boundaries.md) and Postman instructions (`project/development/postman/README.md` in the development checkout).
 
-The default managed inputs/outputs are incoming/bangladesh and output/bangladesh. Both parents also contain reserved india and jordan folders; only Bangladesh processing is active.
+The default managed inputs/outputs are incoming/bangladesh and output/bangladesh. Both parents also contain reserved india and jordan folders; Bangladesh and opt-in India processing are active. Jordan remains disabled.

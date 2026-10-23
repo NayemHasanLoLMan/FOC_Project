@@ -1,8 +1,8 @@
 # HTTP API reference
 
-Base URL: **http://127.0.0.1:8080**, or the selected --port. [openapi.json](openapi.json) describes all 20 implemented routes and their request/response schemas. It can be opened in an OpenAPI 3.1-compatible viewer; no Swagger service is installed or exposed.
+Base URL: **http://127.0.0.1:8080**, or the selected --port. [openapi.json](openapi.json) describes all 25 implemented routes and their request/response schemas. It can be opened in an OpenAPI 3.1-compatible viewer; no Swagger service is installed or exposed.
 
-India/Jordan Stage 2 adds a read-only `region` value (BD/INDIA/JORDAN) to job records and new attempt metadata, plus the actual `template_path` in new attempt metadata. Migrated jobs are BD; historical attempt metadata may omit both fields. There is no region-changing HTTP command and the production watcher remains BD-only. India Fix 11 enables versioned India editing through the existing edit URLs; India goods rows require `hs_code`, and India header changes allow port/terms but protect country and omit BD-only fields. The server selects the contract using the job's immutable region. See [manual editing](manual-invoice-editing.md) and the regional OpenAPI schemas.
+India/Jordan Stage 2 adds a read-only `region` value (BD/INDIA/JORDAN) to job records and new attempt metadata, plus the actual `template_path` in new attempt metadata. Migrated jobs are BD; historical attempt metadata may omit both fields. There is no region-changing HTTP command and the production watcher supports Bangladesh and opt-in India; Jordan stays disabled. India Fix 11 enables versioned India editing through the existing edit URLs; India goods rows require `hs_code`, and India header changes allow port/terms but protect country and omit BD-only fields. The server selects the contract using the job's immutable region. See [manual editing](user-guide.md) and the regional OpenAPI schemas.
 
 This is a local, unauthenticated dashboard API. GET/HEAD routes read retained state. Stage 6 adds five protected POST commands; later additions provide guarded settings, editing and recoverable Clear data commands. There is no upload, forced cancellation or arbitrary shell-command endpoint. The scanner accepts PDFs from the configured filesystem inbox. All timestamps are UTC unless explicitly described as the PC's local date/time.
 
@@ -98,7 +98,7 @@ IDs 12/5188 above illustrate the development demo; discover real IDs from /api/j
 
 ## Postman
 
-Import the [collection](../development/postman/FOC-Invoice.postman_collection.json) and [local environment](../development/postman/Local.postman_environment.json). See [usage and ID selection](../development/postman/README.md). These development files are not shipped in the production ZIP; OpenAPI remains included.
+Import the collection (`project/development/postman/FOC-Invoice.postman_collection.json` in the development checkout) and local environment (`project/development/postman/Local.postman_environment.json` in the development checkout). See usage and ID selection (`project/development/postman/README.md` in the development checkout). These development files are not shipped in the production ZIP; OpenAPI remains included.
 
 ## Stage 6 commands
 
@@ -120,10 +120,10 @@ All commands return 200 with their accepted result; acceptance does not prove co
 
 400 means malformed fields/UUID; 403 means request protection failed; 404 means unknown job; 409 means a stale/ineligible action or mismatched request ID; 415 means unsupported content type. Non-command routes still reject POST with 405. Keep admin_commands audit/idempotency records with the queue backup.
 
-Bangladesh extracted data now includes optional tin_number and import_cover_note from the PDF. Net weight is not applicable to BD and is omitted from printed/audit fields and unresolved-field lists. Other regions retain the shared model property. See [layout update](bd_layout_update.md).
+Bangladesh extracted data now includes optional tin_number and import_cover_note from the PDF. Net weight is not applicable to BD and is omitted from printed/audit fields and unresolved-field lists. Other regions retain the shared model property. TIN/import cover notes use PDF values only. Bangladesh and India do not print net weight. See [configuration](configuration.md).
 
-See [manual invoice editing](manual-invoice-editing.md) for the simplified dashboard and safe versioned editing workflow.
+See [manual invoice editing](user-guide.md) for the simplified dashboard and safe versioned editing workflow.
 
-See [invoice downloads, web preview and development reset](invoice-web-tools.md) for clean filenames, local viewing and the Clear data option on the main or isolated launcher.
+See [invoice downloads, web preview and development reset](user-guide.md) for clean filenames, local viewing and the Clear data option on the main or isolated launcher.
 
-See [editable processing settings](configuration.md#editable-dashboard-settings) for POST `/api/settings`, its seven fields, persistence, validation and idle-only application.
+See [editable processing settings](configuration.md#editable-dashboard-settings) for POST `/api/settings`, its ten fields (or the compatible legacy seven-field request), persistence, validation and idle-only application.

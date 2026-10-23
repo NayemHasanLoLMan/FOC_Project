@@ -127,7 +127,7 @@ class QueueWorker:
             if file.is_symlink() or not file.resolve().is_relative_to(path.parent.resolve()) or _digest(file) != digest:
                 raise ValueError('Prepared artifact failed hash/path verification')
         target = Path(ready['destination'])
-        if (not target.is_absolute() or target.parent != Path(attempt['metadata']['configuration']['output_dir'])
+        if (not target.is_absolute() or target.parent != Path(attempt['metadata'].get('output_dir', attempt['metadata']['configuration']['output_dir']))
                 or target.suffix.lower() != '.xlsx'):
             raise ValueError('Prepared destination escapes its output directory')
         if _digest(job['snapshot_path']) != job['source_sha256']:
@@ -250,7 +250,7 @@ class QueueWorker:
             if (_digest(source) != job['source_sha256'] or any(after[key] != metadata[key]
                     for key in ('template_sha256', 'rates_sha256', 'application_sha256'))):
                 raise ValueError('Source, template, rates or application changed during conversion')
-            target = _output_name(self.config.output_dir, workbook.name, job['id'], attempt['id'])
+            target = _output_name(Path(metadata['output_dir']), workbook.name, job['id'], attempt['id'])
             _write_json(receipt, {'job_id': job['id'], 'attempt_id': attempt['id'], 'source_sha256': job['source_sha256'], 'region':region,
                                  'workbook_name': workbook.name, 'workbook_sha256': _digest(workbook),
                                  'data_name': data_path.name, 'data_sha256': _digest(data_path), 'destination': str(target)})

@@ -1,1 +1,1 @@
-"""Development and invoice evaluation tools; not used by extraction."""
+"""Development-only release tooling; never imported by extraction."""

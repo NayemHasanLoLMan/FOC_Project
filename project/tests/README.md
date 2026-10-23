@@ -16,4 +16,4 @@ project/.venv/Scripts/python.exe project/development/analysis/compare_invoices.p
 project/.venv/Scripts/python.exe project/development/analysis/check_outputs.py
 ~~~
 
-Old commands under project/tools remain compatibility entry points. Production code does not import this package. See [testing](../docs/testing.md) for scope, fixtures and interpretation of reference scores.
+Run analysis commands from project/development/analysis/. Production code does not import this package. See [testing](../docs/testing.md) for scope, fixtures and interpretation of reference scores.

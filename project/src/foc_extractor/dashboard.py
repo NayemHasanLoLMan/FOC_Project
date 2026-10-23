@@ -20,7 +20,8 @@ from werkzeug.exceptions import HTTPException, SecurityError
 
 from . import __version__
 from .job_store import JobStore, STATES
-from .pipeline_config import ROOT, attempt_metadata
+from .pipeline_config import ROOT, IO_FIELDS, attempt_metadata
+from .runtime_settings import editable_settings
 from .processing_evidence import model_image, page_preview
 
 FIELD_LABELS = {'invoice_number':'Invoice number', 'export_date':'Invoice date', 'consignee':'Consignee',
@@ -147,7 +148,7 @@ def _prepared(job, attempt, kind, *, with_name=False):
     if Path(name).name != name:
         raise ValueError('Artifact name is not a basename')
     if kind == 'invoice':
-        root = Path(attempt['metadata']['configuration']['output_dir'])
+        root = Path(attempt['metadata'].get('output_dir', attempt['metadata']['configuration']['output_dir']))
         path = Path(attempt['output_path'])
         if path.parent != root or path.suffix.lower() != '.xlsx':
             raise ValueError('Invoice is outside its recorded output folder')
@@ -238,7 +239,7 @@ class DashboardData:
                         'attempt_seconds': _age(active['started_at']),
                         'stage_seconds': (_age(last['created_at']) if last['details']['status']=='started'
                                           else last['details'].get('elapsed_seconds')) if last else None}
-        intakes = self.store.intake_files(self.config.incoming_dir)
+        intakes = [record for folder in self.config.inboxes().values() for record in self.store.intake_files(folder)]
         intake_counts = {s: sum(i['state']==s for i in intakes) for s in ('waiting_for_file', 'queued', 'rejected', 'missing')}
         return {'web': 'available', 'web_uptime_seconds': time.monotonic()-self.started,
                 'queue': self.store.queue_control(),
@@ -272,8 +273,10 @@ class DashboardData:
 
     def system(self):
         folders = []
-        for name in ('incoming_dir', 'output_dir', 'state_dir', 'artifact_dir'):
+        for name in (*IO_FIELDS, 'state_dir', 'artifact_dir'):
             path = getattr(self.config, name)
+            if path is None:
+                continue
             existing = path
             while not existing.exists() and existing != existing.parent:
                 existing = existing.parent
@@ -291,7 +294,7 @@ class DashboardData:
                 'python': platform.python_version(), 'platform': platform.platform(),
                 'template': str(ROOT/'templates/BD_template.xlsx'), 'fingerprints': attempt_metadata(self.config),
                 'model': self.config.local_model, 'model_defaults': {'num_predict':self.config.vision_output_tokens, 'num_ctx':self.config.vision_context_tokens, 'timeout_seconds':self.config.vision_timeout_seconds},
-                'settings': {key:self.config.to_dict()[key] for key in ('local_model','scan_interval_seconds','vision_output_tokens','vision_context_tokens','vision_timeout_seconds','incoming_dir','output_dir')},
+                'settings': editable_settings(self.config),
                 'scan_interval_seconds': self.config.scan_interval_seconds}
 
     def detail(self, job_id, attempt_id=None, event_page=1):

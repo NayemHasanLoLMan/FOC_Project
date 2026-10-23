@@ -10,11 +10,14 @@ from threading import TIMEOUT_MAX
 from . import __version__
 
 ROOT = Path(__file__).resolve().parents[2]
+IO_FIELDS = ('incoming_dir', 'output_dir', 'india_incoming_dir', 'india_output_dir')
 
 
 def initialize_folders(config):
-    """Keep reserved regional folders separate; the active queue watches only its configured inbox."""
-    for folder in (config.incoming_dir, config.output_dir):
+    """Create configured folders, keeping regional inboxes and outputs separate."""
+    for folder in (getattr(config, key) for key in IO_FIELDS):
+        if folder is None:
+            continue
         if folder.name == 'bangladesh':
             for country in ('bangladesh', 'india', 'jordan'):
                 (folder.parent/country).mkdir(parents=True, exist_ok=True)
@@ -33,6 +36,16 @@ class PipelineConfig:
     vision_output_tokens: int = 4096
     vision_context_tokens: int = 8192
     vision_timeout_seconds: int = 7200
+    india_enabled: bool = False
+    india_incoming_dir: Path | None = None
+    india_output_dir: Path | None = None
+
+    def inboxes(self):
+        return {'BD': self.incoming_dir, **({'INDIA': self.india_incoming_dir} if self.india_enabled else {})}
+
+    def output_for(self, region):
+        # Legacy manually registered regional jobs retain the original single-output behavior.
+        return self.india_output_dir if region == 'INDIA' and self.india_output_dir else self.output_dir
 
     def to_dict(self):
         return {key: str(value) if isinstance(value, Path) else value
@@ -51,14 +64,24 @@ def parse_config(raw, base: Path) -> PipelineConfig:
     if not isinstance(raw, dict) or not required <= set(raw) or set(raw)-expected:
         raise ValueError('Configuration has missing or unknown fields')
     directories = {}
-    for key in ('incoming_dir', 'output_dir', 'state_dir', 'artifact_dir'):
-        value = raw[key]
+    for key in (*IO_FIELDS, 'state_dir', 'artifact_dir'):
+        value = raw.get(key)
+        if key.startswith('india_') and value is None:
+            directories[key] = None
+            continue
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f'{key} must be a nonempty directory path')
         directories[key] = (base / value).resolve()
         if directories[key].exists() and not directories[key].is_dir():
             raise ValueError(f'{key} points to a file')
-    paths = list(directories.values())
+    enabled = raw.get('india_enabled', False)
+    if type(enabled) is not bool:
+        raise ValueError('india_enabled must be true or false')
+    if bool(directories['india_incoming_dir']) != bool(directories['india_output_dir']):
+        raise ValueError('Provide both India input and output folders')
+    if enabled and directories['india_incoming_dir'] is None:
+        raise ValueError('India processing requires separate input and output folders')
+    paths = [path for path in directories.values() if path is not None]
     for index, first in enumerate(paths):
         for second in paths[index + 1:]:
             if first == second or first in second.parents or second in first.parents:
@@ -75,7 +98,7 @@ def parse_config(raw, base: Path) -> PipelineConfig:
             raise ValueError(f'{key} must be a positive whole number')
     if vision['vision_output_tokens'] > vision['vision_context_tokens']:
         raise ValueError('Vision context must be at least as large as the output token limit')
-    return PipelineConfig(**directories, scan_interval_seconds=interval, local_model=model, **vision)
+    return PipelineConfig(**directories, scan_interval_seconds=interval, local_model=model, india_enabled=enabled, **vision)
 
 
 def attempt_metadata(config: PipelineConfig, region='BD') -> dict:
@@ -89,6 +112,7 @@ def attempt_metadata(config: PipelineConfig, region='BD') -> dict:
         application.update(path.relative_to(ROOT).as_posix().encode() + b'\0' + path.read_bytes() + b'\0')
     return {
         'configuration': config.to_dict(),
+        'output_dir': str(config.output_for(region)),
         'application_version': __version__,
         'application_sha256': application.hexdigest(),
         'python_version': platform.python_version(),

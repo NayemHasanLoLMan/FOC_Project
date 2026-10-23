@@ -71,4 +71,4 @@ Retain database, snapshots, attempt artifacts and published invoices together. D
 
 Backing up only the .xlsx loses provenance/restart capability. Backing up only SQLite leaves file references broken. Paths are recorded absolutely; restoring to a different directory/machine requires planned path migration, not blind SQL replacement. See [operations](operations.md).
 
-Manual saves retain the base attempt and validated changes in jobs.manual_edit_json and attempt metadata. See [editing](manual-invoice-editing.md).
+Manual saves retain the base attempt and validated changes in jobs.manual_edit_json and attempt metadata. See [editing](user-guide.md).

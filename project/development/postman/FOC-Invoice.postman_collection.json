@@ -45,6 +45,18 @@
     {
       "key": "output_dir",
       "value": ""
+    },
+    {
+      "key": "india_incoming_dir",
+      "value": ""
+    },
+    {
+      "key": "india_output_dir",
+      "value": ""
+    },
+    {
+      "key": "india_enabled",
+      "value": "false"
     }
   ],
   "item": [
@@ -928,10 +940,10 @@
               ],
               "query": []
             },
-            "description": "Save while scanner/worker are idle. Set incoming_dir/output_dir collection variables to dedicated full absolute paths first. Settings persist across restarts; existing files are not moved. CSRF and Origin protection required.",
+            "description": "Set all four dedicated folder variables and india_enabled before saving while idle. Use getControls first. To preserve existing India settings with a legacy request, omit all three India fields together. Settings persist; existing invoices are not moved.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"request_id\": \"{{$guid}}\",\n  \"changes\": {\n    \"local_model\": \"qwen3-vl:latest\",\n    \"scan_interval_seconds\": 5,\n    \"vision_output_tokens\": 4096,\n    \"vision_context_tokens\": 8192,\n    \"vision_timeout_seconds\": 7200,\n    \"incoming_dir\": \"{{incoming_dir}}\",\n    \"output_dir\": \"{{output_dir}}\"\n  }\n}",
+              "raw": "{\n  \"request_id\": \"{{$guid}}\",\n  \"changes\": {\n    \"local_model\": \"qwen3-vl:latest\",\n    \"scan_interval_seconds\": 5,\n    \"vision_output_tokens\": 4096,\n    \"vision_context_tokens\": 8192,\n    \"vision_timeout_seconds\": 7200,\n    \"incoming_dir\": \"{{incoming_dir}}\",\n    \"output_dir\": \"{{output_dir}}\",\n    \"india_enabled\": {{india_enabled}},\n    \"india_incoming_dir\": \"{{india_incoming_dir}}\",\n    \"india_output_dir\": \"{{india_output_dir}}\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"

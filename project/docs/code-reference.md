@@ -45,7 +45,7 @@ output = run(
 )
 ~~~
 
-run(pdf, template=None, output_dir=None, save_json=False, max_pages=None, cache_dir=None, local_model=DEFAULT_MODEL, observer=None) returns the saved workbook Path. Unlike CLI defaults, the Python function's omitted output_dir resolves to output/bangladesh in the current working directory; pass explicit directories for embedding. cache_dir=None disables that cache path. max_pages is a diagnostic positive limit.
+run(pdf, template=None, output_dir=None, save_json=False, max_pages=None, cache_dir=None, local_model=DEFAULT_MODEL, observer=None, region=None) returns the saved workbook Path. The Python function's omitted output_dir resolves under output/<regional-folder> in the current working directory; pass explicit directories for embedding. cache_dir=None disables that cache path. max_pages is a diagnostic positive limit. Explicit region values are BD, INDIA and JORDAN; omitted region retains legacy source/template selection. Regional selection alone does not establish Jordan readiness.
 
 The optional observer receives callback(event_dict, png=None). Events are plain dictionaries; png is exact image bytes for a vision_request. The observer is scoped through ContextVar and reset after conversion. Its failure raises EvidenceWriteError, deliberately outside the normal model-unavailable fallback exception set. Do not mutate extraction state from an observer.
 
@@ -61,9 +61,9 @@ load_config(path=ROOT/"pipeline_config.json") returns a frozen PipelineConfig. t
 
 JobStore(path, read_only=False) initializes/migrates writable state. read_only=True requires an existing supported database, opens SQLite mode=ro and rejects writes. Read methods include get_job, get_attempt, counts, attempts, events, components, intake_files and unfinished_attempts.
 
-Write transitions include enqueue, observe_intake/finish_intake/mark_missing_intakes, claim_next, heartbeat, prepare, publication_error, finish, recover_attempt, component/touch_worker, processing_event and retry. Prefer the scanner/worker coordinator over calling them manually. In particular, recover_attempt is only safe while holding the matching native lock; a timestamp does not grant ownership. retry exists internally but no public HTTP retry control is implemented.
+Write transitions include enqueue, observe_intake/finish_intake/mark_missing_intakes, claim_next, heartbeat, prepare, publication_error, finish, recover_attempt, component/touch_worker, processing_event and retry. Prefer the scanner/worker coordinator over calling them manually. In particular, recover_attempt is only safe while holding the matching native lock; a timestamp does not grant ownership. Public retries use the guarded admin-command API rather than direct transition calls.
 
-FolderScanner(config, store).scan_once() returns scanned_at/incoming_dir/folder_error/accepted_job_ids/errors/intake_counts/jobs. The scanner CLI adds process locking, repeated polling and component health; a direct scan_once call is not a background service.
+FolderScanner(config, store).scan_once() returns scanned_at/incoming_dir/folder_error/accepted_job_ids/errors/intake_counts/jobs plus per-region folders. Incoming_dir retains the Bangladesh path; enabled-folder counts/errors/jobs are aggregated. India is opt-in with an explicit folder pair. The scanner CLI adds process locking, repeated polling and component health; a direct scan_once call is not a background service.
 
 QueueWorker(config, store) must be used as a context manager. It acquires the native lock, recovers owned interrupted attempts and starts an independent heartbeat. run_once() retries owned prepared saves and processes at most one queued job; it returns a newly processed attempt ID or None. None does not mean all pending saves succeeded. Exiting the context stops heartbeats and releases the lock.
 
@@ -81,7 +81,7 @@ OCRResult holds page text, words, tables, coverage, warnings, DPI and page trans
 
 JobStore.queue_control reads persisted pause state. JobStore.admin_command(request_id, action, job_id=None, attempt_id=None) validates and transactionally records pause/resume/retry/reprocess/retry_save commands; duplicate IDs return their saved results. claim_next checks pause before creating an attempt.
 
-See [manual invoice editing](manual-invoice-editing.md) for the simplified dashboard and safe versioned editing workflow.
+See [manual invoice editing](user-guide.md) for the simplified dashboard and safe versioned editing workflow.
 
 The dashboard shares one responsive stylesheet, `frontend/static/dashboard.css`, using local system fonts and no remote font or UI dependencies. Job tables become cards below 760px; sidebar navigation moves above content below 850px. Invoice and image tables retain their own scrolling area. Keyboard focus, skip navigation and reduced-motion preferences are supported. Editor saves and all data operations remain in the existing JavaScript/backend.
 
@@ -89,6 +89,6 @@ The dashboard shares one responsive stylesheet, `frontend/static/dashboard.css`,
 
 `invoice_preview.py` reads verified workbook bytes into a bounded, escaped HTML invoice sheet. `development_reset.py` supports the standard main workspace and the isolated development workspace. The combined launcher coordinates clearing with separate scanner/worker guards, archives generated files and backs up/resets history with rollback. The main System page exposes Clear data; a standalone dashboard without the coordinator does not. Main archives live under `runtime/cleared`, separate from active state and artifacts.
 
-`runtime_settings.py` validates/persists the seven dashboard overrides under the fixed state root. The combined launcher applies them under scanner/worker guards and restores them at startup. `local_vision.vision_limits` scopes generation/context/timeout settings to each worker conversion; existing standalone callers retain defaults. See configuration.md for POST /api/settings and folder/cache behavior.
+`runtime_settings.py` validates/persists ten dashboard overrides under the fixed state root, accepting the compatible seven-field payload when all India fields are omitted. The combined launcher applies them under scanner/worker guards and restores them at startup. `local_vision.vision_limits` scopes generation/context/timeout settings to each worker conversion; existing standalone callers retain defaults. See [configuration](configuration.md) for POST /api/settings and folder/cache behavior.
 
 

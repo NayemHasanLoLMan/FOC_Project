@@ -47,12 +47,16 @@ class ProjectLayoutTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):build_release(output)
             self.assertEqual(output.read_bytes(),b'previous build')
 
-    def test_legacy_comparison_imports_use_the_separated_implementation(self):
-        from tools import compare_invoices as old
-        from development.analysis import compare_invoices as canonical
-        self.assertIs(old.read_invoice,canonical.read_invoice)
-        self.assertIs(old.compare,canonical.compare)
-        self.assertEqual(old.ROOT,ROOT)
+    def test_current_documentation_links_resolve_in_the_production_bundle(self):
+        from tools.build_release import release_files
+        files = set(release_files())
+        for path in files:
+            if path.suffix != '.md':continue
+            for target in re.findall(r'\[[^\]]+\]\(([^)]+)\)',path.read_text(encoding='utf-8')):
+                if target.startswith(('http:','https:','#')):continue
+                destination = (path.parent/target.split('#')[0]).resolve()
+                self.assertIn(destination,files,(path.name,target))
+        self.assertNotIn(ROOT/'development/archive/completed-milestones-20261023.zip',files)
 
     def test_postman_collection_covers_documented_routes(self):
         collection = json.loads((ROOT/'development/postman/FOC-Invoice.postman_collection.json').read_text())

@@ -8,7 +8,7 @@ Start the entire invoice system from the repository/release root:
 project/.venv/Scripts/python.exe project/run_system.py
 ~~~
 
-Open http://127.0.0.1:8080/. One Python process runs the folder scanner, extraction worker and dashboard on separate threads, using one configuration. It initializes/migrates the queue and creates a missing inbox. Drop completed PDFs into project/incoming/bangladesh; invoices appear in project/output/bangladesh. Existing data is preserved. The browser may be closed without stopping processing.
+Open http://127.0.0.1:8080/. One Python process runs the folder scanner, extraction worker and dashboard on separate threads, using one configuration. It initializes/migrates the queue and creates a missing inbox. Drop completed Bangladesh PDFs into project/incoming/bangladesh; invoices appear in project/output/bangladesh. With India intake enabled in System, India uses its separate configured input/output pair (this installation: incoming/india → output/india). Jordan stays disabled. Additional unseen India PDFs still need acceptance testing. Existing data is preserved. The browser may be closed without stopping processing.
 
 For custom paths/port:
 
@@ -20,7 +20,7 @@ Keep the installed Ollama service available when local vision is enabled. Models
 
 The separate init_pipeline.py, scan_incoming.py, run_worker.py and run_dashboard.py commands remain available for maintenance or independently managed deployments; they are no longer necessary for normal startup. run_dashboard.py starts only the web interface.
 
-Stage 7 adds a current-user Windows Task Scheduler task. It starts after sign-in and runs hidden through the same launcher. See [background startup and stop commands](pipeline_stage7.md). The PC must remain awake.
+Stage 7 adds a current-user Windows Task Scheduler task. It starts after sign-in and runs hidden through the same launcher. Use the commands below. The PC must remain awake.
 
 ## Stop and restart
 
@@ -46,7 +46,7 @@ Stop scanner/worker/dashboard for a simple consistent filesystem backup. Preserv
 
 - state_dir, including jobs.sqlite3 and any active SQLite sidecar files.
 - artifact_dir, containing snapshots, receipts and evidence.
-- output_dir and the configured production input PDFs according to retention policy.
+- All configured regional output folders and production input PDFs according to retention policy.
 - Configuration, rates, templates and the exact source/dependency versions used.
 
 Copy to a new protected backup location and verify file hashes/counts. A database backup alone does not preserve referenced files; a spreadsheet-only backup does not preserve recovery/evidence. An online SQLite backup requires its backup API plus a coordinated artifact/output snapshot; copying a changing live database alone is not a supported backup procedure.
@@ -71,7 +71,7 @@ Restore matching data together to their recorded paths while processes are stopp
 | Worker exits after code change | Restart with completed code/configuration; unfinished work follows normal recovery |
 | Reference score differs | Distinguish source-correct PDF differences, grouping/unit policy and actual extraction loss; never copy expected values into production |
 
-Foreground logs/status remain in the terminal. Background startup writes rotated Python logs under the configured state directory in logs/system.log; see [Stage 7](pipeline_stage7.md). Keep support records outside printed invoices.
+Foreground logs/status remain in the terminal. Background startup writes rotated Python logs under the configured state directory in logs/system.log; see [Stage 7](operations.md). Keep support records outside printed invoices.
 
 ## Privacy and cleanup
 
@@ -79,6 +79,22 @@ The dashboard is loopback-only and unauthenticated; do not expose it to a LAN/re
 
 No automatic evidence retention/deletion is enabled. Keep managed artifacts and state together until an explicit archive workflow exists. Do not remove evidence with OCR cache cleanup. Dependency/model caches can be reprovisioned, but clearing them can cause long recomputation/downloads.
 
-See [manual invoice editing](manual-invoice-editing.md) for the simplified dashboard and safe versioned editing workflow.
+See [manual invoice editing](user-guide.md) for the simplified dashboard and safe versioned editing workflow.
 
-See [invoice downloads, web preview and development reset](invoice-web-tools.md) for clean filenames, local viewing and the isolated Clear data option.
+See [invoice downloads, web preview and development reset](user-guide.md) for clean filenames, local viewing and the isolated Clear data option.
+
+## Windows background operation
+
+Run from the repository root with the same config used at installation:
+
+```powershell
+project/.venv/Scripts/python.exe project/run_system.py --startup status
+project/.venv/Scripts/python.exe project/run_system.py --startup start
+project/.venv/Scripts/python.exe project/run_system.py --startup stop
+```
+
+For a new installation use `--startup install`, then `--startup start`. It creates a current-user Task Scheduler task running hidden through the same environment's pythonw.exe. A 30-second sign-in trigger and one-minute recovery trigger use IgnoreNew, so running work is not duplicated. This is not a Windows Service: it requires sign-in and an awake PC. Ollama and models remain separately provisioned.
+
+Stop disables automatic triggers and requests graceful shutdown. Wait for the current invoice and normal process exit before backing up/upgrading; the model timeout may take two hours. Start re-enables triggers. After stopping, `--startup uninstall` removes only the matching task and preserves files. Do not run foreground and background launchers together.
+
+Task identity derives from the absolute state directory. Install refuses to overwrite an existing task, and start does not silently change its saved port/configuration. Inspect status; deliberately reinstall after a planned migration. Logs rotate near 5 MiB with three backups under the state directory's logs/system.log. Moving an installed checkout requires coordinated task/data migration, not only changed folder settings. Actual reboot acceptance remains pending.

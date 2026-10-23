@@ -11,7 +11,7 @@ import openpyxl
 from src.foc_extractor.models import FOCData, LineItem
 from src.foc_extractor.excel_writer import populate_template, _next_writable
 from src.foc_extractor.pipeline import _resolve_template
-from tools.compare_invoices import read_invoice, compare
+from development.analysis.compare_invoices import read_invoice, compare
 
 
 class WriterTests(unittest.TestCase):

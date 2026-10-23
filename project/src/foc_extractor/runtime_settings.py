@@ -4,10 +4,11 @@ import json
 from pathlib import Path
 from datetime import datetime, timezone
 
-from .pipeline_config import ROOT, parse_config
+from .pipeline_config import ROOT, IO_FIELDS, parse_config
 
-SETTINGS_FIELDS=('local_model','scan_interval_seconds','vision_output_tokens','vision_context_tokens',
+LEGACY_SETTINGS_FIELDS=('local_model','scan_interval_seconds','vision_output_tokens','vision_context_tokens',
                  'vision_timeout_seconds','incoming_dir','output_dir')
+SETTINGS_FIELDS=(*LEGACY_SETTINGS_FIELDS,'india_enabled','india_incoming_dir','india_output_dir')
 
 
 def editable_settings(config):
@@ -18,7 +19,8 @@ def editable_settings(config):
 def validate_setting_paths(config, *, development=False):
     protected=[config.state_dir,config.artifact_dir,*[ROOT/name for name in
         ('src','frontend','templates','.cache','.venv','docs','tools','tests','reports','development','examples','expected_output','expected_outputs')]]
-    for folder in (config.incoming_dir,config.output_dir):
+    for folder in (getattr(config,key) for key in IO_FIELDS):
+        if folder is None:continue
         if development:
             from .development_reset import DEVELOPMENT_ROOT
             if folder==DEVELOPMENT_ROOT or not folder.is_relative_to(DEVELOPMENT_ROOT):
@@ -32,15 +34,18 @@ def validate_setting_paths(config, *, development=False):
             if development and path==ROOT/'development':continue
             if folder==path or folder.is_relative_to(path) or path.is_relative_to(folder):
                 raise ValueError('Input/output folders must not overlap application, cache, reference or state folders')
-    if (config.incoming_dir==config.output_dir or config.incoming_dir.is_relative_to(config.output_dir)
-            or config.output_dir.is_relative_to(config.incoming_dir)):
-        raise ValueError('Input and output folders must not overlap')
+    folders=[getattr(config,key) for key in IO_FIELDS if getattr(config,key) is not None]
+    for index,first in enumerate(folders):
+        for second in folders[index+1:]:
+            if first==second or first.is_relative_to(second) or second.is_relative_to(first):
+                raise ValueError('Regional input and output folders must not overlap')
 
 
 def settings_config(config,changes, *, development=False):
-    if not isinstance(changes,dict) or set(changes)!=set(SETTINGS_FIELDS):
-        raise ValueError('Submit all seven settings fields and no other fields')
-    for key in ('incoming_dir','output_dir'):
+    if not isinstance(changes,dict) or set(changes) not in (set(SETTINGS_FIELDS),set(LEGACY_SETTINGS_FIELDS)):
+        raise ValueError('Submit all settings fields (legacy seven-field requests are also supported)')
+    for key in IO_FIELDS:
+        if key not in changes or (key.startswith('india_') and changes[key] is None):continue
         if not isinstance(changes[key],str) or not Path(changes[key]).is_absolute():
             raise ValueError('Use a full absolute path for the input and output folders')
         requested=Path(changes[key])
@@ -78,7 +83,14 @@ def save_runtime_settings(config,store,locks,request_id,changes,apply, *, develo
                 if db.execute("SELECT 1 FROM attempts WHERE state='running'").fetchone():
                     raise ValueError('An invoice is running. Wait for it to finish before changing settings.')
                 updated=settings_config(config,changes,development=development)
-                for folder in (updated.incoming_dir,updated.output_dir):
+                if config.india_output_dir and updated.india_output_dir is None and db.execute("SELECT 1 FROM jobs WHERE region='INDIA'").fetchone():
+                    raise ValueError('Keep India folders while India history exists; disable new India intake instead')
+                for region,folder in updated.inboxes().items():
+                    for row in db.execute('SELECT source_path,region FROM jobs WHERE region<>?',(region,)):
+                        if Path(row['source_path']).parent==folder:
+                            raise ValueError('An input folder with existing jobs cannot be reassigned to another country')
+                for folder in (getattr(updated,key) for key in IO_FIELDS):
+                    if folder is None:continue
                     folder.mkdir(parents=True,exist_ok=True)
                     # Check actual write access without touching existing user files.
                     from tempfile import TemporaryFile
