@@ -1,4 +1,4 @@
-"""Apply the approved approximate USD rates to supported BD goods only."""
+"""Apply approved regional approximate USD rates without replacing source values."""
 from .processing_evidence import emit
 import json
 import re
@@ -50,25 +50,35 @@ RULES = [
     ('jacket_per_pc', 'PCS', r'\bJACKETS?\b'),
 ]
 
+INDIA_RULES = [
+    RULES[0],
+    ('zipper_per_pc', 'PCS', r'^ZIPPERS?$'),
+    ('fabric_sample_per_set', 'SETS', r'^FAB(?:RIC)? (?:SWATCH(?:ES)?|SAMPLES?|CUTTINGS?)$'),
+]
 
-def _positive(value):
+
+def _positive(value, *, allow_zero=False):
     try:
         number = Decimal(str(value))
-        return number if number.is_finite() and number > 0 else None
+        return number if number.is_finite() and (number >= 0 if allow_zero else number > 0) else None
     except InvalidOperation:
         return None
 
 
 def apply_valuation(data):
-    if data.template_type != 'BD' or data.currency != 'USD':
+    if data.template_type not in ('BD', 'INDIA') or data.currency != 'USD':
         return
     configured = json.loads(RATES_FILE.read_text(encoding='utf-8'))
-    rates = {key: _positive(configured[key]) for key, _, _ in RULES}
+    india = data.template_type == 'INDIA'
+    rules = INDIA_RULES if india else RULES
+    if india:
+        configured = configured['india']
+    rates = {key: _positive(configured[key]) for key, _, _ in rules}
     if any(rate is None for rate in rates.values()):
         raise ValueError('Valuation rates must be finite positive USD numbers')
     for item in data.items:
         description = ' '.join(item.description.upper().split())
-        for key, unit, pattern in RULES:
+        for key, unit, pattern in rules:
             if not re.search(pattern, description):
                 continue
             # Only these confirmed button categories interpret abbreviated G as gross.
@@ -76,24 +86,25 @@ def apply_valuation(data):
                        '24l_snap_per_gross', '9_5mm_rivet_per_gross', 'hidden_snap_per_gross') and item.unit == 'G':
                 item.unit = 'GROSS'
             if item.unit == unit:
-                if item.unit_price is None:
+                if item.unit_price is None and not (india and item.amount is not None):
                     item.unit_price = float(rates[key])
                     emit('valuation_rate', method='approved_approximate_rate', rule=key, rate=item.unit_price,
                          unit=item.unit, source_refs=item.source_refs, description=item.description)
                 break
-        quantity, price = _positive(item.quantity), _positive(item.unit_price)
+        quantity, price = _positive(item.quantity), _positive(item.unit_price, allow_zero=india)
         if item.amount is None and quantity is not None and price is not None:
             item.amount = float((quantity * price).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
     if not any(item.unit == 'G' for item in data.items):
         data.warnings = [w for w in data.warnings if w != 'Unit G is ambiguous; confirm meaning without automatic conversion.']
     priced = sum(item.amount is not None for item in data.items)
-    data.warnings.append(f'Approved approximate USD valuation: {priced}/{len(data.items)} rows priced; final calculated total rounded to nearest whole USD (half up).')
+    rounding = 'two decimal places' if india else 'nearest whole USD'
+    data.warnings.append(f'Approved approximate USD valuation: {priced}/{len(data.items)} rows priced; final calculated total rounded to {rounding} (half up).')
     incomplete_pdf = (data.pages_processed is not None and data.pages_total is not None
                       and data.pages_processed < data.pages_total)
     if incomplete_pdf:
         data.warnings.append('Estimated shipment total unavailable: not all PDF pages processed.')
     if data.total_value is None and data.items and priced == len(data.items) and not incomplete_pdf:
         total = sum(Decimal(str(item.amount)) for item in data.items)
-        data.total_value = float(total.quantize(Decimal('1'), rounding=ROUND_HALF_UP))
-        emit('field_source', field='total_value', method='approved_rates_sum_whole_usd_half_up', value=data.total_value)
+        data.total_value = float(total.quantize(Decimal('0.01' if india else '1'), rounding=ROUND_HALF_UP))
+        emit('field_source', field='total_value', method=('approved_rates_sum_cents_half_up' if india else 'approved_rates_sum_whole_usd_half_up'), value=data.total_value)
         data.warnings = [w for w in data.warnings if not w.startswith('total_value not established')]

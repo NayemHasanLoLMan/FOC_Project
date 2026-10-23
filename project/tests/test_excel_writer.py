@@ -36,6 +36,11 @@ class WriterTests(unittest.TestCase):
                     self.assertEqual(ws.cell(row,7).alignment.horizontal,'right')
                     self.assertEqual(ws.cell(row,8).alignment.horizontal,'left')
                 self.assertEqual(ws[f'G{40+extra}'].alignment.horizontal,'right')
+                for row in ws[f'F{40+extra}:I{40+extra}']:
+                    for cell in row:
+                        self.assertIsNone(cell.fill.patternType)
+                        for edge in ('top','bottom','left','right'):
+                            self.assertIsNone(getattr(getattr(cell.border,edge),'style',None))
                 self.assertEqual(ws['G28'].alignment.horizontal,'right')
                 self.assertEqual(read_invoice(path)['total_value'],11.5)
                 wb.close()

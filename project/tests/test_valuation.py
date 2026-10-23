@@ -140,7 +140,7 @@ class ValuationTests(unittest.TestCase):
         self.assertEqual(data.total_value, 1)
 
     def test_empty_and_other_region_or_currency_are_not_estimated(self):
-        for region, currency in [('INDIA', 'USD'), ('BD', 'EUR'), ('JORDAN', 'USD')]:
+        for region, currency in [('INDIA', 'EUR'), ('BD', 'EUR'), ('JORDAN', 'USD')]:
             data = FOCData(source_file='new.pdf', template_type=region, currency=currency,
                            items=[LineItem('FABRIC', 10, 'YDS')])
             apply_valuation(data)

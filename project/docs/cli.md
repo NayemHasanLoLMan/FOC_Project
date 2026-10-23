@@ -14,7 +14,7 @@ Run from the repository/release root using project/.venv/Scripts/python.exe. --h
 
 main.py/run_batch.py output defaults to project/output/bangladesh, project/output/india or project/output/jordan according to --region; omitted --region remains BD. Cache defaults to project/.cache/ocr. An explicitly conflicting destination or named regional master is rejected. The Python run API accepts region=None for legacy source-based selection, or an explicit BD/INDIA/JORDAN. Model defaults to qwen3-vl:latest. --no-local-vision overrides the model to None. max-pages must be positive; it is diagnostic, not a way to produce a complete shipment invoice. The managed worker does not expose page truncation.
 
-Regional selection is Stage 2 infrastructure, not regional production readiness. Until the India/Jordan master/writer stages pass, non-BD conversion can reject legacy row truncation/duplicate totals or incomplete print areas. Non-BD direct conversion verifies a temporary workbook before replacing its final XLSX. The live scanner remains BD-only; no new country is enabled by these CLI flags. Regional extraction, valuation and editing remain later stages.
+Regional selection is infrastructure, not regional production readiness. India's master/writer, Stage 4A source extraction and Stage 4B approved valuation pass isolated acceptance. India uses only its approved three category rates and keeps cents in calculated totals. Jordan can still reject legacy row truncation/duplicate totals or incomplete print areas until its master/writer stage. Non-BD direct conversion verifies a temporary workbook before replacing its final XLSX. The live scanner remains BD-only; no new country is enabled by these CLI flags. Regional editing remains a later stage.
 
 Batch defaults to project/examples for the development checkout and writes output/bangladesh/run_manifest.json. Its glob is top-level and case-sensitive according to pathlib/platform behavior; continuous intake explicitly handles PDF extensions case-insensitively and checks temporary/link/hidden names. Batch/direct commands bypass queue history and managed collision versioning.
 
@@ -48,3 +48,6 @@ run_system.py is the normal entry point. Ctrl+C waits for active processing befo
 ## Windows background task
 
 `run_system.py --startup install|start|stop|status|uninstall` manages the current-user sign-in task for its configuration. The internal `--background` mode redirects Python output into rotated logs and accepts a graceful native stop signal. See [Stage 7](pipeline_stage7.md) for operation, log paths and limits.
+
+
+India Fix 2 detects declared currency before USD estimation/export. Only USD is supported by the current India template. Non-USD, conflicting and ambiguous currency declarations fail without replacing an existing invoice or JSON; there is no exchange-rate conversion. Missing currency keeps the approved USD default with evidence distinguishing it from an explicit PDF declaration. Regional watching remains disabled.

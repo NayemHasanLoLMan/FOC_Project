@@ -34,5 +34,10 @@
   "button_per_gross": "0.35",
   "pants_per_pc": "1.50",
   "dress_per_pc": "1.00",
-  "jacket_per_pc": "1.00"
+  "jacket_per_pc": "1.00",
+  "india": {
+    "fabric_per_yd": "0.20",
+    "zipper_per_pc": "0.10",
+    "fabric_sample_per_set": "0.10"
+  }
 }

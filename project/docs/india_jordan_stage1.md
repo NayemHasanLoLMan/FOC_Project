@@ -2,6 +2,8 @@
 
 Completed 22 October 2026. This stage freezes the current implementation and defines development checks. It changes documentation only; no parser, writer, template, valuation, routing, schema, setting or frontend behavior changed. India and Jordan remain disabled in the production watcher.
 
+Stage 4 correction: a source close-up confirms India's fabric-page date is 10/13/2026, not the 2025 initially read here. Both India packing dates agree. The user subsequently approved latest-labelled-packing-date fallback for India; the original date-conflict notes below are historical and superseded by this correction. Source zipper rows are 5/35/5/15/5 PCS at 15/16/17/18/19 cm respectively (total65); the original ordering below was also corrected during all-page OCR/close-up QA.
+
 ## Preservation and verification
 
 - Main dashboard before/after: 20 completed attempts/jobs, zero failures, zero queued/running/waiting jobs; queue remains unpaused. Scanner, worker and web are running after restart on port 8080.

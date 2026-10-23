@@ -1,8 +1,10 @@
 # India and Jordan implementation plan
 
-Planning checkpoint: 22 October 2026. The user approved starting the staged work. [Stage 1 is complete](india_jordan_stage1.md): baseline captured and all 31 regional pages reviewed. [Stage 2 is complete](india_jordan_stage2.md): explicit region/template identity, schema-6 migration and regional verification; 297 regressions passed, all 20 BD visible sheets preserved and the BD-only main service restarted successfully. Stage 3 awaits approval. Complete one stage, report its checks and Bangladesh comparison, and obtain approval before starting the next stage.
+Planning checkpoint: 23 October 2026. Stages 1–3, [Stage 4A source extraction](india_jordan_stage4.md) and [Stage 4B India valuation](india_jordan_stage4b.md) are complete. India Fixes 1–7 now preserve source prices/amounts, guard currency, recover the sample invoice number from the PDF even under neutral/conflicting filenames, tolerate equivalent date/mark/airport layouts with bounded source readings, retain supported goods context across adjacent tables/pages, verify mapped printed headers before publication, and preserve explicit HS codes through supported continuations. Fix 8 handwriting review retains the printed FABRIC CUTTINGS fallback after three fresh unsuccessful local-reader comparisons; production code is unchanged. Fix 9 confirms existing safe caching eliminates repeat inference; warm sample attempts took 2.2–3.4 seconds with no production code change. The latest full gate remains 421 passing regressions; all 20 Bangladesh parser and valuation results are unchanged. India uses its approved three category rates with cent totals. Jordan layout (Stage 5), Jordan extraction/valuation, regional editing and regional watching remain separate review gates. Obtain approval before starting the next stage.
 
 ## Recommended approach
+
+Before beginning the Jordan stage, follow the [India fix checklist](india_fix_checklist.md). It records the post-Stage-4B audit findings, production integration work and final release acceptance. Its final item is Stage 5, subject to user approval; completed implementation stages do not imply that India production readiness has been established.
 
 Extend the existing local pipeline. Keep one launcher, one dashboard, one SQLite job store, one scanner coordinator and one extraction worker. Reuse PaddleOCR, orientation correction, ruled-table recovery, selective Ollama transcription, source snapshots, caches, evidence images, publication/retry and the existing preview/download controls.
 
@@ -43,7 +45,7 @@ These examples are development fixtures. Production must never read `expected_ou
 | Models have `hs_code`, `weight_kg`, `port_of_discharge` and `shipment_terms`, but the parser does not populate all these regional fields and writers ignore the last two | Existing model properties do not constitute end-to-end support | Add only the missing parsing and mapping to the existing data model |
 | Origin is not represented; the current region-specific unresolved logic requests net weight for every non-BD invoice | Jordan origin cannot be handled correctly; missing net weight is reported even though these references do not print it | Add source-backed origin where needed and define applicable fields per template; do not require a nonexistent net-weight field |
 | `apply_valuation` deliberately skips India/Jordan | Quantities can be extracted but values remain unpriced | Keep BD rates untouched; introduce separately approved country/category/unit rates |
-| `edited_data` rejects non-BD invoices and the editor has no HS/per-item weight/origin controls | Existing Edit actions cannot fully support new countries | Extend the current editor by region, preserving country, HS, weight and provenance |
+| Original finding: `edited_data` rejected non-BD invoices; no regional goods controls | India editing addressed by [Fix 11](india_fix11_manual_editing.md); Jordan/per-item weight/origin controls remain future work | Reuse regional editing while preserving country, HS, weight and provenance |
 | Existing regional tests mainly ensure BD valuation is not applied to other regions | No positive coverage for regional printing or publication | Add a small regression set for each new boundary and source case |
 
 Do not weaken `_verify_workbook` to get regional invoices published. It must still independently check the printed goods, complete page coverage and source identity.
@@ -67,10 +69,10 @@ Observed PDF facts: the cover declares seven packages and EST. 106 kg. The fabri
 
 Important differences to resolve against PDF evidence:
 
-- Fabric page date reads 10/13/2025; the next packing page is dated 13-Oct-26, and the manual export date is 14-Oct-2026. Do not invent a next-day export rule or silently repair the year from the reference. Retain candidate dates and agree the conflicting-date rule before activation.
+- Stage 4 close-up verification corrects the initial low-resolution reading: the fabric page says 10/13/2026, matching 13-Oct-26 on the next page. The manual export date is 14-Oct-2026; no next-day adjustment is supported by the PDF. The user approved the latest labelled packing date when no export date exists, with all candidates retained in evidence. Bangladesh's first-date policy remains unchanged.
 - Fabric width is printed with an inch mark; the manual description uses a centimetre label. Preserve the source unit; do not copy a conflicting reference unit.
 - CPT and the manual on/about date are not established by the inspected cover/packing declarations. Leave unsupported fields blank under the existing PDF-first instruction unless a standing business rule is later approved.
-- The manual amount is USD 82.40 using visible reference rates. Those rates are valuation assumptions, not extracted PDF facts. India needs its own approved rounding policy rather than automatically inheriting BD's whole-dollar total.
+- The manual amount is USD 82.40 using visible reference rates. Those rates are valuation assumptions, not extracted PDF facts. Stage 4B approval establishes India cent totals and rates 0.20/YDS fabric, 0.10/PCS zipper and 0.10/SETS fabric swatches/samples/cuttings. BD whole-dollar totals remain unchanged.
 
 ### Jordan
 
@@ -157,10 +159,16 @@ incoming/jordan     -> queued job: JORDAN -> Jordan master -> output/jordan
 
 ## Decisions to settle at the appropriate stage
 
-1. India: how to handle the 2025/2026 packing-date conflict, while preserving the approved PDF-first date policy and not guessing a next-day export date.
+1. India date rule is settled: use an explicit export date first, otherwise the latest labelled packing date. Stage 4 confirms both sample packing dates are actually 13-Oct-2026; the earlier 2025 reading was an analysis error, not a source conflict.
 2. India: whether CPT/on-about fields have a standing source outside these PDFs. Without one, they stay blank.
-3. Both countries: approve regional rates and total rounding; do not transfer BD rates automatically. Jordan label subtypes/rates need particular attention.
+3. India rates/cent rounding are approved and implemented in Stage 4B. Jordan rates and rounding still need approval; label subtypes/rates need particular attention.
 4. Jordan: agree presentation for mixed/partial origin and unallocated shared weights. Default is source-supported values only; unsupported individual weights/origin declarations stay blank.
 5. Jordan 5173 page 6 names the India consignee despite the Jordan cover. Resolve this page's inclusion explicitly before extraction activation. Do not silently discard it or reroute the entire shipment. Stage 1 also confirms mixed/partial origins in 5147 (China/Bangladesh) and 5197 (China/HK/Vietnam), and sample-card quantities distinct from their contents.
 
 No extra dependency, paid cloud service, OCR/model replacement, second web app, external queue, multi-worker execution or specimen-specific correction is proposed. Fresh regional accuracy, all-page visual QA and unseen-document reliability remain to be measured during the gated implementation.
+
+
+
+
+
+

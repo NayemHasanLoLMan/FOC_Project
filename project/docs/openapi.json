@@ -1741,7 +1741,15 @@
                     "description": "ID of the latest eligible attempt. Stale or foreign attempts conflict."
                   },
                   "changes": {
-                    "$ref": "#/components/schemas/InvoiceChanges"
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/InvoiceChanges"
+                      },
+                      {
+                        "$ref": "#/components/schemas/IndiaInvoiceChanges"
+                      }
+                    ],
+                    "description": "Server selects BD or India contract from the immutable job region; Jordan rejected."
                   }
                 }
               }
@@ -1840,7 +1848,7 @@
     "/jobs/{job_id}/edit": {
       "get": {
         "operationId": "editInvoicePage",
-        "summary": "Editor for the latest completed Bangladesh invoice.",
+        "summary": "Editor for the latest completed Bangladesh or India invoice.",
         "parameters": [
           {
             "name": "job_id",
@@ -3596,7 +3604,159 @@
               }
             }
           }
-        }
+        },
+        "description": "Bangladesh edit changes; the immutable job region selects the accepted contract."
+      },
+      "IndiaInvoiceChanges": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "properties": {
+          "invoice_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "export_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "consignee": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "consignee_address": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "shipping_marks": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "carton_range": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "destination_city": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "package_count": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ],
+            "description": "Nonnegative finite numeric value or blank; packages require a positive whole number. Maximum 1e12."
+          },
+          "gross_weight_kg": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ],
+            "description": "Nonnegative finite numeric value or blank; packages require a positive whole number. Maximum 1e12."
+          },
+          "total_value": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ],
+            "description": "Nonnegative finite numeric value or blank; packages require a positive whole number. Maximum 1e12."
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source_index",
+                "description",
+                "quantity",
+                "unit",
+                "unit_price",
+                "hs_code"
+              ],
+              "properties": {
+                "source_index": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "quantity": {
+                  "type": [
+                    "number",
+                    "string",
+                    "null"
+                  ]
+                },
+                "unit": {
+                  "type": "string",
+                  "maxLength": 20
+                },
+                "unit_price": {
+                  "type": [
+                    "number",
+                    "string",
+                    "null"
+                  ]
+                },
+                "hs_code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 20,
+                  "description": "Required for every India row; empty/null clears. Literal text preserves leading zeros."
+                }
+              }
+            }
+          },
+          "port_of_discharge": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "shipment_terms": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          }
+        },
+        "description": "India edit changes. Country/template/currency/source remain protected; rows require hs_code. Monetary changes use cent totals; HS/description-only changes preserve source money."
       }
     },
     "parameters": {

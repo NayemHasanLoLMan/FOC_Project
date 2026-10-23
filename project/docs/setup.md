@@ -61,3 +61,8 @@ Check PDF facts, generated goods, blank unsupported fields and Excel print layou
 Hardware throughput varies. Vision currently allows 4,096 output tokens, 8,192 context and a two-hour request timeout. Better hardware may reduce latency; it does not guarantee better extraction. Do not set a short external process timeout merely because no progress token is visible.
 
 See [build](build.md) for a deployable source bundle, dependency wheel provisioning and the limits of the verified build.
+
+
+### Optional India invoice-header fallback
+
+India Fix 3 can use the already installed `qwen3.5:4b` only after an invalid primary invoice-header reading. On a new machine, provision it explicitly with `ollama pull qwen3.5:4b` if this fallback is wanted. The application does not download models. The primary model setting remains unchanged; this does not approve switching Bangladesh extraction to another model. Without the optional reader, the existing source-OCR/filename fallback still works, but unreadable handwriting may remain unresolved. See [Fix 3 acceptance](india_fix3_invoice_number.md) for the model comparison and limits.

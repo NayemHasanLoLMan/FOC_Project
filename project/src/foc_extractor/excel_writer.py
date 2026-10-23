@@ -20,8 +20,9 @@ from textwrap import wrap
 from openpyxl import load_workbook
 from openpyxl.cell.rich_text import CellRichText, TextBlock
 from openpyxl.cell.text import InlineFont
+from openpyxl.styles import Border, PatternFill, Side
 from .models import FOCData
-from .regions import select_region, template_region
+from .regions import REGIONS, select_region, template_region
 
 
 def _safe_write(ws, r: int, c: int, val):
@@ -70,6 +71,37 @@ def _split_address_lines(address: str | None) -> list[str]:
         parts = [p.strip() for p in lines[0].split(",") if p.strip()]
         lines = parts
     return lines
+
+
+def _style_goods_table(ws, region, last_row):
+    """Outline logical invoice columns, preserving merged descriptions and values."""
+    groups = ((1, 1), (2, 6), (7, 9)) if region == 'BD' else ((1, 1), (2, 4), (5, 5), (6, 7), (8, 9))
+    line = Side(style='thin', color='FFB8C2CC')
+    for row in range(30, max(38, last_row) + 1):
+        for first, last in groups:
+            for col in range(first, last + 1):
+                cell = ws.cell(row, col)
+                if row > last_row:
+                    cell.border = Border()
+                    continue
+                cell.border = Border(left=line if col == first else Side(),
+                                     right=line if col == last else Side(),
+                                     top=line if row == 30 else Side(),
+                                     bottom=line if row == 30 or row >= 33 else Side())
+                if row == 30:
+                    cell.fill = PatternFill('solid', fgColor='FFE9EDF2')
+                    font = copy(cell.font)
+                    font.bold = True
+                    cell.font = font
+                alignment = copy(cell.alignment)
+                alignment.vertical = 'center' if row == 30 else 'top'
+                alignment.wrap_text = True
+                alignment.horizontal = ('center' if row == 30 else
+                                        'right' if col == REGIONS[region]['quantity'] or (region == 'INDIA' and col == 9) else 'left')
+                cell.alignment = alignment
+    ws.row_dimensions[30].height = max(30, ws.row_dimensions[30].height or 0)
+    for row in (31, 32):
+        ws.row_dimensions[row].height = 3
 
 
 def _populate_bd(ws, data: FOCData):
@@ -268,54 +300,137 @@ def _populate_bd(ws, data: FOCData):
         part.size = 8
         part.color = '606060'
     ws.firstFooter = copy(ws.oddFooter)
+    _style_goods_table(ws, 'BD', max(33, 32 + max(len(data.items), len(carton_labels))))
 
 
 def _populate_india(ws, data: FOCData):
-    """Populate INDIA customs invoice template."""
+    """Preserve India's layout while growing goods before its total and declarations."""
+    def fit(cell, text, width=55, minimum=20):
+        alignment = copy(cell.alignment)
+        alignment.wrap_text = True
+        alignment.vertical = 'top'
+        cell.alignment = alignment
+        lines = sum(max(1, len(wrap(part, width=width))) for part in str(text or '').split('\n'))
+        height = max(minimum, 14 * lines + 4)
+        if height > 409:
+            raise ValueError('India invoice text exceeds the printable height of one Excel row')
+        ws.row_dimensions[cell.row].height = max(ws.row_dimensions[cell.row].height or 0, height)
+
+    for coordinate in ('C9', 'B11', 'H11', 'H12', 'H13', 'D20', 'A22', 'A23', 'C25', 'B27', 'G27', 'I42'):
+        cell = ws[coordinate]
+        _safe_write(ws, cell.row, cell.column, None)
+    for row in range(12, 17):
+        _safe_write(ws, row, 2, None)
+    for row in range(33, 39):
+        for col in range(1, 10):
+            _safe_write(ws, row, col, None)
     if data.export_date:
-        _safe_write(ws, 9, 3, data.export_date)   # C9
-    if data.shipping_marks:
-        _safe_write(ws, 11, 8, data.shipping_marks)  # H11
-    _safe_write(ws, 12, 8, data.destination_city or "CHENNAI, INDIA")  # H12
+        _safe_write(ws, 9, 3, date.fromisoformat(data.export_date[:10]))
+        ws['C9'].number_format = 'dd-mmm-yyyy'
+    for coordinate, value in (('B11', data.consignee), ('H11', data.shipping_marks),
+                              ('H12', data.destination_city), ('C25', data.invoice_number)):
+        _safe_write(ws, ws[coordinate].row, ws[coordinate].column, value)
+        fit(ws[coordinate], value, 22 if coordinate.startswith('H') else 55)
     if data.carton_range:
-        _safe_write(ws, 13, 9, data.carton_range)  # I13
+        _safe_write(ws, 13, 8, 'C/NO. '+data.carton_range)
+        fit(ws['H13'], ws['H13'].value, 22)
+    address = _split_address_lines(data.consignee_address)
+    if len(address) > 5:
+        address = address[:4] + ['\n'.join(address[4:])]
+    for index, line in enumerate(address):
+        cell = ws.cell(12 + index, 2)
+        _safe_write(ws, cell.row, 2, line)
+        fit(cell, line)
+        if re.search(r'\b(?:IEC|PAN|GST|BIN|TIN)\b', line, re.I):
+            font = copy(cell.font)
+            font.color = 'FFFF0000'
+            cell.font = font
+    for row in range(12 + len(address), 17):
+        if row != 13 or not data.carton_range:
+            ws.row_dimensions[row].height = 5
+    _safe_write(ws, 20, 4, data.destination_country.upper() if data.destination_country else None)
+    fit(ws['D20'], ws['D20'].value)
+    # Keep shipment labels visible without treating packing dates or addresses as departure facts.
+    for row, label, value, suffix in (
+            (17, 'SHIPMENT FROM:          TO: ', data.destination_city, '          BY:'),
+            (18, 'ON/ABT.:', None, ''),
+            (22, 'PORT OF DISCHARGE: ', data.port_of_discharge, ''),
+            (23, 'SHIPMENT TERMS: ', data.shipment_terms, '')):
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=9)
+        cell = ws.cell(row, 1)
+        font = cell.font
+        _safe_write(ws, row, 1, label + (value or '') + suffix)
+        if value:
+            cell.value = CellRichText(
+                TextBlock(InlineFont(rFont=font.name, sz=font.sz, color='FF000000'), label),
+                TextBlock(InlineFont(rFont=font.name, sz=font.sz, color='FFFF0000'), value))
+            if suffix:
+                cell.value.append(TextBlock(InlineFont(rFont=font.name, sz=font.sz, color='FF000000'), suffix))
+        fit(cell, str(cell.value), 110)
+    _safe_write(ws, 27, 2, data.package_count)
+    _safe_write(ws, 27, 7, data.gross_weight_kg)
 
-    if data.consignee:
-        _safe_write(ws, 11, 2, data.consignee)  # B11
-    addr_lines = _split_address_lines(data.consignee_address)
-    for i, line in enumerate(addr_lines[:5]):
-        _safe_write(ws, 12 + i, 2, line)
-
-    if data.destination_country:
-        _safe_write(ws, 20, 4, data.destination_country.upper())  # D20
-    if data.invoice_number:
-        _safe_write(ws, 25, 3, data.invoice_number)  # C25
-    if data.package_count is not None:
-        _safe_write(ws, 27, 2, int(data.package_count))  # B27
-    if data.gross_weight_kg is not None:
-        _safe_write(ws, 27, 7, float(data.gross_weight_kg))  # G27
-
-    # Line items starting row 33
-    start_row = 33
-    max_item_rows = 6
-    for i, item in enumerate(data.items[:max_item_rows]):
-        r = start_row + i
-        if data.carton_range and i == 0:
-            _safe_write(ws, r, 1, data.carton_range)
-        _safe_write(ws, r, 2, item.description)
-        if item.hs_code:
-            _safe_write(ws, r, 5, item.hs_code)
-        if item.quantity is not None:
-            _safe_write(ws, r, 6, item.quantity)
-        if item.unit:
-            _safe_write(ws, r, 7, item.unit)
-        if item.amount is not None:
-            _safe_write(ws, r, 9, item.amount)
-
-    if data.total_value is not None:
-        tot_row = 42
-        _safe_write(ws, tot_row, 8, "TOTAL VALUE:")
-        _safe_write(ws, tot_row, 9, f"{data.total_value:.2f}")
+    layout = REGIONS['INDIA']
+    start_row = layout['start']
+    carton_labels = [part.strip() for part in (data.carton_range or '').split(',') if part.strip()]
+    extra = max(0, max(len(data.items), len(carton_labels)) - 6)
+    shifted = [copy(rng) for rng in ws.merged_cells.ranges if rng.min_row >= 39]
+    if extra:
+        for rng in shifted:
+            ws.unmerge_cells(str(rng))
+        dimensions = {r: copy(dim) for r, dim in ws.row_dimensions.items() if r >= 39}
+        ws.insert_rows(39, extra)
+        for r, dimension in sorted(dimensions.items(), reverse=True):
+            ws.row_dimensions[r + extra] = dimension
+            ws.row_dimensions[r + extra].index = r + extra
+        for rng in shifted:
+            rng.shift(row_shift=extra)
+            ws.merge_cells(str(rng))
+    for index in range(max(len(data.items), len(carton_labels))):
+        row = start_row + index
+        for col in range(1, 10):
+            ws.cell(row, col)._style = copy(ws.cell(start_row, col)._style)
+        ws.merge_cells(start_row=row, start_column=2, end_row=row, end_column=4)
+        ws.row_dimensions[row].height = 26
+        if index < len(data.items):
+            item = data.items[index]
+            for col, value in ((2, item.description), (5, str(item.hs_code) if item.hs_code is not None else None),
+                               (layout['quantity'], item.quantity), (layout['unit'], item.unit), (9, item.amount)):
+                _safe_write(ws, row, col, value)
+            if item.quantity is not None:
+                ws.cell(row, layout['quantity']).number_format = '#,##0' if float(item.quantity).is_integer() else '#,##0.####'
+            fit(ws.cell(row, 2), item.description, 46, 26)
+            fit(ws.cell(row, 5), item.hs_code, 11, 26)
+            fit(ws.cell(row, 7), item.unit, 8, 26)
+        if index < len(carton_labels):
+            _safe_write(ws, row, 1, carton_labels[index])
+            fit(ws.cell(row, 1), carton_labels[index], 13, 26)
+            font = copy(ws.cell(row, 1).font)
+            font.color = 'FFFF0000'
+            ws.cell(row, 1).font = font
+    for row in range(start_row + max(len(data.items), len(carton_labels)), 39 + extra):
+        ws.row_dimensions[row].height = 5
+    total_row = 42 + extra
+    _safe_write(ws, total_row, layout['total_column'], 'TOTAL VALUE:')
+    _safe_write(ws, total_row, 9, data.total_value)
+    ws.cell(total_row, 9).number_format = '"USD "#,##0.00'
+    ws.print_area = f'A1:I{49 + extra}'
+    ws.print_title_rows = '30:30'
+    identity = (data.invoice_number or Path(data.source_file).stem).replace('&', '&&')
+    ws.HeaderFooter.differentFirst = True
+    ws.HeaderFooter.differentOddEven = False
+    ws.firstHeader.left.text = ws.firstHeader.center.text = ws.firstHeader.right.text = None
+    ws.oddHeader.left.text = str(ws['A1'].value or '').replace('&', '&&')
+    ws.oddHeader.right.text = identity
+    ws.oddFooter.left.text = identity
+    ws.oddFooter.center.text = None
+    ws.oddFooter.right.text = 'Page &P of &N'
+    for part in (ws.oddHeader.left, ws.oddHeader.right, ws.oddFooter.left, ws.oddFooter.right):
+        part.font = 'Arial'
+        part.size = 8
+        part.color = '606060'
+    ws.firstFooter = copy(ws.oddFooter)
+    _style_goods_table(ws, 'INDIA', max(33, 32 + max(len(data.items), len(carton_labels))))
 
 
 def _populate_jordan(ws, data: FOCData):

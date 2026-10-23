@@ -30,7 +30,7 @@ Load configuration at process startup. Edit while processes are stopped, validat
 
 - templates/BD_template.xlsx: master used by managed/batch BD conversion. The writer inherits styles while expanding rows. Editing the master affects future generated invoices, not old outputs.
 - templates/INDIA_template.xlsx and JORDAN_template.xlsx: retained alternatives, not validated by the BD benchmark.
-- valuation_rates.json: approved approximate USD rates; recognized product and unit must match. Decimal line rounding is cents; a complete calculated shipment total rounds to whole USD, half up. An explicit source value retains priority.
+- valuation_rates.json: approved approximate USD rates; recognized product and unit must match. Top-level rates remain Bangladesh-only, with cent line rounding and whole-USD shipment rounding (half up). The separate `india` object prices fabric at 0.20/YDS, zippers at 0.10/PCS, and fabric swatches/samples/cuttings at 0.10/SETS; India lines and complete calculated totals retain cents (half up). Source prices, amounts and totals retain priority. Unknown categories/units stay unpriced; an incomplete shipment does not get a partial calculated total. The existing rates SHA-256 covers both countries.
 - parser.py maintained company directory: supported address/BIN/shipping-mark fallbacks only for identified companies/units. It is code-owned, not an exposed web setting.
 
 Direct main.py supports an explicit template, output/cache directory, local model and diagnostic page limit. Batch supports input/output/cache/model/page limit; its no-argument input defaults to development examples. In a production bundle, pass a real --input-dir because examples are excluded.
@@ -74,3 +74,17 @@ Use full absolute paths to dedicated folders. Missing folders are created and wr
 Clear data archives the currently configured output folder, not older output folders. Use a dedicated invoice folder. For output on the same volume, generated files are archived with the database/artifacts in the workspace recovery folder. For output on another volume, the output folder is atomically moved into `.foc-cleared/<reset-id>/output` beside its original folder; `external-output.json` in the main recovery archive records both paths. Restore that output together with its matching database/artifacts. A failed move rolls back the reset. No cross-volume copy-and-delete is used.
 
 POST `/api/settings` accepts a UUID `request_id` and a `changes` object containing all seven editable fields. Origin/CSRF protections apply. Replaying the UUID returns the original result without applying old values over later settings. Busy/invalid settings return 409; an uncoordinated standalone dashboard returns 403. See OpenAPI and the Postman Processing settings group.
+
+
+### India currency policy (Fix 2)
+
+Read explicit currency declarations, financial headings/values and supported currency-table cells before valuation. Explicit USD is supported; declared non-USD currency is retained by parsing but cannot be exported through the USD India template. No exchange-rate conversion or USD estimates are applied to non-USD data. Conflicting declarations and unreadable/ambiguous explicit declarations fail safely, with candidate evidence retained. Existing invoice/JSON files remain untouched.
+
+When no currency is supplied, keep the approved USD valuation default and record `approved_default_usd` evidence; this is not a claim that the PDF declared USD. An unqualified dollar sign in an amount alone does not establish a different currency. Bare `Currency: $` is ambiguous and rejected. Common codes and unambiguous US$/HK$/A$/C$/S$/euro/pound/rupee markers in financial contexts are recognized; an isolated yen/rupee marker that cannot establish a single currency is not guessed as USD. Detection is bounded to financial/currency contexts, not arbitrary address or product words. The live watcher remains Bangladesh-only.
+
+
+### India invoice-number readers (Fix 3)
+
+`local_model` remains the primary vision model; null disables both primary and optional invoice-header vision reading. India first uses a readable PDF invoice reference without a filename hint. If absent, one bounded labelled header area can be read by the configured primary model. A completed but invalid header response may use the already installed `qwen3.5:4b` as an optional fallback, through the same transport, output/context/timeout limits and image/model cache. A valid primary reference avoids the fallback. Missing/unavailable readers retain the existing filename fallback or blank. No model is installed/downloaded automatically and no global model setting changes.
+
+The fallback is limited to India invoice-number reading. Bangladesh extraction, other fields and their configured model remain unchanged. Per-field fallback choice is currently a small fixed policy, not another settings control; review regional model preferences when regional watching is enabled. Both models, rejected/accepted responses, exact input images and the actual invoice-number contribution are retained in attempt evidence.

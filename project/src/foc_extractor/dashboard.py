@@ -9,7 +9,7 @@ import platform
 import shutil
 import secrets
 from uuid import UUID
-from .invoice_edits import EDIT_FIELDS, validate_changes, edited_data
+from .invoice_edits import editable_fields, validate_changes, edited_data
 from .invoice_preview import invoice_sheet
 import threading
 import time
@@ -33,17 +33,21 @@ STATE_LABELS = {'completed':'Invoice ready', 'queued':'Waiting to start', 'runni
                 'interrupted':'Stopped before finishing', 'waiting_for_file':'Waiting for PDF'}
 
 
-def _field_label(value):
+def _field_label(value, region=None):
+    if region=='INDIA' and value=='consignee_address':
+        return 'Consignee address / IEC / PAN / GST'
+    if region=='INDIA' and value=='hs_code':
+        return 'HS code'
     return FIELD_LABELS.get(value, value.replace('_', ' ').capitalize())
 
 
-def _issue_text(issue):
+def _issue_text(issue, region=None):
     parts = issue.split(':')
     if parts[0] == 'missing':
-        field = ('Item '+parts[2]+' — '+_field_label(parts[3])) if len(parts)==4 and parts[1]=='goods' else _field_label(':'.join(parts[1:]))
+        field = ('Item '+parts[2]+' — '+_field_label(parts[3],region)) if len(parts)==4 and parts[1]=='goods' else _field_label(':'.join(parts[1:]),region)
         return field+' was left blank because no usable value was established.'
     if parts[0] in ('vision_failed', 'vision_decision') and len(parts)>=3:
-        return 'The image reader could not provide a usable reading for '+_field_label(parts[1]).lower()+' on '+parts[2].replace('page-', 'page ')+'.'
+        return 'The image reader could not provide a usable reading for '+_field_label(parts[1],region).lower()+' on '+parts[2].replace('page-', 'page ')+'.'
     return 'An additional processing note was recorded. Its original message is available in Technical details.'
 
 
@@ -62,12 +66,15 @@ def _readable_time(value):
     return datetime.fromisoformat(value).astimezone().strftime('%d %b %Y, %I:%M %p') if value else 'Not finished'
 
 
-def _user_summary(attempt, state):
+def _user_summary(attempt, state, region=None):
+    region = region or (attempt.get('metadata',{}).get('region') if attempt else None)
+    notes = list(dict.fromkeys(_issue_text(issue,region) for issue in attempt['issues']
+                              if not (region=='INDIA' and issue=='missing:net_weight_kg'))) if attempt else []
     if attempt and attempt['metadata'].get('manual_edit'):
         return {'result':{'completed':'Your edited invoice is ready to download.', 'failed':'The edited invoice could not be saved.',
                           'interrupted':'Saving the edited invoice was interrupted.', 'waiting_to_save':'Your edited invoice is waiting to be saved.'}.get(state,'Your invoice changes are being saved.'),
                 'how':'Manual changes use the saved invoice information. The original PDF readings and earlier invoices are preserved.',
-                'notes':list(dict.fromkeys(_issue_text(issue) for issue in attempt['issues']))}
+                'notes':notes}
     result = {'completed':'The invoice was created and is ready to download.',
               'waiting_to_save':'The invoice has been created. Saving it to the output folder is still pending.',
               'failed':'This run could not finish. An invoice is not available from this run.',
@@ -79,7 +86,7 @@ def _user_summary(attempt, state):
     if summary is None:
         how = 'Reading details have not been recorded for this run.'
     elif summary.get('vision_contributions'):
-        fields = list(dict.fromkeys(_field_label(c['field']).lower() for c in summary['vision_contributions']))
+        fields = list(dict.fromkeys(_field_label(c['field'],region).lower() for c in summary['vision_contributions']))
         how = 'Text recognition read the PDF. The local image reader helped with '+', '.join(fields)+'.'
     elif summary.get('vision_attempts'):
         how = ('The image reader was tried for unclear areas, but its readings were not used in the final invoice.'
@@ -87,7 +94,7 @@ def _user_summary(attempt, state):
     else:
         how = 'The PDF was read using text recognition and the invoice rules.'
     return {'result':result, 'how':how,
-            'notes':list(dict.fromkeys(_issue_text(issue) for issue in attempt['issues'])) if attempt else []}
+            'notes':notes}
 
 
 def _age(value):
@@ -327,7 +334,7 @@ class DashboardData:
                 outcome = 'Original reading: ' + outcome
             answer = response.get('answer') or {}
             candidate = decision.get('candidate', answer.get('weight_kg') if field=='gross_weight_kg' else answer.get('text'))
-            evidence.append({'request': event, 'related': related, 'label':_field_label(field),
+            evidence.append({'request': event, 'related': related, 'label':_field_label(field,job['region']),
                              'original':_reading_value(event['details'].get('original'),field),
                              'original_label':'First text reading on this page' if isinstance(event['details'].get('original'),list) else 'First text reading',
                              'reading':_reading_value(candidate,field), 'outcome':outcome,
@@ -336,7 +343,7 @@ class DashboardData:
         stages = [e for e in events if e['details'].get('kind')=='stage']
         return {'job': {**job, 'filename': Path(job['source_path']).name}, 'attempt': attempt, 'attempts': attempts,
                 'method': _method(attempt) if attempt else 'Not started', 'data': data, 'data_error': data_error,
-                'user_summary':_user_summary(attempt, attempt['state'] if attempt else job['state']),
+                'user_summary':_user_summary(attempt, attempt['state'] if attempt else job['state'],job['region']),
                 'stages': stages, 'evidence': evidence, 'events': events[(event_page-1)*100:event_page*100],
                 'event_page':event_page, 'event_pages':max(1,(len(events)+99)//100)}
 
@@ -441,9 +448,10 @@ def create_app(config, *, development_reset=None, development_mode=False, update
             abort(409,description='This invoice is not ready for editing. Open its latest completed version.')
         if not view['data']:
             abort(409,description='The saved invoice information could not be verified.')
-        if view['data'].get('template_type') not in (None,'BD'):
-            abort(409,description='Editing is currently available for Bangladesh invoices.')
-        return render_template('edit.html',**_public(view),edit_fields=EDIT_FIELDS)
+        region=view['job']['region']
+        if region not in ('BD','INDIA') or view['data'].get('template_type') not in (region,None if region=='BD' else region):
+            abort(409,description='Editing is available for matching Bangladesh and India invoices.')
+        return render_template('edit.html',**_public(view),edit_fields=editable_fields(region))
 
     @app.get('/system')
     def system():
@@ -484,11 +492,15 @@ def create_app(config, *, development_reset=None, development_mode=False, update
         changes = None
         if action == 'edit':
             try:
-                changes = validate_changes(payload['changes'])
+                job=data.store.get_job(job_id)
+                changes = validate_changes(payload['changes'],job['region'])
                 original = data.store.get_attempt(payload['attempt_id'])
                 if original['job_id'] != job_id or original['state']!='completed':
                     abort(409,description='Choose a completed invoice from this job.')
-                edited_data(json.loads(_prepared(data.store.get_job(job_id),original,'data')),changes)
+                saved=json.loads(_prepared(job,original,'data'))
+                if saved.get('template_type') not in (job['region'],None if job['region']=='BD' else job['region']):
+                    raise ValueError('Saved invoice does not match this job region')
+                edited_data(saved,changes)
             except ValueError as error:
                 abort(400,description=str(error))
         try:

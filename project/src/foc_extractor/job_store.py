@@ -395,15 +395,15 @@ class JobStore:
         if action not in ('pause', 'resume', 'retry', 'reprocess', 'retry_save', 'edit'):
             raise ValueError('Unknown command')
         selected = action in ('retry', 'reprocess', 'retry_save', 'edit')
+        if selected and any(type(value) is not int or value < 1 for value in (job_id, attempt_id)):
+            raise ValueError('Positive job_id and attempt_id are required')
         edit_digest = None
         if action == 'edit':
             from .invoice_edits import validate_changes
-            changes = validate_changes(changes)
+            changes = validate_changes(changes, self.get_job(job_id)['region'])
             edit_digest = hashlib.sha256(json.dumps(changes,sort_keys=True,allow_nan=False).encode()).hexdigest()
         elif changes is not None:
             raise ValueError('Only an edit command accepts invoice changes')
-        if selected and any(type(value) is not int or value < 1 for value in (job_id, attempt_id)):
-            raise ValueError('Positive job_id and attempt_id are required')
         if not selected and (job_id is not None or attempt_id is not None):
             raise ValueError('Queue commands do not take a job or attempt')
         with self._connection(write=True) as db:

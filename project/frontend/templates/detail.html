@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% set document_name = job.filename[:-4] if job.filename.lower().endswith('.pdf') else job.filename %}
+{% set is_india = job.region=='INDIA' %}
 {% block title %}{{ document_name }}{% endblock %}
 {% block breadcrumb %}INVOICE DETAILS{% endblock %}
 {% block content %}
@@ -44,21 +45,27 @@
 <section class="panel">
   <div class="section-heading"><h2>Invoice information</h2>{% if data and job.state=='completed' and attempt and attempt.id==attempts[-1].id %}<a class="button secondary" href="{{ url_for('edit',job_id=job.id) }}">Edit / add information</a>{% endif %}</div>
   {% if data %}
+  {% set currency = (data.get('currency') or 'USD') if is_india else 'USD' %}
+  {% if is_india %}
+  {% set invoice_fields = [('invoice_number','Invoice number'),('export_date','Date'),('consignee','Consignee'),('consignee_address','Address / IEC / PAN / GST'),('shipping_marks','Shipping marks'),('destination_country','Destination country'),('destination_city','Destination city'),('carton_range','Carton references'),('package_count','Packages'),('gross_weight_kg','Gross weight (kg)'),('port_of_discharge','Port of discharge'),('shipment_terms','Shipment terms'),('total_value','Total (' ~ currency ~ ')')] %}
+  {% else %}
+  {% set invoice_fields = [('invoice_number','Invoice number'),('export_date','Date'),('consignee','Consignee'),('consignee_address','Address / BIN'),('shipping_marks','Shipping marks'),('package_count','Packages'),('gross_weight_kg','Gross weight (kg)'),('net_weight_kg','Net weight (kg)'),('tin_number','TIN'),('import_cover_note','Import cover note'),('total_value','Total (USD)')] %}
+  {% endif %}
   <dl class="header-fields">
-    {% for key,label in [('invoice_number','Invoice number'),('export_date','Date'),('consignee','Consignee'),('consignee_address','Address / BIN'),('shipping_marks','Shipping marks'),('package_count','Packages'),('gross_weight_kg','Gross weight (kg)'),('net_weight_kg','Net weight (kg)'),('tin_number','TIN'),('import_cover_note','Import cover note'),('total_value','Total (USD)')] if not (key=='net_weight_kg' and data.template_type=='BD') and (key not in ['tin_number','import_cover_note'] or data.get(key)) %}
+    {% for key,label in invoice_fields if not (key=='net_weight_kg' and data.template_type=='BD') and (key not in ['tin_number','import_cover_note'] or data.get(key)) %}
     <div{% if key=='total_value' %} class="invoice-total"{% endif %}><dt>{{ label }}</dt><dd>{{ data.get(key) if data.get(key) is not none else '—' }}</dd></div>
     {% endfor %}
   </dl>
   <div class="table-scroll"><table class="goods-table"><caption class="sr-only">Invoice goods and values</caption>
-    <thead><tr><th>Goods</th><th>Quantity</th><th>Unit</th><th>Unit value (USD)</th><th>Item value (USD)</th><th>PDF page</th></tr></thead>
+    <thead><tr><th>Goods</th>{% if is_india %}<th>HS code</th>{% endif %}<th>Quantity</th><th>Unit</th><th>Unit value ({{ currency }})</th><th>Item value ({{ currency }})</th><th>PDF page</th></tr></thead>
     <tbody>{% for item in data.get('items',[]) %}<tr>
-      <td>{{ item.description }}</td><td>{{ item.quantity if item.quantity is not none else '—' }}</td>
+      <td>{{ item.description }}</td>{% if is_india %}<td>{{ item.get('hs_code') if item.get('hs_code') not in [none,''] else '—' }}</td>{% endif %}<td>{{ item.quantity if item.quantity is not none else '—' }}</td>
       <td>{{ item.unit or '—' }}</td><td>{{ item.unit_price if item.unit_price is not none else '—' }}</td>
       <td>{{ item.amount if item.amount is not none else '—' }}</td>
       <td>{{ item.source_page if item.source_page is not none else ('Multiple' if item.source_refs else '—') }}</td>
     </tr>{% endfor %}</tbody>
   </table></div>
-  <p class="hint">A dash means the value was left blank. Item values are calculated using the applicable invoice rates; the final total can be rounded.</p>
+  <p class="hint">{% if is_india %}A dash means the value was left blank. Saved values may come from the PDF, approved estimates or manual corrections. Calculated India totals use cents; open Preview Excel to see invoice formatting.{% else %}A dash means the value was left blank. Item values are calculated using the applicable invoice rates; the final total can be rounded.{% endif %}</p>
   {% else %}<p class="muted">{% if data_error %}The saved invoice information could not be opened or verified. The processing result above has not been changed.{% else %}Invoice information will appear once the PDF has been processed and the workbook is ready to save.{% endif %}</p>{% endif %}
 </section>
 <section class="panel">

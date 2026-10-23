@@ -46,9 +46,11 @@ class RegionTests(unittest.TestCase):
         data = self.data(region)
         path = self.root/(region+'.xlsx')
         populate_template(ROOT/f'templates/{region}_template.xlsx', path, data)
-        if region != 'BD':
+        if region == 'JORDAN':
             # Synthetic layout isolates the verifier; production regional master repairs belong to stages 3/5.
             book = load_workbook(path); sheet = book.active; layout = REGIONS[region]
+            for merge in list(sheet.merged_cells.ranges):
+                if merge.min_row >= layout['start']:sheet.unmerge_cells(str(merge))
             for row in sheet.iter_rows(min_row=layout['start'], max_row=sheet.max_row):
                 for cell in row:
                     cell.value = None
@@ -146,7 +148,7 @@ class RegionTests(unittest.TestCase):
                 verify_workbook(path,data.to_dict(),self.pdf,region)
 
     def test_legacy_regional_truncation_cannot_be_published(self):
-        for region,count in [('INDIA',7),('JORDAN',17)]:
+        for region,count in [('JORDAN',17)]:
             data=self.data(region);data.items=[LineItem('ITEM '+str(i),1,'PCS') for i in range(count)]
             path=self.root/(region+'.xlsx');populate_template(ROOT/f'templates/{region}_template.xlsx',path,data)
             with self.assertRaises(ValueError):verify_workbook(path,data.to_dict(),self.pdf,region)
@@ -205,7 +207,7 @@ class RegionTests(unittest.TestCase):
 
     def test_direct_regional_failure_leaves_existing_output_untouched(self):
         out=self.root/'out';out.mkdir();target=out/'shipment.xlsx';target.write_bytes(b'existing invoice')
-        data=self.data('INDIA');data.items=[LineItem('ITEM '+str(i),1,'PCS') for i in range(7)]
+        data=self.data('INDIA');data.items=[LineItem('UNPRINTABLE '+('X '*1800),1,'PCS')]
         with patch.object(pipeline,'analyze_pdf',return_value=OCRResult(pages=['DESTINATION COUNTRY INDIA'])), \
              patch.object(pipeline,'parse_result',return_value=data):
             with self.assertRaises(ValueError):

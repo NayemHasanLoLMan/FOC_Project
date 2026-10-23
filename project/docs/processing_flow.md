@@ -82,3 +82,71 @@ One shared local transport caches completed structured results by crop, prompt, 
 The generation allowance is 4,096 tokens / 8,192 context, with a two-hour HTTP timeout. Qwen may still generate reasoning despite think=false; only the final structured answer is accepted. Hardware upgrades can address throughput; unseen accuracy and correction-trigger coverage still need evaluation. A correction entirely missed by ordinary OCR may not trigger this fallback.
 
 Latest [production integration QA](../reports/local_vision_integration_20261020/RESULTS.md). The earlier [five-cell capability benchmark](../reports/weight_vision_4096_20261020/RESULTS.md) established that isolated cells plus their KG headers can produce correct final numbers without shipment-specific rules. Production conversion never reads these reports or manual expected invoices.
+
+
+## India source extraction (Stage 4A)
+
+Explicit India conversion reuses the existing OCR, parser, selective local transcription and writer. It retains printed HS, width, source consignee identifiers and cover shipping marks, and groups only bounded heading/color continuations. When no export date exists, use the latest labelled packing date; Bangladesh's date rule is unchanged. Missing source terms/port/identifiers stay blank. No directory tax values are invented. Stage 4B applies only approved India category/unit rates (see below). Unreadable handwritten headings may fall back to the readable printed heading. See [acceptance and limitations](india_jordan_stage4.md). Regional automatic watching remains disabled.
+
+
+## India valuation (Stage 4B)
+
+Use the `india` section of valuation_rates.json: fabric 0.20 USD/YDS, zippers 0.10 USD/PCS, fabric swatches/samples/cuttings 0.10 USD/SETS. These are standing approximate rates approved by the user, not PDF-extracted prices. Preserve explicit source prices/amounts/totals. Calculate lines to cents and sum rounded lines for a cent total, using Decimal half-up. Unknown category/unit or missing/invalid quantity does not produce a calculated line; any unpriced row or incomplete PDF prevents a calculated shipment total. Bangladesh rates and whole-dollar rounding remain unchanged; Jordan is not priced.
+
+
+## India Fix 1: printed monetary values
+
+India table enrichment reads uniquely labelled UNIT PRICE, UNIT VALUE, UNIT COST or RATE columns and AMOUNT, LINE AMOUNT/TOTAL, ITEM AMOUNT/VALUE or TOTAL PRICE/AMOUNT/VALUE columns. Optional USD markers are supported in headers and money cells. One readable nonnegative value must map to exactly one extracted item in the row. Original OCR and field/source-row evidence remain intact; split-row/ambiguous readings are not copied across items. Fix 2 now reads source currency before these values can enter USD valuation/export.
+
+Explicit source prices and amounts, including zero, precede approved estimates. A source amount alone stays authoritative without adding a guessed unit price. Same-price grouped rows sum their explicit amounts using Decimal; rows with and without explicit amounts stay separate so neither quantities nor amounts are lost. Source totals remain unchanged. Missing values still use existing approved estimates where supported. Negative, nonfinite, multiline or ambiguous numeric cells are not accepted as source monetary values; no currency conversion or per-100 unit-price inference is performed.
+
+
+## India Fix 2: source currency and safe publication
+
+India parsing calls source_currency before extracting prices. The helper retains currency readings and locations from explicit labels, financial headings/values and currency cells, then selects one declared code. Explicit conflicts or ambiguous declarations raise an extraction error. An absent/blank currency declaration retains USD via a separately recorded approved default.
+
+Non-USD parser data can be inspected, and the existing valuation helper leaves it unestimated. Regional selection and direct writing reject it before any invoice replacement because the current India template supports only USD. Publication independently checks USD data and audit currency. Queue failures use the existing failed-attempt/retry mechanism, leaving previous invoices intact. No currency conversion, non-USD template or currency field on the dashboard is added in this fix.
+
+
+## India Fix 3: invoice number from the PDF
+
+After India parsing/currency selection, resolve_invoice_number first selects a recognizable PDF S/serial/year reference without the filename hint. Equivalent slash glyphs may be normalized. Otherwise, a bounded area near an explicit invoice-number label, or the cover form's To The Agent header, is selected using OCR coordinates and neighbouring fields. Only one source area is rendered. Blue handwriting can be separated from black form lines; other crops retain their original appearance. The configured local reader tries first; an invalid completed response may use the optional installed qwen3.5:4b reader.
+
+The supported format retains the existing 3–5 serial digits and two-digit year. Only the known S prefix may normalize an S/5/8 reading; serial/year digits are never deleted, added, trimmed or repaired to match a filename/reference. Malformed or unavailable readings preserve the approved filename fallback or blank. Original OCR is unchanged. Each reading gets a distinct call ID, exact sent image, source coordinates and response/model provenance. Final metadata records invoice_number as a vision contribution only when accepted and used. Bangladesh's existing selection rule is unchanged.
+
+## India Fix 4: bounded header layouts
+
+India reads export/packing dates, cover shipping marks and the destination airport from the label's same-line remainder or immediate nonempty next line. Adjacent right/below OCR table cells are supported without changing retained OCR. Optional colon/equal/hyphen separators, Marks & Nos / Marks and No / Shipping Marks and the existing combined cover headings are supported. Other known field labels terminate a reading; it never searches past them for a later value. Source page, location, reading and candidate sets are retained in evidence.
+
+One unambiguous calendar date from explicit export labels has priority. Conflicting, unreadable or ambiguous explicit dates stay blank and block packing fallback, including table-only declarations. Without an export declaration, the latest readable labelled date on a PACKING LIST page is selected; numeric packing dates remain month/day/year. Unrelated order/expiry dates do not qualify. Bangladesh retains its existing date rules.
+
+Marks and airport values come only from the cover. Package counts/weight are separated from a supported marks line. Conflicting marks/destinations stay blank. Airport readings require an explicit city/India value; addresses and origin/warehouse fields are not airport evidence. The airport is never copied into the discharge port or shipment terms. No extra OCR/model call, API or settings change is introduced. See [Fix 4 acceptance and limits](india_fix4_headers.md).
+
+## India Fix 5: product continuation across tables/pages
+
+India prepare_tables retains the explicit product and original heading source only between consecutive compatible goods tables on the same/next page whose first meaningful row is a supported color row. Explicit compatible quantity units are required. It stops at new products/styles, new item/sender identities, totals, unknown quantities, intervening non-goods tables, page gaps/order changes, incompatible columns and overlapping same-page tables. Source text before the first color row is checked for a style boundary; repeated ambiguous color locations are rejected conservatively. Blank rows do not clear the active heading.
+
+The original OCR is unchanged; evidence retains color text, source row and heading references. The existing aggregation combines compatible quantities/prices, preserving each row's source money. Rates and amounts remain row-specific; HS continuity is covered by Fix 7 below. Headerless fragments, reordered layouts and bare quantities remain conservative limits. No new OCR/vision request, API or setting is introduced. Bangladesh uses its unchanged parser path. See [Fix 5 acceptance and limits](india_fix5_continuation.md).
+
+## India Fix 6: printed header publication gate
+
+The existing verify_workbook call now independently compares the mapped India invoice headers with structured conversion data: invoice/date, consignee/address and rendered identifiers, shipping marks, destination city/country, carton header and all goods-column carton references, package count/gross kilograms and their unit labels, and optional port/terms. Address folding and legitimate blanks are checked explicitly; zero is preserved and booleans are rejected as counts/weights. Literal strings cannot become formulas. Known readable master formats, an active/visible primary invoice sheet, full header print bounds and populated-cell row/column visibility are required.
+
+Direct conversion already calls this gate before replacing the destination workbook; QueueWorker already calls it before preparing the publication receipt. Failure therefore retains previous outputs using the existing error/retry path. No validation text is printed on the invoice, no model call is added, and Bangladesh/Jordan checks remain unchanged. This proves workbook/data consistency, not the correctness of OCR or arbitrary Excel rendering. See [Fix 6 acceptance and limits](india_fix6_header_verification.md).
+
+
+## India Fix 7: source-backed HS continuation
+
+India HS enrichment reads explicit labelled source codes and reuses Fix 5 product/color heading links. A blank cell can inherit only forward from an earlier coded row in that same chain, when the chain has exactly one unique readable code and no invalid/nonempty HS declaration or ambiguous HS-column mapping. Different explicit codes remain separate; conflicted/invalid chains keep blanks unresolved. Earlier rows are never backfilled from a later code. A supported adjacent-page chain can retain its code when the later table omits the HS column.
+
+Source codes retain the existing 6–10 digit validation and whitespace normalization, preserving leading zeros without letter/digit repair. The original coded-row reference and reading are retained in field evidence and item source references. Rates/amounts remain row-specific; no classification, directory/reference lookup, new OCR/model call or physical merged-cell detector is added. Unsupported product links or ambiguous source spans remain unfilled. Bangladesh is unchanged. See [Fix 7 acceptance and limits](india_fix7_hs_continuation.md).
+
+## India Fix 8: handwriting review outcome
+
+Three fresh isolated reader comparisons using original and highlight-separated focused crops completed normally but did not establish a reliable handwritten subtype. The existing reader acceptance/fallback policy is retained: keep the readable printed FABRIC CUTTINGS, 3 SETS. Do not convert SMARTONES/SMARTOMES variants into a guessed category. No crop preprocessing, prompt change or model cascade from the experiment is adopted in production; all source code/settings are unchanged. The review is complete with an explicit fallback, while the handwriting itself remains unresolved. See [Fix 8 evidence and limits](india_fix8_handwriting_review.md). Vision runtime/call optimization is a separate next task.
+
+## India Fix 9: runtime/cache review outcome
+
+Existing completed-answer caches were measured with exact requests and a real guard forbidding fresh chat inference: nine replays reused identical answers. Three real warm India queue attempts took 2.2–3.4 seconds with zero fresh inference, while retaining model/image provenance and the invoice-number vision contribution. Cache contracts verify model-digest/image/prompt/schema/output/context invalidation, completed-null reuse and retry after failed/truncated requests. Historical cold telemetry is distinguished from current replay wall time.
+
+No production optimization is added: readable-source rules, selective calls, evidence images, one-page retention and completed-response caching already avoid the supported unnecessary inference. Limits/model/crops/residency remain unchanged to preserve accuracy and memory behavior. New PDFs still pay for cold image/model evaluation; cache times are not new-document throughput. See [Fix 9 measurements and limits](india_fix9_runtime_review.md).

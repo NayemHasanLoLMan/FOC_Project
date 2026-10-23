@@ -2,9 +2,11 @@
 
 Base URL: **http://127.0.0.1:8080**, or the selected --port. [openapi.json](openapi.json) describes all 20 implemented routes and their request/response schemas. It can be opened in an OpenAPI 3.1-compatible viewer; no Swagger service is installed or exposed.
 
-India/Jordan Stage 2 adds a read-only `region` value (BD/INDIA/JORDAN) to job records and new attempt metadata, plus the actual `template_path` in new attempt metadata. Migrated jobs are BD; historical attempt metadata may omit both fields. Existing request bodies/URLs/settings and Postman requests are unchanged. There is no region-changing HTTP command and the production watcher remains BD-only. Regional dashboard filters/editing are scheduled for Stage 7.
+India/Jordan Stage 2 adds a read-only `region` value (BD/INDIA/JORDAN) to job records and new attempt metadata, plus the actual `template_path` in new attempt metadata. Migrated jobs are BD; historical attempt metadata may omit both fields. There is no region-changing HTTP command and the production watcher remains BD-only. India Fix 11 enables versioned India editing through the existing edit URLs; India goods rows require `hs_code`, and India header changes allow port/terms but protect country and omit BD-only fields. The server selects the contract using the job's immutable region. See [manual editing](manual-invoice-editing.md) and the regional OpenAPI schemas.
 
 This is a local, unauthenticated dashboard API. GET/HEAD routes read retained state. Stage 6 adds five protected POST commands; later additions provide guarded settings, editing and recoverable Clear data commands. There is no upload, forced cancellation or arbitrary shell-command endpoint. The scanner accepts PDFs from the configured filesystem inbox. All timestamps are UTC unless explicitly described as the PC's local date/time.
+
+India Fix 12 makes the HTML detail page region-aware and adjusts human-readable summary/image labels. The JSON `data` and original `issues` remain intact, including legacy net-weight fields/notes even when omitted from India's presentation. Existing endpoints and edit contracts are unchanged; no new Postman request is required.
 
 ## Access and response rules
 

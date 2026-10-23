@@ -812,7 +812,7 @@
               ],
               "query": []
             },
-            "description": "Save manual invoice changes as a new version through the worker; preserve source readings and previous files. No OCR rerun. Fill changes with intended fields/items before sending; the empty example is rejected. Reuse the same UUID/payload for an uncertain retry.",
+            "description": "Save manual invoice changes as a new version through the worker; preserve source readings and previous files. No OCR rerun. Fill changes with intended fields/items before sending; the empty example is rejected. Reuse the same UUID/payload for an uncertain retry. India: changes may include port_of_discharge/shipment_terms; every submitted goods row must also include hs_code (text or null). India rejects destination_country, tin_number and import_cover_note. India totals use cents; Bangladesh keeps its existing contract. Fetch the job region/data first; no country-changing request is supported.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"request_id\": \"{{$guid}}\",\n  \"attempt_id\": {{attempt_id}},\n  \"changes\": {}\n}",

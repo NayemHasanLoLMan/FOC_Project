@@ -8,6 +8,12 @@ REGIONS = {
     'JORDAN': {'folder': 'jordan', 'country': 'Jordan', 'start': 27, 'quantity': 7, 'unit': 8, 'total_column': 8},
 }
 
+INDIA_DECLARATIONS = (
+    'THIS IS TRADE SAMPLES AND NOT FOR SALE.',
+    'THERE IS NO COMMERCIAL VALUE AND FOREIGN EXCHANGE INVOLVED.',
+    'VALUE DECLARED FOR CUSTOMS PURPOSE ONLY.',
+)
+
 
 def region_code(value):
     if not isinstance(value, str) or value not in REGIONS:
@@ -22,6 +28,8 @@ def template_region(path):
 def select_region(data, requested=None, cover=''):
     """Check consignment evidence only; packing-page recipient conflicts need separate review."""
     selected = region_code(requested or data.template_type or 'BD')
+    if selected=='INDIA' and data.currency!='USD':
+        raise ValueError(f'India invoice supports USD only; source currency is {data.currency}. No currency conversion or USD invoice was generated')
     countries = [data.destination_country] if data.destination_country else []
     declared = re.search(r'\b(?:DESTINATION\s+COUNTRY|COUNTRY\s+OF\s+(?:ULTIMATE\s+)?DESTINATION)\s*[:\-]?\s*([A-Za-z]+)', cover, re.I)
     if declared:

@@ -85,12 +85,23 @@ def run(
     if local_model:
         from .local_vision import resolve_quantities
         track('goods_vision', resolve_quantities, result, pdf_path, local_model, cache_dir)
+    description_refs=set()
+    if initial_region=='INDIA' and local_model:
+        from .india import resolve_annotations
+        description_refs=track('india_annotations',resolve_annotations,result,pdf_path,local_model,cache_dir)
 
     # 2. Parse structured data
-    data = track('parse', parse_result, result, pdf_path)
+    data = track('parse', parse_result, result, pdf_path, **({'region':initial_region} if initial_region!='BD' else {}))
     selected = select_region(data, region or (template_region(template) if template else None),
                              (result.pages or [result.content])[0])
     active_template = _resolve_template(template, selected)
+    if selected=='INDIA':
+        from .india import resolve_invoice_number
+        number = track('india_invoice_number',resolve_invoice_number,result,pdf_path,local_model,cache_dir)
+        if number:
+            data.invoice_number = number
+            data.warnings = [w for w in data.warnings if not w.startswith(('Best-effort invoice number:', 'invoice_number not established'))]
+            data.warnings.append('India invoice number supplied by PDF reading; source candidates and any model image retained.')
     if output_dir is None:
         out_dir = Path('output') / REGIONS[selected]['folder']
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -129,8 +140,11 @@ def run(
 
     track('valuation', apply_valuation, data)
     contributions=[]
+    if selected=='INDIA' and any(ref.endswith(':header:invoice_number') for ref in accepted_vision_refs()):
+        contributions.append({'field':'invoice_number'})
     refs={ref for item in data.items for ref in item.source_refs}
-    contributions.extend({'field':'goods_quantity','source_ref':ref} for ref in sorted(accepted_vision_refs() & refs))
+    contributions.extend({'field':'goods_quantity','source_ref':ref} for ref in sorted((accepted_vision_refs() & refs)-description_refs))
+    contributions.extend({'field':'goods_description','source_ref':ref} for ref in sorted(accepted_vision_refs() & refs & description_refs))
     if data.package_count is not None and any('local vision' in e.get('method','') for e in package_evidence['entries']):
         contributions.append({'field':'package_count'})
     if data.gross_weight_kg is not None and 'weight' in locals() and weight['total_kg'] is not None and any(c.get('method')=='local vision' for c in weight['cells']):

@@ -163,11 +163,14 @@ if (editor) {
   total.addEventListener('input', () => { manualTotal = true; });
   const updateTotal = () => {
     manualTotal = false;
+    if (editor.dataset.region === 'INDIA') { total.value = ''; return; }
     const rows = collect().items;
     total.value = rows.length && rows.every(row => row.quantity !== '' && row.unit_price !== '')
       ? String(Math.round(rows.reduce((sum,row) => sum + Math.round((Number(row.quantity)*Number(row.unit_price)+Number.EPSILON)*100)/100,0))) : '';
   };
-  editor.addEventListener('input', event => { if (event.target.closest('.editor-good')) updateTotal(); });
+  editor.addEventListener('input', event => {
+    if (event.target.closest('.editor-good') && (editor.dataset.region !== 'INDIA' || ['quantity','unit','unit_price'].includes(event.target.dataset.field))) updateTotal();
+  });
   editor.addEventListener('click', event => {
     if (event.target.closest('.remove-goods')) { event.target.closest('.editor-good').remove(); updateTotal(); }
     if (event.target.closest('#add-goods')) {
@@ -180,7 +183,7 @@ if (editor) {
     event.preventDefault();
     const current = collect();
     const changes = Object.fromEntries(Object.entries(current).filter(([key,value]) => JSON.stringify(value)!==JSON.stringify(initial[key])));
-    if (!manualTotal && changes.items) delete changes.total_value;
+    if (!manualTotal) delete changes.total_value;
     if (!Object.keys(changes).length) { text('#editor-result','No changes to save.'); return; }
     const body = JSON.stringify(changes);
     if (body !== lastBody) { requestId = crypto.randomUUID(); lastBody = body; }

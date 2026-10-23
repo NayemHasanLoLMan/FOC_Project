@@ -13,6 +13,7 @@ Extraction strategy:
 from .processing_evidence import emit
 import re
 from collections import Counter
+from decimal import Decimal
 from pathlib import Path
 
 from .models import FOCData, LineItem
@@ -702,14 +703,17 @@ def _extract_table_data(ocr):
     return items,weights,parsed_pages,warnings
 
 
-def _aggregate_items(items):
+def _aggregate_items(items, *, clean=True):
     grouped={}
     for it in items:
-        it.description=_clean_material_description(it.description)
+        if clean:it.description=_clean_material_description(it.description)
         key=(it.description,it.unit,it.hs_code,it.unit_price)
         if key not in grouped:grouped[key]=it
-        elif it.quantity is not None and grouped[key].quantity is not None:
+        elif (it.quantity is not None and grouped[key].quantity is not None
+              and (it.amount is None)==(grouped[key].amount is None)):
             grouped[key].quantity=round(grouped[key].quantity+it.quantity,4)
+            if it.amount is not None:
+                grouped[key].amount=float(Decimal(str(grouped[key].amount))+Decimal(str(it.amount)))
             if grouped[key].source_page!=it.source_page:grouped[key].source_page=None
             grouped[key].source_refs=list(dict.fromkeys(grouped[key].source_refs+it.source_refs))
         else:grouped[(key,len(grouped))]=it
@@ -758,9 +762,19 @@ def _extract_import_cover_note(text):
     return notes[0] if notes and len(set(notes)) == 1 else None
 
 
-def parse_result(ocr_result, source):
+def parse_result(ocr_result, source, *, region=None):
     text=ocr_result.content; upper=text.upper()
+    consignee_block=_consignee_region(ocr_result)
+    first_page=ocr_result.pages[0] if ocr_result.pages else text
+    india = region=='INDIA' or (region is None and bool(re.search(
+        r'\bTRIMETRO\b|^\s*TO\s*:\s*TG[IP]*L\b',consignee_block or first_page,re.I|re.M)))
+    if region is not None:
+        from .regions import region_code
+        region_code(region)
     data=FOCData(source_file=Path(source).name,template_type='BD')
+    if india:
+        from .india import source_currency
+        data.currency=source_currency(ocr_result)
     data.ocr_backend=ocr_result.backend or None
     data.pages_processed=len(ocr_result.pages)
     data.pages_total=ocr_result.total_pages or None
@@ -774,13 +788,23 @@ def parse_result(ocr_result, source):
         data.warnings.append(f'Best-effort invoice number: {data.invoice_number}; filename hint: {filename_invoice or "none"}. '
                              'PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); '
                              'a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.')
-    data.export_date=_extract_export_date(text)
+    if india:
+        from .india import export_date
+        data.export_date,explicit_export=export_date(ocr_result)
+        explicit_export=explicit_export or bool(re.search(EXPORT_DATE_LABEL,text,re.I))
+    else:
+        data.export_date=_extract_export_date(text)
+        explicit_export=bool(re.search(EXPORT_DATE_LABEL,text,re.I))
     emit('field_source', field='export_date', method='explicit_export_label', value=data.export_date)
-    if data.export_date is None and not re.search(EXPORT_DATE_LABEL,text,re.I):
-        data.export_date=_extract_packing_date(ocr_result.pages or [text])
-        emit('field_source', field='export_date', method='first_labelled_packing_date', value=data.export_date)
+    if data.export_date is None and not explicit_export:
+        if india:
+            from .india import latest_packing_date
+            data.export_date=latest_packing_date(ocr_result)
+        else:
+            data.export_date=_extract_packing_date(ocr_result.pages or [text])
+        emit('field_source', field='export_date', method='latest_labelled_packing_date' if india else 'first_labelled_packing_date', value=data.export_date)
         if data.export_date:
-            data.warnings.append('Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).')
+            data.warnings.append('Export date supplied by '+('latest labelled' if india else 'first dated')+' PDF packing-list page (numeric dates: month/day/year).')
     data.shipping_marks=_extract_shipping_marks(text)
     data.carton_range=_extract_carton_range(text)
     # Header weight declarations precede packing tables.
@@ -792,7 +816,13 @@ def parse_result(ocr_result, source):
     data.total_value=_extract_total_value(text)
     for field in ('shipping_marks','gross_weight_kg','tin_number','import_cover_note','total_value'):
         emit('field_source', field=field, method='explicit_pdf_reading', value=getattr(data,field))
-    items,weights,parsed_pages,warnings=_extract_table_data(ocr_result)
+    if india:
+        from .india import prepare_tables, enrich_items
+        prepared,headings=prepare_tables(ocr_result)
+        items,weights,parsed_pages,warnings=_extract_table_data(prepared)
+        enrich_items(items,ocr_result,headings)
+    else:
+        items,weights,parsed_pages,warnings=_extract_table_data(ocr_result)
     data.warnings.extend(warnings)
     for page,content in enumerate(ocr_result.pages or [text]):
         if 'SHIPPER' in content.upper():continue
@@ -817,7 +847,7 @@ def parse_result(ocr_result, source):
                 it.source_refs=[f'{page+1}:text:{index+1}']
             items.extend(fallback)
         elif page not in parsed_pages:data.warnings.append(f'Page {page+1}: no goods extracted; check page coverage.')
-    data.items=_aggregate_items(items)
+    data.items=_aggregate_items(items,clean=not india)
     if data.gross_weight_kg is None and weights:
         data.warnings.append('Packing-list weights are not established as complete gross shipment weight.')
     from .packages import packing_packages
@@ -825,8 +855,7 @@ def parse_result(ocr_result, source):
     data.package_count=package_evidence['total']
     data.warnings.append('Package count basis: '+package_evidence['basis']+'.')
     if package_evidence['reason']:data.warnings.append('Package extraction: '+package_evidence['reason'])
-    region=_consignee_region(ocr_result)
-    first_page=ocr_result.pages[0] if ocr_result.pages else text
+    region=consignee_block
     header=re.split(r'\bPACKING\s+LIST\b',first_page,maxsplit=1,flags=re.I)[0]
     recipient=re.search(r'^\s*TO\s*:\s*(.+)$',header,re.I|re.M)
     lookup=(region or (recipient[1] if recipient else header)).upper()
@@ -845,7 +874,7 @@ def parse_result(ocr_result, source):
             data.destination_country=entity['country']
             data.destination_city=entity['city']
             data.template_type=entity['template']
-            if not data.shipping_marks:
+            if not data.shipping_marks and not india:
                 data.shipping_marks=entity['shipping_marks']
                 data.warnings.append('Shipping marks supplied by existing consignee directory; verify.')
                 emit('field_source', field='shipping_marks', method='company_directory', key=key, value=data.shipping_marks)
@@ -854,7 +883,7 @@ def parse_result(ocr_result, source):
                 address=[line for line in lines[1:] if not re.fullmatch(r'\s*(?:TEL(?:EPHONE)?|FAX)(?:\s+NO\.?)?\s*:?\s*',line,re.I)]
                 data.consignee_address='\n'.join(address) or None
                 emit('field_source', field='consignee_address', method='labelled_pdf_block', value=data.consignee_address)
-            if not unknown_unit:
+            if not unknown_unit and not india:
                 if not data.consignee_address:
                     data.consignee_address=entity['address']
                     data.warnings.append('Consignee address/BIN supplied by company directory.')
@@ -871,6 +900,10 @@ def parse_result(ocr_result, source):
         data.consignee_address='\n'.join(region.splitlines()[1:]) or None
     if not data.destination_country and ('BANGLADESH' in upper or 'DHAKA' in upper):
         data.destination_country='Bangladesh';data.destination_city='DHAKA, BD'
+    if india:
+        from .india import apply_header
+        data.template_type='INDIA'
+        apply_header(data,ocr_result,consignee_block)
     if data.template_type != 'BD':
         data.net_weight_kg = _extract_net_weight(text)
     for attr in ['invoice_number','export_date','consignee','consignee_address','shipping_marks','package_count','gross_weight_kg','total_value']:

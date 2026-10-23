@@ -22,6 +22,8 @@ Image readings show the exact area read by the local image model and the highlig
 
 The source download is the accepted PDF snapshot, which may differ from a subsequently edited incoming file. The invoice download is the recorded output version, checked against its saved hash.
 
+India invoice details show IEC/PAN/GST address information, destination, carton references, discharge port/terms and goods HS codes. Blank values use a dash; unsupported values are not inferred. India net weight is omitted. Earlier processing runs show their own saved information; original image readings remain available after manual edits. Use Preview Excel to inspect the invoice's printed layout.
+
 ## Blank fields and values
 
 Unsupported/unreadable/conflicting information stays blank; no approval or validation prompt is added to the printed invoice. A completed invoice can therefore have missing information. Notes on the dashboard do not require intervention or automatically stop generation.
