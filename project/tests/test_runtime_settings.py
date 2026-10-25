@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 from pathlib import Path
 import sys
 import threading
@@ -107,6 +108,78 @@ class RuntimeSettingsTests(unittest.TestCase):
                 open_url.return_value.__enter__.return_value.read.return_value=b'{}'
                 local_vision._request('tags')
                 self.assertEqual(open_url.call_args.kwargs['timeout'],17)
+
+    def test_shared_folders_create_country_children_and_preserve_old_download(self):
+        attempt=self.complete();old=self.client.get(f'/files/attempts/{attempt}/invoice').data
+        incoming=self.root/'shared-input';output=self.root/'shared-output'
+        changes={**settings.editable_settings(self.config),'incoming_dir':str(incoming/'bangladesh'),
+                 'india_incoming_dir':str(incoming/'india'),'output_dir':str(output/'bangladesh'),
+                 'india_output_dir':str(output/'india'),'india_enabled':True}
+        self.assertEqual(self.save(changes).status_code,200)
+        self.assertEqual(settings.shared_folders(self.config),{'incoming':incoming,'output':output})
+        for parent in (incoming,output):
+            for country in ('bangladesh','india','jordan'):self.assertTrue((parent/country).is_dir())
+        self.assertEqual(self.client.get(f'/files/attempts/{attempt}/invoice').data,old)
+        html=self.client.get('/system').get_data(as_text=True)
+        self.assertEqual(html.count('data-folder-kind='),2)
+        self.assertNotIn('Folders &amp; disk space',html)
+        self.assertNotIn(str(incoming),re.sub(r'<[^>]*>','',html))
+        self.assertIn('Jordan intake is disabled',html)
+
+    def test_existing_separate_paths_are_not_misrepresented_as_a_shared_root(self):
+        custom=replace(self.config,incoming_dir=self.root/'input/bangladesh',india_incoming_dir=self.root/'other/india',
+                       india_output_dir=self.root/'other-output/india')
+        self.assertIsNone(settings.shared_folders(custom)['incoming'])
+        self.assertIsNone(settings.shared_folders(custom)['output'])
+        shared=replace(custom,india_incoming_dir=self.root/'input/india')
+        self.assertEqual(settings.shared_folders(shared)['incoming'],self.root/'input')
+
+    def test_country_controls_persist_and_legacy_requests_preserve_their_state(self):
+        original=self.config
+        changes={**settings.editable_settings(original),'bangladesh_enabled':False}
+        self.assertEqual(self.save(changes).status_code,200)
+        self.assertFalse(settings.load_runtime_settings(original).bangladesh_enabled)
+        legacy={key:value for key,value in changes.items() if key not in ('bangladesh_enabled','jordan_enabled')}
+        self.assertEqual(self.save(legacy).status_code,200)
+        self.assertFalse(self.config.bangladesh_enabled)
+        self.assertEqual(self.save({**settings.editable_settings(self.config),'jordan_enabled':True}).status_code,409)
+        html=self.client.get('/system').get_data(as_text=True)
+        for country in ('bangladesh','india','jordan'):
+            self.assertIn('name="'+country+'_enabled"',html)
+            self.assertIn('data-intake-status="'+country+'"',html)
+        self.assertRegex(html,r'id="jordan-intake"[^>]* disabled')
+
+    def test_folder_browser_requires_protection_and_does_not_save_settings(self):
+        chosen=self.root/'chosen';chosen.mkdir()
+        for payload in ({'kind':'incoming'},{'kind':'output','path':str(chosen)}):
+            response=self.client.post('/api/folders/browse',json=payload,headers=self.headers)
+            self.assertEqual(response.status_code,200)
+            self.assertTrue(Path(response.get_json()['path']).is_absolute())
+        for payload in ({},{'kind':'bad'},{'kind':'incoming','extra':'arbitrary'},{'kind':'incoming','path':True}):
+            self.assertEqual(self.client.post('/api/folders/browse',json=payload,headers=self.headers).status_code,400)
+        self.assertEqual(self.client.post('/api/folders/browse',json={'kind':'incoming'}).status_code,403)
+        standalone=create_app(self.config).test_client()
+        headers={'Origin':'http://localhost','X-CSRF-Token':standalone.get('/api/controls').get_json()['csrf_token']}
+        self.assertEqual(standalone.post('/api/folders/browse',json={'kind':'incoming'},headers=headers).status_code,403)
+        self.assertFalse((self.config.state_dir/'settings.json').exists())
+
+    def test_browser_lists_sorted_directories_without_files_or_hidden_folders(self):
+        for name in ('b','A','.hidden','linked'):(self.root/name).mkdir()
+        (self.root/'shipment.pdf').write_bytes(b'private file')
+        with patch.object(Path,'is_junction',autospec=True,side_effect=lambda path:path.name=='linked'):
+            result=settings.folder_contents(self.root)
+        names=[item['name'] for item in result['directories']]
+        self.assertNotIn('shipment.pdf',names);self.assertNotIn('.hidden',names);self.assertNotIn('linked',names)
+        self.assertEqual(names,sorted(names,key=str.casefold))
+        self.assertEqual(result['parent'],str(self.root.parent))
+        self.assertTrue(result['locations'])
+
+    def test_browser_refuses_relative_paths_files_and_redirected_paths(self):
+        file=self.root/'not-a-directory';file.write_bytes(b'do not serve')
+        for path in ('relative',str(file),str(self.root/'missing')):
+            self.assertEqual(self.client.post('/api/folders/browse',json={'kind':'incoming','path':path},headers=self.headers).status_code,409)
+        with patch.object(Path,'is_junction',return_value=True):
+            self.assertEqual(self.client.post('/api/folders/browse',json={'kind':'incoming','path':str(self.root)},headers=self.headers).status_code,409)
 
 
 if __name__=='__main__':unittest.main()

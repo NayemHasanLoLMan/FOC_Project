@@ -1,19 +1,45 @@
 """Persist user settings and apply them while scanner and worker are idle."""
 from contextlib import ExitStack
 import json
+import os
 from pathlib import Path
 from datetime import datetime, timezone
 
-from .pipeline_config import ROOT, IO_FIELDS, parse_config
+from .pipeline_config import ROOT, IO_FIELDS, parse_config, initialize_folders
 
 LEGACY_SETTINGS_FIELDS=('local_model','scan_interval_seconds','vision_output_tokens','vision_context_tokens',
                  'vision_timeout_seconds','incoming_dir','output_dir')
-SETTINGS_FIELDS=(*LEGACY_SETTINGS_FIELDS,'india_enabled','india_incoming_dir','india_output_dir')
+SETTINGS_FIELDS=(*LEGACY_SETTINGS_FIELDS,'india_enabled','india_incoming_dir','india_output_dir','bangladesh_enabled','jordan_enabled')
 
 
 def editable_settings(config):
     values=config.to_dict()
     return {key:values[key] for key in SETTINGS_FIELDS}
+
+
+def shared_folders(config):
+    roots={}
+    for kind,bd,india in (('incoming',config.incoming_dir,config.india_incoming_dir),
+                          ('output',config.output_dir,config.india_output_dir)):
+        roots[kind]=bd.parent if bd.name=='bangladesh' and (india is None or india==bd.parent/'india') else None
+    return roots
+
+
+def folder_contents(folder):
+    """List local directories only; selection never changes settings or files."""
+    folder=Path(folder)
+    if not folder.is_absolute() or any(p.is_symlink() or p.is_junction() for p in (folder,*folder.parents)):
+        raise ValueError('Choose an absolute folder without redirected paths')
+    folder=folder.resolve()
+    children=[]
+    for child in folder.iterdir():
+        if not child.name.startswith('.') and not child.is_symlink() and not child.is_junction() and child.is_dir():
+            children.append({'name':child.name,'path':str(child)})
+            if len(children)>1000:raise ValueError('Too many folders; enter a more specific location')
+    drives=os.listdrives() if hasattr(os,'listdrives') else [folder.anchor]
+    return {'path':str(folder),'name':folder.name or folder.anchor,'parent':str(folder.parent) if folder.parent!=folder else None,
+            'directories':sorted(children,key=lambda item:item['name'].casefold()),
+            'locations':[{'name':'Home','path':str(Path.home())},*[{'name':drive,'path':drive} for drive in drives]]}
 
 
 def validate_setting_paths(config, *, development=False):
@@ -42,8 +68,8 @@ def validate_setting_paths(config, *, development=False):
 
 
 def settings_config(config,changes, *, development=False):
-    if not isinstance(changes,dict) or set(changes) not in (set(SETTINGS_FIELDS),set(LEGACY_SETTINGS_FIELDS)):
-        raise ValueError('Submit all settings fields (legacy seven-field requests are also supported)')
+    if not isinstance(changes,dict) or set(changes) not in (set(SETTINGS_FIELDS),set(SETTINGS_FIELDS)-{'bangladesh_enabled','jordan_enabled'},set(LEGACY_SETTINGS_FIELDS)):
+        raise ValueError('Submit all settings fields (legacy seven- and ten-field requests are also supported)')
     for key in IO_FIELDS:
         if key not in changes or (key.startswith('india_') and changes[key] is None):continue
         if not isinstance(changes[key],str) or not Path(changes[key]).is_absolute():
@@ -95,6 +121,7 @@ def save_runtime_settings(config,store,locks,request_id,changes,apply, *, develo
                     # Check actual write access without touching existing user files.
                     from tempfile import TemporaryFile
                     with TemporaryFile(dir=folder):pass
+                initialize_folders(updated)
                 result={'request_id':request_id,'action':'settings','settings':editable_settings(updated)}
                 _write_json(path,result['settings']);written=True
                 db.execute('INSERT INTO admin_commands VALUES(?,?,NULL,NULL,?,?)',

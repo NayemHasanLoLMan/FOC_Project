@@ -204,15 +204,111 @@ if (editor) {
 }
 
 const settingsEditor = document.querySelector('#settings-editor');
+function updateIntakeStatus(control) {
+  const badge = document.querySelector('[data-intake-status="' + control.dataset.intakeControl + '"]');
+  const enabled = control.value === 'true';
+  badge.textContent = (enabled ? 'Enabled' : 'Disabled') + (control.value !== control.dataset.current ? ' · unsaved' : '');
+  badge.className = 'badge' + (enabled ? ' state-completed' : '');
+}
+if (settingsEditor) settingsEditor.addEventListener('change',event => {
+  if (event.target.matches('[data-intake-control]')) updateIntakeStatus(event.target);
+});
+function settingsChanges(form) {
+  const changes = Object.fromEntries(new FormData(form));
+  for (const kind of ['incoming','output']) {
+    const root = form.querySelector('[data-folder-root="' + kind + '"]').value;
+    if (root) {
+      changes[kind + '_dir'] = root.replace(/[\\/]+$/, '') + '/bangladesh';
+      changes['india_' + kind + '_dir'] = root.replace(/[\\/]+$/, '') + '/india';
+    }
+  }
+  changes.local_model = changes.local_model.trim() || null;
+  changes.india_enabled = changes.india_enabled === 'true';
+  changes.bangladesh_enabled = changes.bangladesh_enabled === 'true';
+  changes.jordan_enabled = false;
+  for (const field of ['india_incoming_dir','india_output_dir']) changes[field] = changes[field].trim() || null;
+  for (const field of ['scan_interval_seconds','vision_output_tokens','vision_context_tokens','vision_timeout_seconds']) changes[field] = Number(changes[field]);
+  return changes;
+}
+const folderBrowser = document.querySelector('#folder-browser');
+if (settingsEditor && folderBrowser) {
+  let browsing;
+  const useFolder = document.querySelector('#folder-use');
+  const loadFolders = async path => {
+    if (browsing) browsing.abort();
+    const request = new AbortController(); browsing = request;
+    useFolder.disabled = true; delete folderBrowser.dataset.path;
+    text('#folder-browser-result','Loading folders…');
+    document.querySelector('#folder-list').replaceChildren();
+    try {
+      const response = await fetch('/api/folders/browse',{method:'POST',cache:'no-store',signal:request.signal,
+        headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name="csrf-token"]').content},
+        body:JSON.stringify({kind:folderBrowser.dataset.kind,path})});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'This folder could not be opened.');
+      if (request.signal.aborted || !folderBrowser.open) return;
+      folderBrowser.dataset.path = result.path; folderBrowser.dataset.name = result.name;
+      document.querySelector('#folder-location').value = result.path;
+      text('#folder-current',result.name);
+      const up = document.querySelector('#folder-up');
+      up.disabled = !result.parent; up.dataset.folderPath = result.parent || '';
+      document.querySelector('#folder-locations').replaceChildren(new Option('Go to…',''),
+        ...result.locations.map(location => new Option(location.name,location.path)));
+      document.querySelector('#folder-list').replaceChildren(...result.directories.map(directory => {
+        const item = document.createElement('button');
+        item.type = 'button'; item.className = 'folder-entry';
+        item.textContent = '▸ ' + directory.name; item.dataset.folderPath = directory.path;
+        return item;
+      }));
+      text('#folder-browser-result',result.directories.length ? 'Open a subfolder, or use this folder.' : 'No subfolders. You can use this folder.');
+      useFolder.disabled = false;
+    } catch (error) {
+      if (error.name !== 'AbortError') text('#folder-browser-result',error.message);
+    }
+  };
+  settingsEditor.addEventListener('click',event => {
+    const button = event.target.closest('[data-folder-kind]');
+    if (!button || button.disabled) return;
+    folderBrowser.dataset.kind = button.dataset.folderKind;
+    folderBrowser.returnValue = '';
+    text('#folder-browser-title',button.dataset.folderKind === 'incoming' ? 'Choose PDF intake folder' : 'Choose invoice output folder');
+    settingsEditor.querySelector('[type="submit"]').disabled = true;
+    folderBrowser.showModal();
+    loadFolders(settingsEditor.querySelector('[data-folder-root="' + button.dataset.folderKind + '"]').value || null);
+  });
+  folderBrowser.addEventListener('click',event => {
+    const directory = event.target.closest('[data-folder-path]');
+    if (directory && !directory.disabled && directory.dataset.folderPath) loadFolders(directory.dataset.folderPath);
+    if (event.target.closest('#folder-cancel')) folderBrowser.close();
+  });
+  document.querySelector('#folder-locations').addEventListener('change',event => {
+    if (event.target.value) loadFolders(event.target.value);
+  });
+  document.querySelector('#folder-open').addEventListener('click',() => loadFolders(document.querySelector('#folder-location').value));
+  document.querySelector('#folder-location').addEventListener('keydown',event => {
+    if (event.key === 'Enter') { event.preventDefault(); loadFolders(event.target.value); }
+  });
+  useFolder.addEventListener('click',() => {
+    if (!folderBrowser.dataset.path) return;
+    settingsEditor.querySelector('[data-folder-root="' + folderBrowser.dataset.kind + '"]').value = folderBrowser.dataset.path;
+    text('#' + folderBrowser.dataset.kind + '-folder-name',folderBrowser.dataset.name);
+    folderBrowser.close('selected');
+  });
+  folderBrowser.addEventListener('close',() => {
+    if (browsing) browsing.abort();
+    settingsEditor.querySelector('[type="submit"]').disabled = false;
+    text('#folder-picker-result',folderBrowser.returnValue === 'selected' ? 'Folder selected. Save settings to apply it.' : 'Selection cancelled. Your folders have not changed.');
+  });
+}
 if (settingsEditor) settingsEditor.addEventListener('submit', async event => {
   event.preventDefault();
   const button = settingsEditor.querySelector('button[type="submit"]');
   if (button.disabled) return;
-  const changes = Object.fromEntries(new FormData(settingsEditor));
-  changes.local_model = changes.local_model.trim() || null;
-  changes.india_enabled = changes.india_enabled === 'true';
-  for (const field of ['india_incoming_dir','india_output_dir']) changes[field] = changes[field].trim() || null;
-  for (const field of ['scan_interval_seconds','vision_output_tokens','vision_context_tokens','vision_timeout_seconds']) changes[field] = Number(changes[field]);
+  const changes = settingsChanges(settingsEditor);
+  if (Boolean(changes.india_incoming_dir) !== Boolean(changes.india_output_dir)) {
+    text('#settings-result','Choose both parent folders before saving: PDF intake and invoice output.');
+    return;
+  }
   const signature = JSON.stringify(changes);
   if (settingsEditor.dataset.signature !== signature) {
     settingsEditor.dataset.requestId = crypto.randomUUID();

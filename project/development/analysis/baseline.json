@@ -1,0 +1,4449 @@
+{
+  "purpose": "Development preservation baseline only; never a runtime lookup",
+  "BD": {
+    "parsed": {
+      "26S5075-D.pdf": {
+        "source_file": "26S5075-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5075/26",
+        "export_date": "2026-09-15",
+        "consignee": "THE ROSE DRESSES LTD",
+        "consignee_address": "DIAKHALI, YEARPUR\nJAMGORA,ASHULIA, SAVAR,\nDHAKA-1349, Bangladesh\nBIN: 000517241-0403",
+        "shipping_marks": "ROSE-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 1,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "DIE MOULD (SNAP)",
+            "quantity": 5.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2"
+            ]
+          },
+          {
+            "description": "DIE MOULD (SHANK)",
+            "quantity": 5.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2"
+            ]
+          },
+          {
+            "description": "DIE MOULD (RIVET)",
+            "quantity": 8.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5075/26; filename hint: S/5075/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Shipping marks supplied by existing consignee directory; verify.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5157-D.pdf": {
+        "source_file": "26S5157-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5157/26",
+        "export_date": "2026-10-06",
+        "consignee": "EPIC GARMENTS MANUFACTURING CO.LTD.,(UNIT-2)",
+        "consignee_address": "SFB NO.08 (GROUND, 1ST,2ND,3RD & 4TH FLOOR)\nDEPZ EXTENSION AREA, GONOK BARI, SAVAR,\nDHAKA-1349, BANGLADESH.\n(BIN:000320579-0403)",
+        "shipping_marks": "EGMCL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 1,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "FABRIC SAMPLES",
+            "quantity": 6.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:6",
+              "1:1:7",
+              "1:1:8",
+              "1:1:9",
+              "1:1:10",
+              "1:1:11"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5157/26; filename hint: S/5157/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1, row 6: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 7: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 8: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 9: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 10: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 11: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5158-D.pdf": {
+        "source_file": "26S5158-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5158/26",
+        "export_date": "2026-10-06",
+        "consignee": "EPIC GARMENTS MANUFACTURING CO.LTD.,(UNIT-2)",
+        "consignee_address": "SFB NO.08 (GROUND, 1ST,2ND,3RD & 4TH FLOOR)\nDEPZ EXTENSION AREA, GONOK BARI, SAVAR,\nDHAKA-1349, BANGLADESH.\n(BIN:000320579-0403)",
+        "shipping_marks": "EGMCL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 1,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% NYLON WOVEN FABRICS",
+            "quantity": 47.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:6",
+              "1:1:7",
+              "1:1:8",
+              "1:1:9",
+              "1:1:10",
+              "1:1:11"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5158/26; filename hint: S/5158/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Shipping marks supplied by existing consignee directory; verify.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5166-D.pdf": {
+        "source_file": "26S5166-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 9,
+        "pages_total": 9,
+        "invoice_number": "S/5166/26",
+        "export_date": "2026-10-06",
+        "consignee": "EPIC GARMENTS MANUFACTURING CO. LTD.",
+        "consignee_address": "Plot # 11- 22, 26-34, MS-SFB # 3, Plot # 265-266,\n271-272,200, 201, 202 & 209, Adamjee EPZ.\nSiddhirganj PS : Narayanganj-1431, BANGLADESH.\nBIN:000322109-1402",
+        "shipping_marks": "EGMCL-FOC",
+        "carton_range": "E01-E13, B01",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 14,
+        "gross_weight_kg": 384.0,
+        "net_weight_kg": null,
+        "tin_number": "472-620-435136",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "80% POLYESTER 15% WOOL 5% OTHERS WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:5"
+            ]
+          },
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 145.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "3:3:2",
+              "4:4:7",
+              "4:4:9",
+              "4:4:13"
+            ]
+          },
+          {
+            "description": "78% COTTON 20% POLYESTER 2% SPANDEX WOVEN FABRICS",
+            "quantity": 200.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:3"
+            ]
+          },
+          {
+            "description": "68% COTTON 28% RECYCLED POLYESTER 3% RAYON 1% SPANDEX WOVEN FABRICS",
+            "quantity": 200.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:5"
+            ]
+          },
+          {
+            "description": "98% COTTON 2% ELASTANE WOVEN FABRICS",
+            "quantity": 7.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:11"
+            ]
+          },
+          {
+            "description": "97% COTTON 3% SPANDEX WOVEN FABRICS",
+            "quantity": 64.5,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 5,
+            "confidence": null,
+            "source_refs": [
+              "5:5:7",
+              "5:5:8",
+              "5:5:9",
+              "5:5:10",
+              "5:5:19",
+              "5:5:20",
+              "5:5:21",
+              "5:5:22"
+            ]
+          },
+          {
+            "description": "65% POLYESTER 35% COTTON WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 6,
+            "confidence": null,
+            "source_refs": [
+              "6:6:3",
+              "6:6:5"
+            ]
+          },
+          {
+            "description": "99% COTTON 1% SPANDEX WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 7,
+            "confidence": null,
+            "source_refs": [
+              "7:7:2"
+            ]
+          },
+          {
+            "description": "60% COTTON 40% RECYCLED POLYESTER WOVEN FABRICS",
+            "quantity": 2.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 8,
+            "confidence": null,
+            "source_refs": [
+              "8:8:2"
+            ]
+          },
+          {
+            "description": "90% NYLON 10% SPANDEX WOVEN FABRICS",
+            "quantity": 4.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 9,
+            "confidence": null,
+            "source_refs": [
+              "9:9:4"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5166/26; filename hint: S/5166/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1: table columns not established.",
+          "Page 4: ambiguous weight cell '44Kgs\\n44Kgs'.",
+          "Page 4: ambiguous weight cell '53Kgs\\n53Kgs'.",
+          "Package count basis: declared shipment total.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5169-D.pdf": {
+        "source_file": "26S5169-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 3,
+        "pages_total": 3,
+        "invoice_number": "S/5169/26",
+        "export_date": "2026-10-06",
+        "consignee": "PEARL GARMENTS COMPANY LTD.",
+        "consignee_address": "Polashbari, Nabinagar, Savar,\nPS: Dhaka-1349\nBangladesh\nBIN : 000817323-0112",
+        "shipping_marks": "PGCL-FOC",
+        "carton_range": "P10-P18",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 9,
+        "gross_weight_kg": 56.0,
+        "net_weight_kg": null,
+        "tin_number": "140-200-1879/CIRCLE-50",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 200.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2",
+              "2:2:3",
+              "2:2:4",
+              "2:2:5",
+              "2:2:6",
+              "2:2:7",
+              "2:2:8",
+              "2:2:9",
+              "3:3:2"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5169/26; filename hint: S/5169/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1: table columns not established.",
+          "Package count basis: distinct declared carton ranges.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5170-D.pdf": {
+        "source_file": "26S5170-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 4,
+        "pages_total": 4,
+        "invoice_number": "S/5170/26",
+        "export_date": "2026-10-06",
+        "consignee": "PEARL GARMENTS COMPANY LTD.",
+        "consignee_address": "Polashbari, Nabinagar, Savar,\nPS: Dhaka-1349\nBangladesh\nBIN : 000817323-0112",
+        "shipping_marks": "PGCL-FOC",
+        "carton_range": "P19-P26",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 8,
+        "gross_weight_kg": 48.0,
+        "net_weight_kg": null,
+        "tin_number": "140-200-1879/CIRCLE-50",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 180.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2",
+              "2:2:3",
+              "2:2:4",
+              "2:2:5",
+              "2:2:6",
+              "2:2:7",
+              "3:3:2"
+            ]
+          },
+          {
+            "description": "97% COTTON 3% SPANDEX WOVEN FABRICS",
+            "quantity": 6.5,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:7",
+              "4:4:8",
+              "4:4:9"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5170/26; filename hint: S/5170/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1: table columns not established.",
+          "Package count basis: declared shipment total.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5177-D.pdf": {
+        "source_file": "26S5177-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 3,
+        "pages_total": 3,
+        "invoice_number": "S/5177/26",
+        "export_date": "2026-10-09",
+        "consignee": "PEARL GARMENTS COMPANY LTD.",
+        "consignee_address": "POLASHBARI, NABINAGAR, SAVAR\nPS: DHAKA -1349\nBangladesh\n(BIN : 000817323-0112)",
+        "shipping_marks": "PGCL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 3,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "FABRIC SAMPLES",
+            "quantity": 33.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2",
+              "1:1:3",
+              "1:1:4",
+              "1:1:5",
+              "1:1:6",
+              "1:1:7",
+              "1:1:8",
+              "1:1:9"
+            ]
+          },
+          {
+            "description": "FABRIC SWATCHES CARD",
+            "quantity": 2.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2"
+            ]
+          },
+          {
+            "description": "ZIPPER",
+            "quantity": 5.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:2"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5177/26; filename hint: S/5177/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1, row 2: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 3: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 4: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 5: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 6: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 7: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 8: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 9: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5183-D.pdf": {
+        "source_file": "26S5183-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 5,
+        "pages_total": 5,
+        "invoice_number": "S/5183/26",
+        "export_date": "2026-10-09",
+        "consignee": "EPIC GARMENTS MANUFACTURING CO. LTD.",
+        "consignee_address": "Plot # 11- 22, 26-34, MS-SFB # 3, Plot # 265-266,\n271-272,200, 201, 202 & 209, Adamjee EPZ.\nSiddhirganj PS : Narayanganj-1431, BANGLADESH.\nBIN:000322109-1402",
+        "shipping_marks": "EGMCL-FOC",
+        "carton_range": "E01-E14",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 14,
+        "gross_weight_kg": 324.0,
+        "net_weight_kg": null,
+        "tin_number": "472-620-435136",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "94% COTTON 5% POLYESTER 1% ELASTANE WOVEN FABRICS",
+            "quantity": 200.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:3",
+              "2:2:6"
+            ]
+          },
+          {
+            "description": "62% COTTON 21% POLYESTER 11% VISCOSE 6% SPANDEX WOVEN FABRICS",
+            "quantity": 102.5,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:9",
+              "2:2:12"
+            ]
+          },
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 318.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "3:3:5",
+              "4:4:4",
+              "4:4:5",
+              "4:4:6",
+              "4:4:7",
+              "4:4:9",
+              "5:5:3",
+              "5:5:4"
+            ]
+          },
+          {
+            "description": "94% NYLON 6% SPANDEX WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:12"
+            ]
+          },
+          {
+            "description": "99% COTTON 1% SPANDEX WOVEN FABRICS",
+            "quantity": 30.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 5,
+            "confidence": null,
+            "source_refs": [
+              "5:5:2"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5183/26; filename hint: S/5183/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1: table columns not established.",
+          "Package count basis: declared shipment total.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5184-D.pdf": {
+        "source_file": "26S5184-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 2,
+        "pages_total": 2,
+        "invoice_number": "S/5184/26",
+        "export_date": "2026-10-09",
+        "consignee": "GREEN TEXTILE LIMITED",
+        "consignee_address": "NIJHURI, BARAID, 2 NO MEDUARI\nBHALUKA, MYMENSINGH, BANGLADESH\nBIN NO. 000830659-0104",
+        "shipping_marks": "GTL-FOC",
+        "carton_range": "G01-G04",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 4,
+        "gross_weight_kg": 83.0,
+        "net_weight_kg": null,
+        "tin_number": "821-271-140975",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 150.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:1:2",
+              "2:1:3",
+              "2:1:5"
+            ]
+          },
+          {
+            "description": "81% COTTON 19% LYOCELL WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:1:4"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5184/26; filename hint: S/5184/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Package count basis: distinct declared carton ranges.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5186-D.pdf": {
+        "source_file": "26S5186-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5186/26",
+        "export_date": "2026-10-13",
+        "consignee": "COSMOPOLITAN INDUSTRIES (PVT.) LIMITED",
+        "consignee_address": "Khejur Bagan, Bara Ashulia,\nSavar PS; Dhaka-1341\nBangladesh\nBIN : 000771673-0112",
+        "shipping_marks": "CIPL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 1,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "FABRIC SWATCHES",
+            "quantity": 2.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2",
+              "1:1:3"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5186/26; filename hint: S/5186/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5187-D.pdf": {
+        "source_file": "26S5187-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5187/26",
+        "export_date": "2026-10-13",
+        "consignee": "COSMOPOLITAN INDUSTRIES (PVT.) LIMITED",
+        "consignee_address": "Khejur Bagan, Bara Ashulia,\nSavar PS; Dhaka-1341\nBangladesh\nBIN : 000771673-0112",
+        "shipping_marks": "CIPL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 1,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "MENS 100% LINEN WOVEN SHIRT",
+            "quantity": 2.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:4"
+            ]
+          },
+          {
+            "description": "MENS 63% VISCOSE RAYON 37% POLYAMIDE WOVEN SHIRT",
+            "quantity": 1.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:4"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5187/26; filename hint: S/5187/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Shipping marks supplied by existing consignee directory; verify.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5188-D.pdf": {
+        "source_file": "26S5188-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 2,
+        "pages_total": 2,
+        "invoice_number": "S/5188/26",
+        "export_date": "2026-10-13",
+        "consignee": "GREEN TEXTILE LIMITED",
+        "consignee_address": "NIJHURI, BARAID, 2 NO MEDUARI\nBHALUKA, MYMENSINGH, BANGLADESH.\n(BIN:000830659-0104)",
+        "shipping_marks": "GTL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 7,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 39.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2",
+              "1:1:5",
+              "1:1:7"
+            ]
+          },
+          {
+            "description": "98% COTTON 2% SPANDEX WOVEN FABRICS",
+            "quantity": 33.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:3"
+            ]
+          },
+          {
+            "description": "61% VISCOSE RAYON 37% POLYESTER 2% ELASTANE WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:4"
+            ]
+          },
+          {
+            "description": "65% POLYESTER 35% VISCOSE RAYON WOVEN FABRICS",
+            "quantity": 15.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:6"
+            ]
+          },
+          {
+            "description": "COTTON WOVEN FABRICS",
+            "quantity": 5.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:8"
+            ]
+          },
+          {
+            "description": "88% COTTON 12% LINEN WOVEN FABRICS",
+            "quantity": 20.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:3"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5188/26; filename hint: S/5188/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1, row 8: cotton fabric retained without an unreadable percentage.",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Shipping marks supplied by existing consignee directory; verify.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5189-D.pdf": {
+        "source_file": "26S5189-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 3,
+        "pages_total": 3,
+        "invoice_number": "S/5189/26",
+        "export_date": "2026-10-13",
+        "consignee": "GREEN TEXTILE LIMITED",
+        "consignee_address": "NIJHURI, BARAID, 2 NO MEDUARI\nBHALUKA, MYMENSINGH, BANGLADESH.\n(BIN:000830659-0104)",
+        "shipping_marks": "GTL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 7,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "BULK FABRIC BLANKET",
+            "quantity": 4.0,
+            "unit": "PACKS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2"
+            ]
+          },
+          {
+            "description": "TAPER CARD",
+            "quantity": 2.0,
+            "unit": "PACKS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:3"
+            ]
+          },
+          {
+            "description": "EC SAMPLE LACE",
+            "quantity": 72.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2"
+            ]
+          },
+          {
+            "description": "TRIM CARD",
+            "quantity": 8.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:3",
+              "2:2:5"
+            ]
+          },
+          {
+            "description": "SIZE STICKER",
+            "quantity": 80.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:4"
+            ]
+          },
+          {
+            "description": "FABRIC SAMPLES",
+            "quantity": 2.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:5"
+            ]
+          },
+          {
+            "description": "FELT PATCH",
+            "quantity": 440.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:4"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5189/26; filename hint: S/5189/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 2, row 5: FAB annotation supplies broad fabric-sample heading for continuation rows.",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5190-D.pdf": {
+        "source_file": "26S5190-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5190/26",
+        "export_date": "2026-10-13",
+        "consignee": "GREEN TEXTILE LIMITED",
+        "consignee_address": "NIJHURI, BARAID, 2 NO MEDUARI\nBHALUKA, MYMENSINGH, BANGLADESH.\n(BIN:000830659-0104)",
+        "shipping_marks": "GTL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 1,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "53% VISCOSE 47% COTTON WOMENS WOVEN BLOUSE",
+            "quantity": 1.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:3"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5190/26; filename hint: S/5190/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Shipping marks supplied by existing consignee directory; verify.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5191-D.pdf": {
+        "source_file": "26S5191-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5191/26",
+        "export_date": "2026-10-13",
+        "consignee": "PEARL GARMENTS COMPANY LTD.",
+        "consignee_address": "POLASHBARI, NABINAGAR, SAVAR\nPS: DHAKA -1349\nBangladesh\n(BIN : 000817323-0112)",
+        "shipping_marks": "PGCL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 3,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 65.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2",
+              "1:1:3",
+              "1:1:4"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5191/26; filename hint: S/5191/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Shipping marks supplied by existing consignee directory; verify.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5192-D.pdf": {
+        "source_file": "26S5192-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 2,
+        "pages_total": 2,
+        "invoice_number": "S/5192/26",
+        "export_date": "2026-10-13",
+        "consignee": "PEARL GARMENTS COMPANY LTD.",
+        "consignee_address": "POLASHBARI, NABINAGAR, SAVAR\nPS: DHAKA -1349\nBangladesh\n(BIN : 000817323-0112)",
+        "shipping_marks": "PGCL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 2,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "FABRIC SAMPLES",
+            "quantity": 9.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2",
+              "1:1:3",
+              "1:1:4",
+              "1:1:5",
+              "1:1:6"
+            ]
+          },
+          {
+            "description": "SHANK BUTTON",
+            "quantity": 2.0,
+            "unit": "GROSS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2"
+            ]
+          },
+          {
+            "description": "DIE MOULD",
+            "quantity": 1.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2"
+            ]
+          },
+          {
+            "description": "SNAP BUTTON",
+            "quantity": 1.0,
+            "unit": "GROSS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:3"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5192/26; filename hint: S/5192/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1, row 2: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 3: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 4: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 5: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 6: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5193-D.pdf": {
+        "source_file": "26S5193-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 12,
+        "pages_total": 12,
+        "invoice_number": "S/5193/26",
+        "export_date": "2026-10-13",
+        "consignee": "EPIC GARMENTS MANUFACTURING CO. LTD.",
+        "consignee_address": "Plot # 11- 22, 26-34, MS-SFB # 3, Plot # 265-266,\n271-272,200, 201, 202 & 209, Adamjee EPZ.\nSiddhirganj PS : Narayanganj-1431\nBangladesh\nBIN : 000322109-1402",
+        "shipping_marks": "EGMCL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 16,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "DIE MOULD (SNAP)",
+            "quantity": 2.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2"
+            ]
+          },
+          {
+            "description": "SHANK & RIVET",
+            "quantity": 600.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2"
+            ]
+          },
+          {
+            "description": "FABRIC CARD",
+            "quantity": 1.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:3"
+            ]
+          },
+          {
+            "description": "METAL SNAP",
+            "quantity": 150.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:4"
+            ]
+          },
+          {
+            "description": "ZIPPER CLIP",
+            "quantity": 30.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:5"
+            ]
+          },
+          {
+            "description": "FABRIC SWATCHES",
+            "quantity": 5.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:6",
+              "2:2:7"
+            ]
+          },
+          {
+            "description": "FABRIC SAMPLES",
+            "quantity": 2.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "3:3:2",
+              "10:10:2"
+            ]
+          },
+          {
+            "description": "BULK TRIM CARD",
+            "quantity": 2.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:3"
+            ]
+          },
+          {
+            "description": "FABRIC SWATCHES CARD",
+            "quantity": 3.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "3:3:4",
+              "5:5:2",
+              "8:8:3"
+            ]
+          },
+          {
+            "description": "27L SHANK",
+            "quantity": 8.125,
+            "unit": "G",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:5"
+            ]
+          },
+          {
+            "description": "27L SNAP",
+            "quantity": 7.0,
+            "unit": "G",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:6"
+            ]
+          },
+          {
+            "description": "24L SHANK",
+            "quantity": 4.3,
+            "unit": "G",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:7"
+            ]
+          },
+          {
+            "description": "24L SNAP",
+            "quantity": 6.0,
+            "unit": "G",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:8"
+            ]
+          },
+          {
+            "description": "9.5MM RIVET",
+            "quantity": 20.0,
+            "unit": "G",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:9"
+            ]
+          },
+          {
+            "description": "HIDDEN SNAP",
+            "quantity": 2.0,
+            "unit": "G",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:10"
+            ]
+          },
+          {
+            "description": "FABRIC SAMPLES",
+            "quantity": 12.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "4:4:4",
+              "7:7:4"
+            ]
+          },
+          {
+            "description": "TRIM CARD",
+            "quantity": 19.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "6:6:3",
+              "6:6:4",
+              "6:6:5",
+              "6:6:6",
+              "6:6:7",
+              "6:6:8",
+              "6:6:9",
+              "6:6:10",
+              "6:6:11",
+              "6:6:12",
+              "6:6:13",
+              "6:6:14",
+              "9:9:3"
+            ]
+          },
+          {
+            "description": "FABRIC SWATCHES",
+            "quantity": 26.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 9,
+            "confidence": null,
+            "source_refs": [
+              "9:9:4",
+              "9:9:7"
+            ]
+          },
+          {
+            "description": "LADY 98% COTTON 2% SPANDEX WOVEN PANTS",
+            "quantity": 7.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 11,
+            "confidence": null,
+            "source_refs": [
+              "11:11:3"
+            ]
+          },
+          {
+            "description": "MEN 100% COTTON WOVEN PANTS",
+            "quantity": 2.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 11,
+            "confidence": null,
+            "source_refs": [
+              "11:11:4"
+            ]
+          },
+          {
+            "description": "KIDS 100% COTTON WOVEN JACKET",
+            "quantity": 1.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 12,
+            "confidence": null,
+            "source_refs": [
+              "12:12:7"
+            ]
+          },
+          {
+            "description": "KIDS 100% COTTON WOVEN DRESS",
+            "quantity": 1.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 12,
+            "confidence": null,
+            "source_refs": [
+              "12:12:7"
+            ]
+          },
+          {
+            "description": "LADIES 100% COTTON WOVEN DRESS",
+            "quantity": 1.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 12,
+            "confidence": null,
+            "source_refs": [
+              "12:12:8"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5193/26; filename hint: S/5193/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 4, row 3: FAB annotation supplies broad fabric-sample heading for continuation rows.",
+          "Page 6, row 3: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 4: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 5: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 6: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 7: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 8: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 9: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 10: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 11: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 12: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 13: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 14: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 7, row 3: FAB annotation supplies broad fabric-sample heading for continuation rows.",
+          "Page 12, row 7: repaired fiber-adjacent OCR glyphs 'SCOOP S3 27 - inspo sample for FIT intent (DO NQT CUT)\\nKIPS 1OOT OTTON WOVEN\\n1. SCEP0715FA27 - WML-4715-2027 (WEDGE DENIM JACKET)\\n2. SCEP0772FA27 - WML-4772-2027 (L/S DENIM MINI DRESS)\\nM\\nKIDS 1OUTO COTON WOVEN\\nIPC\\nx\\nI pC' -> 'SCOOP S3 27 - inspo sample for FIT intent (DO NQT CUT)\\nKIDS 100% COTTON WOVEN\\n1. SCEP0715FA27 - WML-4715-2027 (WEDGE DENIM JACKET)\\n2. SCEP0772FA27 - WML-4772-2027 (L/S DENIM MINI DRESS)\\nM\\nKIDS 1OUTO COTON WOVEN\\nIPC\\nx\\nI pC'.",
+          "Page 12, row 7: split numbered garments using source inline quantities; total preserved.",
+          "Page 12: matching garment annotation below the final row retained: 'LADIES 100% COTTON WOVEN DRESS'.",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "total_value not established from source; review required.",
+          "Unit G is ambiguous; confirm meaning without automatic conversion."
+        ]
+      },
+      "26S5194-D.pdf": {
+        "source_file": "26S5194-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 4,
+        "pages_total": 4,
+        "invoice_number": "S/5194/26",
+        "export_date": "2026-10-13",
+        "consignee": "COSMOPOLITAN INDUSTRIES (PVT.) LIMITED",
+        "consignee_address": "Khejur Bagan, Bara Ashulia,\nSavar PS; Dhaka-1341\nBangladesh\nBIN : 000771673-0112",
+        "shipping_marks": "CIPL-FOC",
+        "carton_range": "C01-C06",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 6,
+        "gross_weight_kg": 71.0,
+        "net_weight_kg": null,
+        "tin_number": "105-201-6754",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "94% COTTON 6% STRETCH WOVEN FABRICS",
+            "quantity": 10.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:5"
+            ]
+          },
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 60.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:2",
+              "3:3:5",
+              "3:3:6"
+            ]
+          },
+          {
+            "description": "99% COTTON 1% ELASTANE WOVEN FABRICS",
+            "quantity": 40.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:3",
+              "3:3:4"
+            ]
+          },
+          {
+            "description": "35% COTTON 65% POLYESTER WOVEN FABRICS",
+            "quantity": 18.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:7"
+            ]
+          },
+          {
+            "description": "62% COTTON 38% POLYAMIDE WOVEN FABRICS",
+            "quantity": 20.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:2"
+            ]
+          },
+          {
+            "description": "98% COTTON 2% ELASTANE WOVEN FABRICS",
+            "quantity": 10.5,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:3"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5194/26; filename hint: S/5194/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1: table columns not established.",
+          "Page 4: ambiguous weight cell '2.27 kgs\\n1.14 kgs'.",
+          "Page 4: unlabelled final quantity equals preceding rows; possible total excluded from goods.",
+          "Package count basis: distinct declared carton ranges.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S5195-D.pdf": {
+        "source_file": "26S5195-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 6,
+        "pages_total": 6,
+        "invoice_number": "S/5195/26",
+        "export_date": "2026-10-13",
+        "consignee": "EPIC GARMENTS MANUFACTURING CO. LTD.",
+        "consignee_address": "Plot # 11- 22, 26-34, MS-SFB # 3, Plot # 265-266,\n271-272,200, 201, 202 & 209, Adamjee EPZ.\nSiddhirganj PS : Narayanganj-1431, BANGLADESH.\nBIN:000322109-1402",
+        "shipping_marks": "EGMCL-FOC",
+        "carton_range": "E01-E15",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 15,
+        "gross_weight_kg": 276.0,
+        "net_weight_kg": null,
+        "tin_number": "472-620-435136",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 450.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2",
+              "5:5:3",
+              "5:5:5",
+              "5:5:7",
+              "5:5:10",
+              "6:6:4"
+            ]
+          },
+          {
+            "description": "49% NYLON 48% POLYESTER 3% ELASTANE WOVEN FABRICS",
+            "quantity": 58.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:5",
+              "3:3:6",
+              "3:3:7",
+              "3:3:8",
+              "3:3:9",
+              "3:3:10"
+            ]
+          },
+          {
+            "description": "100% POLYESTER WOVEN FABRICS",
+            "quantity": 18.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:5"
+            ]
+          },
+          {
+            "description": "70% COTTON 30% RAYON WOVEN FABRICS",
+            "quantity": 23.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 6,
+            "confidence": null,
+            "source_refs": [
+              "6:6:2"
+            ]
+          },
+          {
+            "description": "98% COTTON 2% SPANDEX WOVEN FABRICS",
+            "quantity": 30.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 6,
+            "confidence": null,
+            "source_refs": [
+              "6:6:3"
+            ]
+          },
+          {
+            "description": "63% COTTON 36% RECYCLED POLYESTER 1% SPANDEX WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 6,
+            "confidence": null,
+            "source_refs": [
+              "6:6:5"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5195/26; filename hint: S/5195/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1: table columns not established.",
+          "Page 2: ambiguous weight cell '40 Kgs\\n40 Kgs\\n20 Kgs'.",
+          "Package count basis: declared shipment total.",
+          "total_value not established from source; review required."
+        ]
+      },
+      "26S8185-D.pdf": {
+        "source_file": "26S8185-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 4,
+        "pages_total": 4,
+        "invoice_number": "S/8185/26",
+        "export_date": "2026-10-09",
+        "consignee": "GREEN TEXTILE LIMITED",
+        "consignee_address": "NIJHURI, BARAID, 2 NO MEDUARI\nBHALUKA, MYMENSINGH, BANGLADESH\nBIN NO. 000830659-0104",
+        "shipping_marks": "GTL-FOC",
+        "carton_range": "G05-G09",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 5,
+        "gross_weight_kg": 55.0,
+        "net_weight_kg": null,
+        "tin_number": "821-271-140975",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": null,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 121.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "2:1:2",
+              "2:1:3",
+              "2:1:4",
+              "2:1:5",
+              "2:1:6",
+              "3:2:2"
+            ]
+          },
+          {
+            "description": "53% COTTON 42% NYLON 5% METALLIC WOVEN FABRICS",
+            "quantity": 25.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:3:2"
+            ]
+          },
+          {
+            "description": "100% POLYESTER WOVEN FABRICS",
+            "quantity": 25.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:3:2"
+            ]
+          },
+          {
+            "description": "63% LYOCELL 37% COTTON WOVEN FABRICS",
+            "quantity": 20.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": null,
+            "amount": null,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:3:2"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/8185/26; filename hint: S/8185/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 4: ambiguous weight cell '5.27kgs\\n3.02 kgs\\n6.10kgs'.",
+          "Page 4: quantity '70.00 yds' has no established goods description.",
+          "Package count basis: declared shipment total.",
+          "total_value not established from source; review required."
+        ]
+      }
+    },
+    "valued": {
+      "26S5075-D.pdf": {
+        "source_file": "26S5075-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5075/26",
+        "export_date": "2026-09-15",
+        "consignee": "THE ROSE DRESSES LTD",
+        "consignee_address": "DIAKHALI, YEARPUR\nJAMGORA,ASHULIA, SAVAR,\nDHAKA-1349, Bangladesh\nBIN: 000517241-0403",
+        "shipping_marks": "ROSE-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 1,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 13.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "DIE MOULD (SNAP)",
+            "quantity": 5.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.72,
+            "amount": 3.6,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2"
+            ]
+          },
+          {
+            "description": "DIE MOULD (SHANK)",
+            "quantity": 5.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.72,
+            "amount": 3.6,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2"
+            ]
+          },
+          {
+            "description": "DIE MOULD (RIVET)",
+            "quantity": 8.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.72,
+            "amount": 5.76,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5075/26; filename hint: S/5075/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Shipping marks supplied by existing consignee directory; verify.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "Approved approximate USD valuation: 3/3 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5157-D.pdf": {
+        "source_file": "26S5157-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5157/26",
+        "export_date": "2026-10-06",
+        "consignee": "EPIC GARMENTS MANUFACTURING CO.LTD.,(UNIT-2)",
+        "consignee_address": "SFB NO.08 (GROUND, 1ST,2ND,3RD & 4TH FLOOR)\nDEPZ EXTENSION AREA, GONOK BARI, SAVAR,\nDHAKA-1349, BANGLADESH.\n(BIN:000320579-0403)",
+        "shipping_marks": "EGMCL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 1,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 2.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "FABRIC SAMPLES",
+            "quantity": 6.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.25,
+            "amount": 1.5,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:6",
+              "1:1:7",
+              "1:1:8",
+              "1:1:9",
+              "1:1:10",
+              "1:1:11"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5157/26; filename hint: S/5157/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1, row 6: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 7: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 8: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 9: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 10: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 11: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "Approved approximate USD valuation: 1/1 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5158-D.pdf": {
+        "source_file": "26S5158-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5158/26",
+        "export_date": "2026-10-06",
+        "consignee": "EPIC GARMENTS MANUFACTURING CO.LTD.,(UNIT-2)",
+        "consignee_address": "SFB NO.08 (GROUND, 1ST,2ND,3RD & 4TH FLOOR)\nDEPZ EXTENSION AREA, GONOK BARI, SAVAR,\nDHAKA-1349, BANGLADESH.\n(BIN:000320579-0403)",
+        "shipping_marks": "EGMCL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 1,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 9.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% NYLON WOVEN FABRICS",
+            "quantity": 47.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 9.4,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:6",
+              "1:1:7",
+              "1:1:8",
+              "1:1:9",
+              "1:1:10",
+              "1:1:11"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5158/26; filename hint: S/5158/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Shipping marks supplied by existing consignee directory; verify.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "Approved approximate USD valuation: 1/1 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5166-D.pdf": {
+        "source_file": "26S5166-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 9,
+        "pages_total": 9,
+        "invoice_number": "S/5166/26",
+        "export_date": "2026-10-06",
+        "consignee": "EPIC GARMENTS MANUFACTURING CO. LTD.",
+        "consignee_address": "Plot # 11- 22, 26-34, MS-SFB # 3, Plot # 265-266,\n271-272,200, 201, 202 & 209, Adamjee EPZ.\nSiddhirganj PS : Narayanganj-1431, BANGLADESH.\nBIN:000322109-1402",
+        "shipping_marks": "EGMCL-FOC",
+        "carton_range": "E01-E13, B01",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 14,
+        "gross_weight_kg": 384.0,
+        "net_weight_kg": null,
+        "tin_number": "472-620-435136",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 155.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "80% POLYESTER 15% WOOL 5% OTHERS WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 10.0,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:5"
+            ]
+          },
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 145.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 29.0,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "3:3:2",
+              "4:4:7",
+              "4:4:9",
+              "4:4:13"
+            ]
+          },
+          {
+            "description": "78% COTTON 20% POLYESTER 2% SPANDEX WOVEN FABRICS",
+            "quantity": 200.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 40.0,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:3"
+            ]
+          },
+          {
+            "description": "68% COTTON 28% RECYCLED POLYESTER 3% RAYON 1% SPANDEX WOVEN FABRICS",
+            "quantity": 200.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 40.0,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:5"
+            ]
+          },
+          {
+            "description": "98% COTTON 2% ELASTANE WOVEN FABRICS",
+            "quantity": 7.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 1.4,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:11"
+            ]
+          },
+          {
+            "description": "97% COTTON 3% SPANDEX WOVEN FABRICS",
+            "quantity": 64.5,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 12.9,
+            "source_page": 5,
+            "confidence": null,
+            "source_refs": [
+              "5:5:7",
+              "5:5:8",
+              "5:5:9",
+              "5:5:10",
+              "5:5:19",
+              "5:5:20",
+              "5:5:21",
+              "5:5:22"
+            ]
+          },
+          {
+            "description": "65% POLYESTER 35% COTTON WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 10.0,
+            "source_page": 6,
+            "confidence": null,
+            "source_refs": [
+              "6:6:3",
+              "6:6:5"
+            ]
+          },
+          {
+            "description": "99% COTTON 1% SPANDEX WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 10.0,
+            "source_page": 7,
+            "confidence": null,
+            "source_refs": [
+              "7:7:2"
+            ]
+          },
+          {
+            "description": "60% COTTON 40% RECYCLED POLYESTER WOVEN FABRICS",
+            "quantity": 2.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 0.4,
+            "source_page": 8,
+            "confidence": null,
+            "source_refs": [
+              "8:8:2"
+            ]
+          },
+          {
+            "description": "90% NYLON 10% SPANDEX WOVEN FABRICS",
+            "quantity": 4.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 0.8,
+            "source_page": 9,
+            "confidence": null,
+            "source_refs": [
+              "9:9:4"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5166/26; filename hint: S/5166/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1: table columns not established.",
+          "Page 4: ambiguous weight cell '44Kgs\\n44Kgs'.",
+          "Page 4: ambiguous weight cell '53Kgs\\n53Kgs'.",
+          "Package count basis: declared shipment total.",
+          "Approved approximate USD valuation: 10/10 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5169-D.pdf": {
+        "source_file": "26S5169-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 3,
+        "pages_total": 3,
+        "invoice_number": "S/5169/26",
+        "export_date": "2026-10-06",
+        "consignee": "PEARL GARMENTS COMPANY LTD.",
+        "consignee_address": "Polashbari, Nabinagar, Savar,\nPS: Dhaka-1349\nBangladesh\nBIN : 000817323-0112",
+        "shipping_marks": "PGCL-FOC",
+        "carton_range": "P10-P18",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 9,
+        "gross_weight_kg": 56.0,
+        "net_weight_kg": null,
+        "tin_number": "140-200-1879/CIRCLE-50",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 40.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 200.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 40.0,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2",
+              "2:2:3",
+              "2:2:4",
+              "2:2:5",
+              "2:2:6",
+              "2:2:7",
+              "2:2:8",
+              "2:2:9",
+              "3:3:2"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5169/26; filename hint: S/5169/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1: table columns not established.",
+          "Package count basis: distinct declared carton ranges.",
+          "Approved approximate USD valuation: 1/1 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5170-D.pdf": {
+        "source_file": "26S5170-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 4,
+        "pages_total": 4,
+        "invoice_number": "S/5170/26",
+        "export_date": "2026-10-06",
+        "consignee": "PEARL GARMENTS COMPANY LTD.",
+        "consignee_address": "Polashbari, Nabinagar, Savar,\nPS: Dhaka-1349\nBangladesh\nBIN : 000817323-0112",
+        "shipping_marks": "PGCL-FOC",
+        "carton_range": "P19-P26",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 8,
+        "gross_weight_kg": 48.0,
+        "net_weight_kg": null,
+        "tin_number": "140-200-1879/CIRCLE-50",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 37.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 180.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 36.0,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2",
+              "2:2:3",
+              "2:2:4",
+              "2:2:5",
+              "2:2:6",
+              "2:2:7",
+              "3:3:2"
+            ]
+          },
+          {
+            "description": "97% COTTON 3% SPANDEX WOVEN FABRICS",
+            "quantity": 6.5,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 1.3,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:7",
+              "4:4:8",
+              "4:4:9"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5170/26; filename hint: S/5170/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1: table columns not established.",
+          "Package count basis: declared shipment total.",
+          "Approved approximate USD valuation: 2/2 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5177-D.pdf": {
+        "source_file": "26S5177-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 3,
+        "pages_total": 3,
+        "invoice_number": "S/5177/26",
+        "export_date": "2026-10-09",
+        "consignee": "PEARL GARMENTS COMPANY LTD.",
+        "consignee_address": "POLASHBARI, NABINAGAR, SAVAR\nPS: DHAKA -1349\nBangladesh\n(BIN : 000817323-0112)",
+        "shipping_marks": "PGCL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 3,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 10.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "FABRIC SAMPLES",
+            "quantity": 33.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.25,
+            "amount": 8.25,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2",
+              "1:1:3",
+              "1:1:4",
+              "1:1:5",
+              "1:1:6",
+              "1:1:7",
+              "1:1:8",
+              "1:1:9"
+            ]
+          },
+          {
+            "description": "FABRIC SWATCHES CARD",
+            "quantity": 2.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.5,
+            "amount": 1.0,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2"
+            ]
+          },
+          {
+            "description": "ZIPPER",
+            "quantity": 5.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.1,
+            "amount": 0.5,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:2"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5177/26; filename hint: S/5177/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1, row 2: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 3: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 4: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 5: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 6: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 7: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 8: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 9: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "Approved approximate USD valuation: 3/3 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5183-D.pdf": {
+        "source_file": "26S5183-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 5,
+        "pages_total": 5,
+        "invoice_number": "S/5183/26",
+        "export_date": "2026-10-09",
+        "consignee": "EPIC GARMENTS MANUFACTURING CO. LTD.",
+        "consignee_address": "Plot # 11- 22, 26-34, MS-SFB # 3, Plot # 265-266,\n271-272,200, 201, 202 & 209, Adamjee EPZ.\nSiddhirganj PS : Narayanganj-1431, BANGLADESH.\nBIN:000322109-1402",
+        "shipping_marks": "EGMCL-FOC",
+        "carton_range": "E01-E14",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 14,
+        "gross_weight_kg": 324.0,
+        "net_weight_kg": null,
+        "tin_number": "472-620-435136",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 140.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "94% COTTON 5% POLYESTER 1% ELASTANE WOVEN FABRICS",
+            "quantity": 200.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 40.0,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:3",
+              "2:2:6"
+            ]
+          },
+          {
+            "description": "62% COTTON 21% POLYESTER 11% VISCOSE 6% SPANDEX WOVEN FABRICS",
+            "quantity": 102.5,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 20.5,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:9",
+              "2:2:12"
+            ]
+          },
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 318.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 63.6,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "3:3:5",
+              "4:4:4",
+              "4:4:5",
+              "4:4:6",
+              "4:4:7",
+              "4:4:9",
+              "5:5:3",
+              "5:5:4"
+            ]
+          },
+          {
+            "description": "94% NYLON 6% SPANDEX WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 10.0,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:12"
+            ]
+          },
+          {
+            "description": "99% COTTON 1% SPANDEX WOVEN FABRICS",
+            "quantity": 30.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 6.0,
+            "source_page": 5,
+            "confidence": null,
+            "source_refs": [
+              "5:5:2"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5183/26; filename hint: S/5183/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1: table columns not established.",
+          "Package count basis: declared shipment total.",
+          "Approved approximate USD valuation: 5/5 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5184-D.pdf": {
+        "source_file": "26S5184-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 2,
+        "pages_total": 2,
+        "invoice_number": "S/5184/26",
+        "export_date": "2026-10-09",
+        "consignee": "GREEN TEXTILE LIMITED",
+        "consignee_address": "NIJHURI, BARAID, 2 NO MEDUARI\nBHALUKA, MYMENSINGH, BANGLADESH\nBIN NO. 000830659-0104",
+        "shipping_marks": "GTL-FOC",
+        "carton_range": "G01-G04",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 4,
+        "gross_weight_kg": 83.0,
+        "net_weight_kg": null,
+        "tin_number": "821-271-140975",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 40.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 150.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 30.0,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:1:2",
+              "2:1:3",
+              "2:1:5"
+            ]
+          },
+          {
+            "description": "81% COTTON 19% LYOCELL WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 10.0,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:1:4"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5184/26; filename hint: S/5184/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Package count basis: distinct declared carton ranges.",
+          "Approved approximate USD valuation: 2/2 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5186-D.pdf": {
+        "source_file": "26S5186-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5186/26",
+        "export_date": "2026-10-13",
+        "consignee": "COSMOPOLITAN INDUSTRIES (PVT.) LIMITED",
+        "consignee_address": "Khejur Bagan, Bara Ashulia,\nSavar PS; Dhaka-1341\nBangladesh\nBIN : 000771673-0112",
+        "shipping_marks": "CIPL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 1,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 1.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "FABRIC SWATCHES",
+            "quantity": 2.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.25,
+            "amount": 0.5,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2",
+              "1:1:3"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5186/26; filename hint: S/5186/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "Approved approximate USD valuation: 1/1 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5187-D.pdf": {
+        "source_file": "26S5187-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5187/26",
+        "export_date": "2026-10-13",
+        "consignee": "COSMOPOLITAN INDUSTRIES (PVT.) LIMITED",
+        "consignee_address": "Khejur Bagan, Bara Ashulia,\nSavar PS; Dhaka-1341\nBangladesh\nBIN : 000771673-0112",
+        "shipping_marks": "CIPL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 1,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 1.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "MENS 100% LINEN WOVEN SHIRT",
+            "quantity": 2.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.35,
+            "amount": 0.7,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:4"
+            ]
+          },
+          {
+            "description": "MENS 63% VISCOSE RAYON 37% POLYAMIDE WOVEN SHIRT",
+            "quantity": 1.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.35,
+            "amount": 0.35,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:4"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5187/26; filename hint: S/5187/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Shipping marks supplied by existing consignee directory; verify.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "Approved approximate USD valuation: 2/2 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5188-D.pdf": {
+        "source_file": "26S5188-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 2,
+        "pages_total": 2,
+        "invoice_number": "S/5188/26",
+        "export_date": "2026-10-13",
+        "consignee": "GREEN TEXTILE LIMITED",
+        "consignee_address": "NIJHURI, BARAID, 2 NO MEDUARI\nBHALUKA, MYMENSINGH, BANGLADESH.\n(BIN:000830659-0104)",
+        "shipping_marks": "GTL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 7,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 32.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 39.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 7.8,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2",
+              "1:1:5",
+              "1:1:7"
+            ]
+          },
+          {
+            "description": "98% COTTON 2% SPANDEX WOVEN FABRICS",
+            "quantity": 33.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 6.6,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:3"
+            ]
+          },
+          {
+            "description": "61% VISCOSE RAYON 37% POLYESTER 2% ELASTANE WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 10.0,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:4"
+            ]
+          },
+          {
+            "description": "65% POLYESTER 35% VISCOSE RAYON WOVEN FABRICS",
+            "quantity": 15.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 3.0,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:6"
+            ]
+          },
+          {
+            "description": "COTTON WOVEN FABRICS",
+            "quantity": 5.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 1.0,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:8"
+            ]
+          },
+          {
+            "description": "88% COTTON 12% LINEN WOVEN FABRICS",
+            "quantity": 20.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 4.0,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:3"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5188/26; filename hint: S/5188/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1, row 8: cotton fabric retained without an unreadable percentage.",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Shipping marks supplied by existing consignee directory; verify.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "Approved approximate USD valuation: 6/6 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5189-D.pdf": {
+        "source_file": "26S5189-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 3,
+        "pages_total": 3,
+        "invoice_number": "S/5189/26",
+        "export_date": "2026-10-13",
+        "consignee": "GREEN TEXTILE LIMITED",
+        "consignee_address": "NIJHURI, BARAID, 2 NO MEDUARI\nBHALUKA, MYMENSINGH, BANGLADESH.\n(BIN:000830659-0104)",
+        "shipping_marks": "GTL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 7,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 10.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "BULK FABRIC BLANKET",
+            "quantity": 4.0,
+            "unit": "PACKS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.5,
+            "amount": 2.0,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2"
+            ]
+          },
+          {
+            "description": "TAPER CARD",
+            "quantity": 2.0,
+            "unit": "PACKS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.25,
+            "amount": 0.5,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:3"
+            ]
+          },
+          {
+            "description": "EC SAMPLE LACE",
+            "quantity": 72.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.02,
+            "amount": 1.44,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2"
+            ]
+          },
+          {
+            "description": "TRIM CARD",
+            "quantity": 8.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.1,
+            "amount": 0.8,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:3",
+              "2:2:5"
+            ]
+          },
+          {
+            "description": "SIZE STICKER",
+            "quantity": 80.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.005,
+            "amount": 0.4,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:4"
+            ]
+          },
+          {
+            "description": "FABRIC SAMPLES",
+            "quantity": 2.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.25,
+            "amount": 0.5,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:5"
+            ]
+          },
+          {
+            "description": "FELT PATCH",
+            "quantity": 440.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.01,
+            "amount": 4.4,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:4"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5189/26; filename hint: S/5189/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 2, row 5: FAB annotation supplies broad fabric-sample heading for continuation rows.",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "Approved approximate USD valuation: 7/7 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5190-D.pdf": {
+        "source_file": "26S5190-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5190/26",
+        "export_date": "2026-10-13",
+        "consignee": "GREEN TEXTILE LIMITED",
+        "consignee_address": "NIJHURI, BARAID, 2 NO MEDUARI\nBHALUKA, MYMENSINGH, BANGLADESH.\n(BIN:000830659-0104)",
+        "shipping_marks": "GTL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 1,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 1.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "53% VISCOSE 47% COTTON WOMENS WOVEN BLOUSE",
+            "quantity": 1.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 1.0,
+            "amount": 1.0,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:3"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5190/26; filename hint: S/5190/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Shipping marks supplied by existing consignee directory; verify.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "Approved approximate USD valuation: 1/1 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5191-D.pdf": {
+        "source_file": "26S5191-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 1,
+        "pages_total": 1,
+        "invoice_number": "S/5191/26",
+        "export_date": "2026-10-13",
+        "consignee": "PEARL GARMENTS COMPANY LTD.",
+        "consignee_address": "POLASHBARI, NABINAGAR, SAVAR\nPS: DHAKA -1349\nBangladesh\n(BIN : 000817323-0112)",
+        "shipping_marks": "PGCL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 3,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 13.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 65.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 13.0,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2",
+              "1:1:3",
+              "1:1:4"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5191/26; filename hint: S/5191/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Shipping marks supplied by existing consignee directory; verify.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "Approved approximate USD valuation: 1/1 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5192-D.pdf": {
+        "source_file": "26S5192-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 2,
+        "pages_total": 2,
+        "invoice_number": "S/5192/26",
+        "export_date": "2026-10-13",
+        "consignee": "PEARL GARMENTS COMPANY LTD.",
+        "consignee_address": "POLASHBARI, NABINAGAR, SAVAR\nPS: DHAKA -1349\nBangladesh\n(BIN : 000817323-0112)",
+        "shipping_marks": "PGCL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 2,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 4.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "FABRIC SAMPLES",
+            "quantity": 9.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.25,
+            "amount": 2.25,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2",
+              "1:1:3",
+              "1:1:4",
+              "1:1:5",
+              "1:1:6"
+            ]
+          },
+          {
+            "description": "SHANK BUTTON",
+            "quantity": 2.0,
+            "unit": "GROSS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.35,
+            "amount": 0.7,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2"
+            ]
+          },
+          {
+            "description": "DIE MOULD",
+            "quantity": 1.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.72,
+            "amount": 0.72,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2"
+            ]
+          },
+          {
+            "description": "SNAP BUTTON",
+            "quantity": 1.0,
+            "unit": "GROSS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.35,
+            "amount": 0.35,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:3"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5192/26; filename hint: S/5192/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1, row 2: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 3: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 4: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 5: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Page 1, row 6: broad fabric-sample category from FAB annotation; subtype not asserted.",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "Approved approximate USD valuation: 4/4 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5193-D.pdf": {
+        "source_file": "26S5193-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 12,
+        "pages_total": 12,
+        "invoice_number": "S/5193/26",
+        "export_date": "2026-10-13",
+        "consignee": "EPIC GARMENTS MANUFACTURING CO. LTD.",
+        "consignee_address": "Plot # 11- 22, 26-34, MS-SFB # 3, Plot # 265-266,\n271-272,200, 201, 202 & 209, Adamjee EPZ.\nSiddhirganj PS : Narayanganj-1431\nBangladesh\nBIN : 000322109-1402",
+        "shipping_marks": "EGMCL-FOC",
+        "carton_range": null,
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 16,
+        "gross_weight_kg": null,
+        "net_weight_kg": null,
+        "tin_number": null,
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 69.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "DIE MOULD (SNAP)",
+            "quantity": 2.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.72,
+            "amount": 1.44,
+            "source_page": 1,
+            "confidence": null,
+            "source_refs": [
+              "1:1:2"
+            ]
+          },
+          {
+            "description": "SHANK & RIVET",
+            "quantity": 600.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.025,
+            "amount": 15.0,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2"
+            ]
+          },
+          {
+            "description": "FABRIC CARD",
+            "quantity": 1.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 1.0,
+            "amount": 1.0,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:3"
+            ]
+          },
+          {
+            "description": "METAL SNAP",
+            "quantity": 150.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.05,
+            "amount": 7.5,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:4"
+            ]
+          },
+          {
+            "description": "ZIPPER CLIP",
+            "quantity": 30.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.05,
+            "amount": 1.5,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:5"
+            ]
+          },
+          {
+            "description": "FABRIC SWATCHES",
+            "quantity": 5.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.1,
+            "amount": 0.5,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:6",
+              "2:2:7"
+            ]
+          },
+          {
+            "description": "FABRIC SAMPLES",
+            "quantity": 2.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.1,
+            "amount": 0.2,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "3:3:2",
+              "10:10:2"
+            ]
+          },
+          {
+            "description": "BULK TRIM CARD",
+            "quantity": 2.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.5,
+            "amount": 1.0,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:3"
+            ]
+          },
+          {
+            "description": "FABRIC SWATCHES CARD",
+            "quantity": 3.0,
+            "unit": "SETS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.5,
+            "amount": 1.5,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "3:3:4",
+              "5:5:2",
+              "8:8:3"
+            ]
+          },
+          {
+            "description": "27L SHANK",
+            "quantity": 8.125,
+            "unit": "GROSS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.12,
+            "amount": 0.98,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:5"
+            ]
+          },
+          {
+            "description": "27L SNAP",
+            "quantity": 7.0,
+            "unit": "GROSS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.14,
+            "amount": 0.98,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:6"
+            ]
+          },
+          {
+            "description": "24L SHANK",
+            "quantity": 4.3,
+            "unit": "GROSS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.13,
+            "amount": 0.56,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:7"
+            ]
+          },
+          {
+            "description": "24L SNAP",
+            "quantity": 6.0,
+            "unit": "GROSS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.17,
+            "amount": 1.02,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:8"
+            ]
+          },
+          {
+            "description": "9.5MM RIVET",
+            "quantity": 20.0,
+            "unit": "GROSS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.05,
+            "amount": 1.0,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:9"
+            ]
+          },
+          {
+            "description": "HIDDEN SNAP",
+            "quantity": 2.0,
+            "unit": "GROSS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.25,
+            "amount": 0.5,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:10"
+            ]
+          },
+          {
+            "description": "FABRIC SAMPLES",
+            "quantity": 12.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.25,
+            "amount": 3.0,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "4:4:4",
+              "7:7:4"
+            ]
+          },
+          {
+            "description": "TRIM CARD",
+            "quantity": 19.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.1,
+            "amount": 1.9,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "6:6:3",
+              "6:6:4",
+              "6:6:5",
+              "6:6:6",
+              "6:6:7",
+              "6:6:8",
+              "6:6:9",
+              "6:6:10",
+              "6:6:11",
+              "6:6:12",
+              "6:6:13",
+              "6:6:14",
+              "9:9:3"
+            ]
+          },
+          {
+            "description": "FABRIC SWATCHES",
+            "quantity": 26.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.25,
+            "amount": 6.5,
+            "source_page": 9,
+            "confidence": null,
+            "source_refs": [
+              "9:9:4",
+              "9:9:7"
+            ]
+          },
+          {
+            "description": "LADY 98% COTTON 2% SPANDEX WOVEN PANTS",
+            "quantity": 7.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 2.5,
+            "amount": 17.5,
+            "source_page": 11,
+            "confidence": null,
+            "source_refs": [
+              "11:11:3"
+            ]
+          },
+          {
+            "description": "MEN 100% COTTON WOVEN PANTS",
+            "quantity": 2.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 1.5,
+            "amount": 3.0,
+            "source_page": 11,
+            "confidence": null,
+            "source_refs": [
+              "11:11:4"
+            ]
+          },
+          {
+            "description": "KIDS 100% COTTON WOVEN JACKET",
+            "quantity": 1.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 1.0,
+            "amount": 1.0,
+            "source_page": 12,
+            "confidence": null,
+            "source_refs": [
+              "12:12:7"
+            ]
+          },
+          {
+            "description": "KIDS 100% COTTON WOVEN DRESS",
+            "quantity": 1.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.75,
+            "amount": 0.75,
+            "source_page": 12,
+            "confidence": null,
+            "source_refs": [
+              "12:12:7"
+            ]
+          },
+          {
+            "description": "LADIES 100% COTTON WOVEN DRESS",
+            "quantity": 1.0,
+            "unit": "PCS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 1.0,
+            "amount": 1.0,
+            "source_page": 12,
+            "confidence": null,
+            "source_refs": [
+              "12:12:8"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5193/26; filename hint: S/5193/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 4, row 3: FAB annotation supplies broad fabric-sample heading for continuation rows.",
+          "Page 6, row 3: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 4: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 5: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 6: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 7: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 8: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 9: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 10: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 11: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 12: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 13: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 6, row 14: PCS inferred from integer count of named cards; source unit not explicit.",
+          "Page 7, row 3: FAB annotation supplies broad fabric-sample heading for continuation rows.",
+          "Page 12, row 7: repaired fiber-adjacent OCR glyphs 'SCOOP S3 27 - inspo sample for FIT intent (DO NQT CUT)\\nKIPS 1OOT OTTON WOVEN\\n1. SCEP0715FA27 - WML-4715-2027 (WEDGE DENIM JACKET)\\n2. SCEP0772FA27 - WML-4772-2027 (L/S DENIM MINI DRESS)\\nM\\nKIDS 1OUTO COTON WOVEN\\nIPC\\nx\\nI pC' -> 'SCOOP S3 27 - inspo sample for FIT intent (DO NQT CUT)\\nKIDS 100% COTTON WOVEN\\n1. SCEP0715FA27 - WML-4715-2027 (WEDGE DENIM JACKET)\\n2. SCEP0772FA27 - WML-4772-2027 (L/S DENIM MINI DRESS)\\nM\\nKIDS 1OUTO COTON WOVEN\\nIPC\\nx\\nI pC'.",
+          "Page 12, row 7: split numbered garments using source inline quantities; total preserved.",
+          "Page 12: matching garment annotation below the final row retained: 'LADIES 100% COTTON WOVEN DRESS'.",
+          "Packing-list weights are not established as complete gross shipment weight.",
+          "Package count basis: sum of readable PDF package entries; outer consolidation not inferred.",
+          "Consignee address/BIN supplied by company directory.",
+          "gross_weight_kg not established from source; review required.",
+          "Approved approximate USD valuation: 23/23 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5194-D.pdf": {
+        "source_file": "26S5194-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 4,
+        "pages_total": 4,
+        "invoice_number": "S/5194/26",
+        "export_date": "2026-10-13",
+        "consignee": "COSMOPOLITAN INDUSTRIES (PVT.) LIMITED",
+        "consignee_address": "Khejur Bagan, Bara Ashulia,\nSavar PS; Dhaka-1341\nBangladesh\nBIN : 000771673-0112",
+        "shipping_marks": "CIPL-FOC",
+        "carton_range": "C01-C06",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA, BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 6,
+        "gross_weight_kg": 71.0,
+        "net_weight_kg": null,
+        "tin_number": "105-201-6754",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 32.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "94% COTTON 6% STRETCH WOVEN FABRICS",
+            "quantity": 10.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 2.0,
+            "source_page": 2,
+            "confidence": null,
+            "source_refs": [
+              "2:2:5"
+            ]
+          },
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 60.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 12.0,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:2",
+              "3:3:5",
+              "3:3:6"
+            ]
+          },
+          {
+            "description": "99% COTTON 1% ELASTANE WOVEN FABRICS",
+            "quantity": 40.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 8.0,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:3",
+              "3:3:4"
+            ]
+          },
+          {
+            "description": "35% COTTON 65% POLYESTER WOVEN FABRICS",
+            "quantity": 18.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 3.6,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:7"
+            ]
+          },
+          {
+            "description": "62% COTTON 38% POLYAMIDE WOVEN FABRICS",
+            "quantity": 20.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 4.0,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:2"
+            ]
+          },
+          {
+            "description": "98% COTTON 2% ELASTANE WOVEN FABRICS",
+            "quantity": 10.5,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 2.1,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:3"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5194/26; filename hint: S/5194/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1: table columns not established.",
+          "Page 4: ambiguous weight cell '2.27 kgs\\n1.14 kgs'.",
+          "Page 4: unlabelled final quantity equals preceding rows; possible total excluded from goods.",
+          "Package count basis: distinct declared carton ranges.",
+          "Approved approximate USD valuation: 6/6 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S5195-D.pdf": {
+        "source_file": "26S5195-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 6,
+        "pages_total": 6,
+        "invoice_number": "S/5195/26",
+        "export_date": "2026-10-13",
+        "consignee": "EPIC GARMENTS MANUFACTURING CO. LTD.",
+        "consignee_address": "Plot # 11- 22, 26-34, MS-SFB # 3, Plot # 265-266,\n271-272,200, 201, 202 & 209, Adamjee EPZ.\nSiddhirganj PS : Narayanganj-1431, BANGLADESH.\nBIN:000322109-1402",
+        "shipping_marks": "EGMCL-FOC",
+        "carton_range": "E01-E15",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 15,
+        "gross_weight_kg": 276.0,
+        "net_weight_kg": null,
+        "tin_number": "472-620-435136",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 126.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 450.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 90.0,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "2:2:2",
+              "5:5:3",
+              "5:5:5",
+              "5:5:7",
+              "5:5:10",
+              "6:6:4"
+            ]
+          },
+          {
+            "description": "49% NYLON 48% POLYESTER 3% ELASTANE WOVEN FABRICS",
+            "quantity": 58.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 11.6,
+            "source_page": 3,
+            "confidence": null,
+            "source_refs": [
+              "3:3:5",
+              "3:3:6",
+              "3:3:7",
+              "3:3:8",
+              "3:3:9",
+              "3:3:10"
+            ]
+          },
+          {
+            "description": "100% POLYESTER WOVEN FABRICS",
+            "quantity": 18.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 3.6,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:4:5"
+            ]
+          },
+          {
+            "description": "70% COTTON 30% RAYON WOVEN FABRICS",
+            "quantity": 23.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 4.6,
+            "source_page": 6,
+            "confidence": null,
+            "source_refs": [
+              "6:6:2"
+            ]
+          },
+          {
+            "description": "98% COTTON 2% SPANDEX WOVEN FABRICS",
+            "quantity": 30.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 6.0,
+            "source_page": 6,
+            "confidence": null,
+            "source_refs": [
+              "6:6:3"
+            ]
+          },
+          {
+            "description": "63% COTTON 36% RECYCLED POLYESTER 1% SPANDEX WOVEN FABRICS",
+            "quantity": 50.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 10.0,
+            "source_page": 6,
+            "confidence": null,
+            "source_refs": [
+              "6:6:5"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/5195/26; filename hint: S/5195/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 1: table columns not established.",
+          "Page 2: ambiguous weight cell '40 Kgs\\n40 Kgs\\n20 Kgs'.",
+          "Package count basis: declared shipment total.",
+          "Approved approximate USD valuation: 6/6 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      },
+      "26S8185-D.pdf": {
+        "source_file": "26S8185-D.pdf",
+        "ocr_backend": "paddle",
+        "pages_processed": 4,
+        "pages_total": 4,
+        "invoice_number": "S/8185/26",
+        "export_date": "2026-10-09",
+        "consignee": "GREEN TEXTILE LIMITED",
+        "consignee_address": "NIJHURI, BARAID, 2 NO MEDUARI\nBHALUKA, MYMENSINGH, BANGLADESH\nBIN NO. 000830659-0104",
+        "shipping_marks": "GTL-FOC",
+        "carton_range": "G05-G09",
+        "destination_country": "Bangladesh",
+        "destination_city": "DHAKA,BD",
+        "port_of_discharge": null,
+        "shipment_terms": null,
+        "package_count": 5,
+        "gross_weight_kg": 55.0,
+        "net_weight_kg": null,
+        "tin_number": "821-271-140975",
+        "import_cover_note": null,
+        "currency": "USD",
+        "total_value": 38.0,
+        "template_type": "BD",
+        "items": [
+          {
+            "description": "100% COTTON WOVEN FABRICS",
+            "quantity": 121.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 24.2,
+            "source_page": null,
+            "confidence": null,
+            "source_refs": [
+              "2:1:2",
+              "2:1:3",
+              "2:1:4",
+              "2:1:5",
+              "2:1:6",
+              "3:2:2"
+            ]
+          },
+          {
+            "description": "53% COTTON 42% NYLON 5% METALLIC WOVEN FABRICS",
+            "quantity": 25.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 5.0,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:3:2"
+            ]
+          },
+          {
+            "description": "100% POLYESTER WOVEN FABRICS",
+            "quantity": 25.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 5.0,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:3:2"
+            ]
+          },
+          {
+            "description": "63% LYOCELL 37% COTTON WOVEN FABRICS",
+            "quantity": 20.0,
+            "unit": "YDS",
+            "weight_kg": null,
+            "hs_code": null,
+            "unit_price": 0.2,
+            "amount": 4.0,
+            "source_page": 4,
+            "confidence": null,
+            "source_refs": [
+              "4:3:2"
+            ]
+          }
+        ],
+        "warnings": [
+          "Best-effort invoice number: S/8185/26; filename hint: S/8185/26. PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.",
+          "Export date supplied by first dated PDF packing-list page (numeric dates: month/day/year).",
+          "Page 4: ambiguous weight cell '5.27kgs\\n3.02 kgs\\n6.10kgs'.",
+          "Page 4: quantity '70.00 yds' has no established goods description.",
+          "Package count basis: declared shipment total.",
+          "Approved approximate USD valuation: 4/4 rows priced; final calculated total rounded to nearest whole USD (half up)."
+        ]
+      }
+    }
+  },
+  "INDIA": {
+    "valued": {
+      "source_file": "26S5196-D.pdf",
+      "ocr_backend": "paddle",
+      "pages_processed": 3,
+      "pages_total": 3,
+      "invoice_number": "S/5196/26",
+      "export_date": "2026-10-13",
+      "consignee": "TRIMETRO GARMENTS INDIA PVT LTD",
+      "consignee_address": "MOTA VILLAGE,KALIBETI MOUZA,IDCO,PLOT 1 AND 2,\nREVENUE PLOT NO 282,JANKIA,KHORDA ODISHA-752020,INDIA\nIEC &PAN: AAJCT7390N\nGST Number : 21AAJCT7390N1ZS",
+      "shipping_marks": "TGPLFOCTS",
+      "carton_range": "T01-T07",
+      "destination_country": "India",
+      "destination_city": "CHENNAI, INDIA",
+      "port_of_discharge": null,
+      "shipment_terms": null,
+      "package_count": 7,
+      "gross_weight_kg": 106.0,
+      "net_weight_kg": null,
+      "tin_number": null,
+      "import_cover_note": null,
+      "currency": "USD",
+      "total_value": 82.4,
+      "template_type": "INDIA",
+      "items": [
+        {
+          "description": "57% COTTON 35% LINEN 6% POLYAMIDE 2% ELASTANE WOVEN FABRICS, WIDTH 53 INCHES",
+          "quantity": 378.0,
+          "unit": "YDS",
+          "weight_kg": null,
+          "hs_code": "55132900",
+          "unit_price": 0.2,
+          "amount": 75.6,
+          "source_page": 2,
+          "confidence": null,
+          "source_refs": [
+            "2:2:2"
+          ]
+        },
+        {
+          "description": "ZIPPER",
+          "quantity": 65.0,
+          "unit": "PCS",
+          "weight_kg": null,
+          "hs_code": null,
+          "unit_price": 0.1,
+          "amount": 6.5,
+          "source_page": 3,
+          "confidence": null,
+          "source_refs": [
+            "3:3:2",
+            "3:3:3"
+          ]
+        },
+        {
+          "description": "FABRIC CUTTINGS",
+          "quantity": 3.0,
+          "unit": "SETS",
+          "weight_kg": null,
+          "hs_code": null,
+          "unit_price": 0.1,
+          "amount": 0.3,
+          "source_page": 3,
+          "confidence": null,
+          "source_refs": [
+            "3:3:7",
+            "3:3:6",
+            "3:3:8",
+            "3:3:9"
+          ]
+        }
+      ],
+      "warnings": [
+        "Export date supplied by latest labelled PDF packing-list page (numeric dates: month/day/year).",
+        "Page 1: table columns not established.",
+        "Page 2: ambiguous weight cell '17kg\\n17kg\\n17kg\\n17kg\\n17kg\\n17kg'.",
+        "India invoice number supplied by PDF reading; source candidates and any model image retained.",
+        "Package count basis: declared shipment total; selected count 7.",
+        "Approved approximate USD valuation: 3/3 rows priced; final calculated total rounded to two decimal places (half up)."
+      ]
+    }
+  },
+  "JORDAN": {
+    "purpose": "QA source contracts from reviewed PDF pages, not runtime extraction answers. Manual workbook values are comparison context only. Null means not established in this baseline.",
+    "samples": {
+      "26S5147-D.pdf": {
+        "pages": 10,
+        "invoice_number": "S/5147/26",
+        "package_count": 9,
+        "carton_range": "J01-J09",
+        "gross_weight_kg": 120,
+        "packing_date": "2026-09-29",
+        "origins_present": [
+          "China",
+          "Bangladesh"
+        ],
+        "missing_origin_pages": [
+          10
+        ],
+        "destination_conflict_pages": [],
+        "page_checks": [
+          [
+            "cover"
+          ],
+          [
+            "fabric_composition",
+            "shared_weight"
+          ],
+          [
+            "cones",
+            "gross_count",
+            "net_vs_gross"
+          ],
+          [
+            "sample_card"
+          ],
+          [
+            "handwritten_description",
+            "mixed_units"
+          ],
+          [
+            "label_vs_origin",
+            "shared_weight",
+            "elastic_vs_interlining"
+          ],
+          [
+            "quantity_without_unit"
+          ],
+          [
+            "garment_type",
+            "Bangladesh_origin"
+          ],
+          [
+            "garment_types",
+            "shared_weight"
+          ],
+          [
+            "garment_types",
+            "handwritten_description",
+            "missing_origin"
+          ]
+        ],
+        "source_sha256": "2ba21b8774dc608f4bff41c6410db7d8bef08187804966cecd4871c4256b33ea",
+        "reference_sha256": "696dc83235eff2b1966dba70546d0555c7acd284ecd8b31126aa7dc58d3119d9"
+      },
+      "26S5172-D.pdf": {
+        "pages": 2,
+        "invoice_number": "S/5172/26",
+        "package_count": 3,
+        "carton_range": "J01-J03",
+        "gross_weight_kg": 48,
+        "packing_date": "2026-10-06",
+        "origins_present": [],
+        "missing_origin_pages": [
+          2
+        ],
+        "destination_conflict_pages": [],
+        "page_checks": [
+          [
+            "cover"
+          ],
+          [
+            "large_quantity_106400_PCS",
+            "packing_weight_45_vs_header_48",
+            "missing_origin"
+          ]
+        ],
+        "source_sha256": "b4d7b58252f240d2b0f4ea199b070761ebbea7bbfab3d7528c654612a7f6ed7d",
+        "reference_sha256": "8c028d8b55ab32c94f42caf3b5e43f2d802dc95e7cb9b6c4b8d065c83acc38f9"
+      },
+      "26S5173-D.pdf": {
+        "pages": 8,
+        "invoice_number": "S/5173/26",
+        "package_count": 6,
+        "carton_range": "J04-J09",
+        "gross_weight_kg": 102,
+        "packing_date": "2026-10-06",
+        "origins_present": [
+          "China"
+        ],
+        "missing_origin_pages": [
+          3,
+          4,
+          6,
+          7,
+          8
+        ],
+        "destination_conflict_pages": [
+          6
+        ],
+        "page_checks": [
+          [
+            "cover"
+          ],
+          [
+            "fabric_composition",
+            "compatible_grouping",
+            "packing_weight_65"
+          ],
+          [
+            "woven_vs_knit",
+            "width_53",
+            "missing_origin"
+          ],
+          [
+            "label_vs_origin"
+          ],
+          [
+            "elastic_vs_interlining",
+            "shared_weight"
+          ],
+          [
+            "India_recipient_conflict",
+            "handwritten_description",
+            "quantity_without_unit"
+          ],
+          [
+            "sample_card",
+            "small_weight_0_02"
+          ],
+          [
+            "label_vs_origin"
+          ]
+        ],
+        "source_sha256": "d5d7ab669ce31d5cae8cbdd60003cd440364c0e317b85e180803fb85ef7bf25a",
+        "reference_sha256": "1751352b5fedd1f85554484ca29a3edbaf3e366627903203b591b11940f3821f"
+      },
+      "26S5197-D.pdf": {
+        "pages": 8,
+        "invoice_number": "S/5197/26",
+        "package_count": 6,
+        "carton_range": "J01-J06",
+        "gross_weight_kg": 71,
+        "packing_date": "2026-10-13",
+        "origins_present": [
+          "China",
+          "HK",
+          "Vietnam"
+        ],
+        "missing_origin_pages": [
+          7
+        ],
+        "destination_conflict_pages": [],
+        "page_checks": [
+          [
+            "cover"
+          ],
+          [
+            "fabric_composition"
+          ],
+          [
+            "fabric_composition",
+            "compatible_grouping",
+            "shared_weight"
+          ],
+          [
+            "primary_quantity_vs_parenthetical"
+          ],
+          [
+            "sets",
+            "HK_origin"
+          ],
+          [
+            "sample_contents_vs_primary_quantity",
+            "shared_weight",
+            "elastic_vs_interlining"
+          ],
+          [
+            "gross_count",
+            "shared_weight",
+            "missing_origin"
+          ],
+          [
+            "garment_types",
+            "Vietnam_origin",
+            "shared_weight"
+          ]
+        ],
+        "source_sha256": "2205be7dd741924d5e4a7e9abccc799b55e752c55ff6ae26d8dd01fdfa97d35f",
+        "reference_sha256": "782a86555e19a6d12a2e0d35f4952222958e22750a3ba1226018664639f04127"
+      }
+    }
+  }
+}

@@ -20,8 +20,9 @@ from werkzeug.exceptions import HTTPException, SecurityError
 
 from . import __version__
 from .job_store import JobStore, STATES
+from .regions import REGIONS
 from .pipeline_config import ROOT, IO_FIELDS, attempt_metadata
-from .runtime_settings import editable_settings
+from .runtime_settings import editable_settings, shared_folders, folder_contents
 from .processing_evidence import model_image, page_preview
 
 FIELD_LABELS = {'invoice_number':'Invoice number', 'export_date':'Invoice date', 'consignee':'Consignee',
@@ -195,6 +196,8 @@ class DashboardData:
             values.extend(['%'+text+'%']*2)
         if filters.get('status'):
             where.append('state=?'); values.append(filters['status'])
+        if filters.get('region'):
+            where.append('region=?'); values.append(filters['region'])
         if filters.get('date'):
             where.append('export_date=?'); values.append(filters['date'])
         if filters.get('issues') == 'yes':
@@ -360,6 +363,7 @@ def create_app(config, *, development_reset=None, development_mode=False, update
     app.jinja_env.filters['field_label'] = _field_label
     app.jinja_env.filters['readable_time'] = _readable_time
     app.jinja_env.filters['status_label'] = lambda value: STATE_LABELS.get(value,value.replace('_',' '))
+    app.jinja_env.globals['countries'] = {code: region['country'] for code, region in REGIONS.items()}
     previews = threading.BoundedSemaphore(2)
     csrf_token = secrets.token_urlsafe(32)
 
@@ -421,7 +425,9 @@ def create_app(config, *, development_reset=None, development_mode=False, update
             abort(400, description='Invalid page or attempt number.')
 
     def filters():
-        values = {name: request.args.get(name, '').strip() for name in ('q', 'status', 'date', 'issues')}
+        values = {name: request.args.get(name, '').strip() for name in ('q', 'status', 'date', 'issues', 'region')}
+        if values['region'] not in ('', *REGIONS):
+            abort(400, description='Invalid country filter.')
         if len(values['q']) > 200 or values['status'] not in ('', *STATES) or values['issues'] not in ('', 'yes', 'no'):
             abort(400, description='Invalid job filter.')
         if values['date']:
@@ -458,7 +464,7 @@ def create_app(config, *, development_reset=None, development_mode=False, update
 
     @app.get('/system')
     def system():
-        return render_template('system.html', system=data.system())
+        return render_template('system.html', system=data.system(),folder_roots=shared_folders(data.config))
 
     @app.get('/api/status')
     def status_api(): return jsonify(data.status())
@@ -535,6 +541,24 @@ def create_app(config, *, development_reset=None, development_mode=False, update
 
     @app.post('/api/settings')
     def settings_api(): return command('settings')
+
+    @app.post('/api/folders/browse')
+    def browse_folder():
+        if update_settings is None:
+            abort(403,description='Folder selection requires the combined system launcher.')
+        payload=request.get_json(silent=True)
+        if (not isinstance(payload,dict) or set(payload) not in ({'kind'},{'kind','path'})
+                or payload['kind'] not in ('incoming','output')
+                or (payload.get('path') is not None and (not isinstance(payload['path'],str) or not 1<=len(payload['path'])<=4096))):
+            abort(400,description='Choose an incoming or output folder.')
+        try:
+            kind=payload['kind']
+            initial=shared_folders(data.config)[kind] or getattr(data.config,kind+'_dir').parent
+            while not initial.exists() and initial!=initial.parent:
+                initial=initial.parent
+            return jsonify(folder_contents(payload.get('path') or initial))
+        except (ValueError,OSError) as error:
+            abort(409,description=str(error) if isinstance(error,ValueError) else 'This folder is unavailable or cannot be opened.')
 
     @app.get('/api/ollama')
     def ollama_api(): return jsonify(data.ollama())

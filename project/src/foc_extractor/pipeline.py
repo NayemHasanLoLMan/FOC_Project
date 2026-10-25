@@ -95,13 +95,22 @@ def run(
     selected = select_region(data, region or (template_region(template) if template else None),
                              (result.pages or [result.content])[0])
     active_template = _resolve_template(template, selected)
-    if selected=='INDIA':
-        from .india import resolve_invoice_number
-        number = track('india_invoice_number',resolve_invoice_number,result,pdf_path,local_model,cache_dir)
+    if selected in ('INDIA','JORDAN'):
+        if selected=='INDIA':
+            from .india import resolve_invoice_number
+        else:
+            from .jordan import resolve_invoice_number
+        number = track(selected.lower()+'_invoice_number',resolve_invoice_number,result,pdf_path,local_model,cache_dir)
         if number:
             data.invoice_number = number
             data.warnings = [w for w in data.warnings if not w.startswith(('Best-effort invoice number:', 'invoice_number not established'))]
-            data.warnings.append('India invoice number supplied by PDF reading; source candidates and any model image retained.')
+            data.warnings.append(('India' if selected=='INDIA' else 'Jordan')+' invoice number supplied by PDF reading; source candidates and any model image retained.')
+    if selected=='JORDAN':
+        from .jordan import resolve_date
+        data.export_date = track('jordan_date',resolve_date,result,pdf_path,local_model,cache_dir)
+        emit('field_source',field='export_date',value=data.export_date,method='jordan_source_date')
+        if data.export_date is not None:
+            data.warnings = [warning for warning in data.warnings if not warning.startswith('export_date not established')]
     if output_dir is None:
         out_dir = Path('output') / REGIONS[selected]['folder']
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -140,8 +149,10 @@ def run(
 
     track('valuation', apply_valuation, data)
     contributions=[]
-    if selected=='INDIA' and any(ref.endswith(':header:invoice_number') for ref in accepted_vision_refs()):
+    if selected in ('INDIA','JORDAN') and any(ref.endswith(':header:invoice_number') for ref in accepted_vision_refs()):
         contributions.append({'field':'invoice_number'})
+    if selected=='JORDAN' and data.export_date is not None and any(ref.endswith(':header:export_date') for ref in accepted_vision_refs()):
+        contributions.append({'field':'export_date'})
     refs={ref for item in data.items for ref in item.source_refs}
     contributions.extend({'field':'goods_quantity','source_ref':ref} for ref in sorted((accepted_vision_refs() & refs)-description_refs))
     contributions.extend({'field':'goods_description','source_ref':ref} for ref in sorted(accepted_vision_refs() & refs & description_refs))

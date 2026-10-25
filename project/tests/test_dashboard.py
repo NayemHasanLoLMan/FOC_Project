@@ -170,11 +170,37 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(status['completed_with_issues'],1)
 
     def test_invalid_filters_and_foreign_attempts_are_rejected(self):
-        for query in ('status=madeup','issues=maybe','page=0','page=no','date=wrong'):
+        for query in ('status=madeup','issues=maybe','page=0','page=no','date=wrong','region=unknown',"region=BD%27%20OR%201=1--"):
             self.assertEqual(self.client.get('/jobs?'+query).status_code,400,query)
+            self.assertEqual(self.client.get('/api/jobs?'+query).status_code,400,query)
         self.complete()
         self.assertEqual(self.client.get('/jobs/1?attempt=999').status_code,404)
         self.assertEqual(self.client.get('/files/attempts/999/invoice').status_code,404)
+
+    def test_country_labels_and_filter_combine_with_search_status_and_pagination(self):
+        for number in range(26):
+            self.store.enqueue(self.config.incoming_dir.parent/'india'/f'india-{number}.pdf',
+                f'{number:064x}', self.config.artifact_dir/'inputs'/f'india-{number}.pdf', region='INDIA')
+        jordan = self.store.enqueue(self.config.incoming_dir.parent/'jordan'/'jordan.pdf',
+            'f'*64, self.config.artifact_dir/'inputs'/'jordan.pdf', region='JORDAN')
+        for region, total in (('BD',1), ('INDIA',26), ('JORDAN',1)):
+            listing = self.client.get('/api/jobs?region='+region).get_json()
+            self.assertEqual(listing['total'],total)
+            self.assertTrue(all(job['region']==region for job in listing['jobs']))
+        self.assertEqual(self.client.get('/api/jobs?region=INDIA&page=2').get_json()['total'],26)
+        self.assertEqual(len(self.client.get('/api/jobs?region=INDIA&page=2').get_json()['jobs']),1)
+        self.assertEqual(self.client.get('/api/jobs?region=INDIA&q=india-25&status=queued').get_json()['total'],1)
+        self.assertEqual(self.client.get('/api/jobs?region=INDIA&status=completed').get_json()['total'],0)
+        for route in ('/jobs?region=BD','/jobs/1'):
+            self.assertIn('Country: <strong>Bangladesh</strong>',self.client.get(route).get_data(as_text=True))
+        self.assertIn('Country: <strong>Jordan</strong>',self.client.get(f'/jobs/{jordan}').get_data(as_text=True))
+        for route in ('/','/jobs?region=INDIA','/jobs?region=INDIA&partial=1'):
+            self.assertIn('Country: <strong>India</strong>',self.client.get(route).get_data(as_text=True))
+        page = self.client.get('/jobs?region=INDIA').get_data(as_text=True)
+        self.assertIn('value="INDIA" selected',page)
+        self.assertIn('page=2',page)
+        self.assertIn('region=INDIA',page)
+        self.assertNotIn('Country: <strong>Bangladesh</strong>',page)
 
     def test_methods_do_not_equate_cache_reuse_or_unknown_history_with_ocr_only(self):
         self.assertEqual(_method({'metadata':{}}),'Not recorded')

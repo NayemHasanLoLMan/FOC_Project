@@ -148,6 +148,9 @@
             "$ref": "#/components/parameters/status"
           },
           {
+            "$ref": "#/components/parameters/region"
+          },
+          {
             "$ref": "#/components/parameters/date"
           },
           {
@@ -601,6 +604,9 @@
           },
           {
             "$ref": "#/components/parameters/status"
+          },
+          {
+            "$ref": "#/components/parameters/region"
           },
           {
             "$ref": "#/components/parameters/date"
@@ -2152,19 +2158,36 @@
                           "null"
                         ],
                         "description": "Full absolute dedicated India output path; retained when intake is disabled."
+                      },
+                      "bangladesh_enabled": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "New Bangladesh intake only; queued jobs and old outputs remain available."
+                      },
+                      "jordan_enabled": {
+                        "type": "boolean",
+                        "const": false,
+                        "description": "Reserved intake control; true is rejected until Jordan workflow acceptance."
                       }
                     },
                     "oneOf": [
                       {
                         "required": [
-                          "india_enabled",
-                          "india_incoming_dir",
-                          "india_output_dir"
-                        ]
-                      },
-                      {
+                          "incoming_dir",
+                          "local_model",
+                          "output_dir",
+                          "scan_interval_seconds",
+                          "vision_context_tokens",
+                          "vision_output_tokens",
+                          "vision_timeout_seconds"
+                        ],
                         "not": {
                           "anyOf": [
+                            {
+                              "required": [
+                                "bangladesh_enabled"
+                              ]
+                            },
                             {
                               "required": [
                                 "india_enabled"
@@ -2179,12 +2202,61 @@
                               "required": [
                                 "india_output_dir"
                               ]
+                            },
+                            {
+                              "required": [
+                                "jordan_enabled"
+                              ]
                             }
                           ]
                         }
+                      },
+                      {
+                        "required": [
+                          "incoming_dir",
+                          "india_enabled",
+                          "india_incoming_dir",
+                          "india_output_dir",
+                          "local_model",
+                          "output_dir",
+                          "scan_interval_seconds",
+                          "vision_context_tokens",
+                          "vision_output_tokens",
+                          "vision_timeout_seconds"
+                        ],
+                        "not": {
+                          "anyOf": [
+                            {
+                              "required": [
+                                "bangladesh_enabled"
+                              ]
+                            },
+                            {
+                              "required": [
+                                "jordan_enabled"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "required": [
+                          "bangladesh_enabled",
+                          "incoming_dir",
+                          "india_enabled",
+                          "india_incoming_dir",
+                          "india_output_dir",
+                          "jordan_enabled",
+                          "local_model",
+                          "output_dir",
+                          "scan_interval_seconds",
+                          "vision_context_tokens",
+                          "vision_output_tokens",
+                          "vision_timeout_seconds"
+                        ]
                       }
                     ],
-                    "description": "Submit all ten fields, or exactly the legacy seven to preserve India settings. Both India paths or neither; enabling requires both."
+                    "description": "Submit twelve fields, or exactly the legacy ten/seven. Legacy payloads retain omitted country controls. Disabling intake never removes queued jobs. Jordan must remain false."
                   }
                 }
               }
@@ -2266,6 +2338,16 @@
                             "null"
                           ],
                           "description": "Full absolute dedicated India output path; retained when intake is disabled."
+                        },
+                        "bangladesh_enabled": {
+                          "type": "boolean",
+                          "default": true,
+                          "description": "New Bangladesh intake only; queued jobs and old outputs remain available."
+                        },
+                        "jordan_enabled": {
+                          "type": "boolean",
+                          "const": false,
+                          "description": "Reserved intake control; true is rejected until Jordan workflow acceptance."
                         }
                       }
                     }
@@ -2339,6 +2421,73 @@
           }
         },
         "description": "Combined launcher only. Applies atomically while scanner and worker are idle. Persists under the fixed state directory for restart; old jobs and invoice paths remain unchanged. State/artifact folders are not editable. A blank UI model saves null (OCR only). Context must be at least the output limit. Use an installed vision-capable Ollama model; this does not install models."
+      }
+    },
+    "/api/folders/browse": {
+      "post": {
+        "operationId": "browseFolders",
+        "summary": "Browse local directories for a shared country parent folder.",
+        "description": "Combined launcher only. JSON/Origin/CSRF protected. Lists directory names and paths, never file contents; dot-prefixed directories and redirects are omitted. Does not save settings, create folders or queue work. No UUID is needed.",
+        "parameters": [],
+        "tags": [
+          "Processing settings"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "kind"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "incoming",
+                      "output"
+                    ]
+                  },
+                  "path": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 4096,
+                    "description": "Absolute directory; omitted/null starts at the current configured parent."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Local folder navigation data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderListing"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed fields/kind/path type."
+          },
+          "403": {
+            "description": "Request protection missing or standalone server."
+          },
+          "409": {
+            "description": "Unavailable, redirected, relative or overly large directory."
+          },
+          "415": {
+            "description": "JSON required."
+          }
+        }
       }
     }
   },
@@ -2500,6 +2649,16 @@
               "null"
             ],
             "description": "Full absolute dedicated India output path; retained when intake is disabled."
+          },
+          "bangladesh_enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "New Bangladesh intake only; queued jobs and old outputs remain available."
+          },
+          "jordan_enabled": {
+            "type": "boolean",
+            "const": false,
+            "description": "Reserved intake control; true is rejected until Jordan workflow acceptance."
           }
         },
         "required": [
@@ -3846,6 +4005,60 @@
           }
         },
         "description": "India edit changes. Country/template/currency/source remain protected; rows require hs_code. Monetary changes use cent totals; HS/description-only changes preserve source money."
+      },
+      "FolderLocation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "path"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "FolderListing": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "name",
+          "parent",
+          "directories",
+          "locations"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parent": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "directories": {
+            "type": "array",
+            "maxItems": 1000,
+            "items": {
+              "$ref": "#/components/schemas/FolderLocation"
+            }
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FolderLocation"
+            }
+          }
+        }
       }
     },
     "parameters": {
@@ -3987,6 +4200,21 @@
           ]
         },
         "description": "Return only the escaped jobs table HTML for refresh."
+      },
+      "region": {
+        "name": "region",
+        "in": "query",
+        "required": false,
+        "description": "Recorded intake country; combines with the other job filters.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "",
+            "BD",
+            "INDIA",
+            "JORDAN"
+          ]
+        }
       }
     },
     "responses": {

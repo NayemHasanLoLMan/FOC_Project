@@ -3,6 +3,7 @@
 <form class="filters panel" method="get" action="{{ url_for('jobs') }}">
 <label>Filename or invoice number<input name="q" type="search" maxlength="200" placeholder="Search a shipment…" value="{{ filters.q }}"></label>
 <label>Status<select name="status"><option value="">All statuses</option>{% for state in states %}<option value="{{ state }}" {% if filters.status==state %}selected{% endif %}>{{ state|replace('_',' ') }}</option>{% endfor %}</select></label>
+<label>Country<select name="region"><option value="">All countries</option>{% for code, country in countries.items() %}<option value="{{ code }}" {% if filters.region==code %}selected{% endif %}>{{ country }}</option>{% endfor %}</select></label>
 <label>Document date<input type="date" name="date" value="{{ filters.date }}"></label>
 
 <button type="submit">Apply</button><a href="{{ url_for('jobs') }}">Clear</a></form>

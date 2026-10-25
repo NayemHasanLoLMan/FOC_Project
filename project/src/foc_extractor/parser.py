@@ -768,6 +768,8 @@ def parse_result(ocr_result, source, *, region=None):
     first_page=ocr_result.pages[0] if ocr_result.pages else text
     india = region=='INDIA' or (region is None and bool(re.search(
         r'\bTRIMETRO\b|^\s*TO\s*:\s*TG[IP]*L\b',consignee_block or first_page,re.I|re.M)))
+    jordan = region=='JORDAN' or (region is None and not india and bool(re.search(
+        r'\bEPIC\s+DESIGNERS[^\n]*\bJORDAN\b|\bEJU1\b',consignee_block or first_page,re.I)))
     if region is not None:
         from .regions import region_code
         region_code(region)
@@ -781,14 +783,14 @@ def parse_result(ocr_result, source, *, region=None):
     data.warnings.extend(ocr_result.warnings)
     filename=re.search(r'(\d{2})S(\d{3,5})',Path(source).stem,re.I)
     filename_invoice=f'S/{filename[2]}/{filename[1]}' if filename else None
-    data.invoice_number=_extract_invoice_number(text,filename_invoice)
-    emit('field_source', field='invoice_number', method='best_effort_pdf_and_filename',
-         value=data.invoice_number, filename_hint=filename_invoice)
-    if data.invoice_number:
+    data.invoice_number=_extract_invoice_number(first_page) if jordan else _extract_invoice_number(text,filename_invoice)
+    emit('field_source', field='invoice_number', method='jordan_shipment_cover' if jordan else 'best_effort_pdf_and_filename',
+         value=data.invoice_number, filename_hint=None if jordan else filename_invoice)
+    if data.invoice_number and not jordan:
         data.warnings.append(f'Best-effort invoice number: {data.invoice_number}; filename hint: {filename_invoice or "none"}. '
                              'PDF/filename agreement preferred, otherwise repeated PDF reading (first on ties); '
                              'a lone reading may use a filename within two character substitutions; filename fallback if no PDF reading.')
-    if india:
+    if india or jordan:
         from .india import export_date
         data.export_date,explicit_export=export_date(ocr_result)
         explicit_export=explicit_export or bool(re.search(EXPORT_DATE_LABEL,text,re.I))
@@ -797,14 +799,14 @@ def parse_result(ocr_result, source, *, region=None):
         explicit_export=bool(re.search(EXPORT_DATE_LABEL,text,re.I))
     emit('field_source', field='export_date', method='explicit_export_label', value=data.export_date)
     if data.export_date is None and not explicit_export:
-        if india:
+        if india or jordan:
             from .india import latest_packing_date
             data.export_date=latest_packing_date(ocr_result)
         else:
             data.export_date=_extract_packing_date(ocr_result.pages or [text])
-        emit('field_source', field='export_date', method='latest_labelled_packing_date' if india else 'first_labelled_packing_date', value=data.export_date)
+        emit('field_source', field='export_date', method='latest_labelled_packing_date' if india or jordan else 'first_labelled_packing_date', value=data.export_date)
         if data.export_date:
-            data.warnings.append('Export date supplied by '+('latest labelled' if india else 'first dated')+' PDF packing-list page (numeric dates: month/day/year).')
+            data.warnings.append('Export date supplied by '+('latest labelled' if india or jordan else 'first dated')+' PDF packing-list page (numeric dates: month/day/year).')
     data.shipping_marks=_extract_shipping_marks(text)
     data.carton_range=_extract_carton_range(text)
     # Header weight declarations precede packing tables.
@@ -874,7 +876,7 @@ def parse_result(ocr_result, source, *, region=None):
             data.destination_country=entity['country']
             data.destination_city=entity['city']
             data.template_type=entity['template']
-            if not data.shipping_marks and not india:
+            if not data.shipping_marks and not india and not jordan:
                 data.shipping_marks=entity['shipping_marks']
                 data.warnings.append('Shipping marks supplied by existing consignee directory; verify.')
                 emit('field_source', field='shipping_marks', method='company_directory', key=key, value=data.shipping_marks)
@@ -883,7 +885,7 @@ def parse_result(ocr_result, source, *, region=None):
                 address=[line for line in lines[1:] if not re.fullmatch(r'\s*(?:TEL(?:EPHONE)?|FAX)(?:\s+NO\.?)?\s*:?\s*',line,re.I)]
                 data.consignee_address='\n'.join(address) or None
                 emit('field_source', field='consignee_address', method='labelled_pdf_block', value=data.consignee_address)
-            if not unknown_unit and not india:
+            if not unknown_unit and not india and not jordan:
                 if not data.consignee_address:
                     data.consignee_address=entity['address']
                     data.warnings.append('Consignee address/BIN supplied by company directory.')
@@ -903,6 +905,9 @@ def parse_result(ocr_result, source, *, region=None):
     if india:
         from .india import apply_header
         data.template_type='INDIA'
+        apply_header(data,ocr_result,consignee_block)
+    elif jordan:
+        from .jordan import apply_header
         apply_header(data,ocr_result,consignee_block)
     if data.template_type != 'BD':
         data.net_weight_kg = _extract_net_weight(text)

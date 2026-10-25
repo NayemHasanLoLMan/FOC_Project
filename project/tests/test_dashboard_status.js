@@ -70,6 +70,34 @@ async function check() {
   vm.runInContext('updateModelOptions({model_list_available:true,models:["new-model:latest"]})',context);
   assert.equal(select.value,'');
   assert.equal(select.options.length,2);
-  console.log('Dashboard status transitions passed.');
+  context.FormData = function(form) { return Object.entries(form.values); };
+  context.settingsForm = {values:{local_model:'qwen3-vl:latest',india_enabled:'true',bangladesh_enabled:'true',
+    scan_interval_seconds:'5',vision_output_tokens:'4096',vision_context_tokens:'8192',vision_timeout_seconds:'7200',
+    incoming_dir:'old-bd-input',output_dir:'old-bd-output',india_incoming_dir:'old-india-input',india_output_dir:'old-india-output'},
+    querySelector:selector=>({value:selector.includes('incoming') ? 'C:\\PDF inbox\\' : 'C:\\Invoices\\'})};
+  let changes = vm.runInContext('settingsChanges(settingsForm)',context);
+  assert.equal(changes.incoming_dir,'C:\\PDF inbox/bangladesh');
+  assert.equal(changes.india_incoming_dir,'C:\\PDF inbox/india');
+  assert.equal(changes.output_dir,'C:\\Invoices/bangladesh');
+  assert.equal(changes.india_output_dir,'C:\\Invoices/india');
+  assert.equal(changes.india_enabled,true);
+  assert.equal(changes.vision_timeout_seconds,7200);
+  context.settingsForm.querySelector=()=>({value:''});
+  changes=vm.runInContext('settingsChanges(settingsForm)',context);
+  assert.equal(changes.incoming_dir,'old-bd-input');
+  assert.equal(changes.india_incoming_dir,'old-india-input');
+  assert.equal(changes.bangladesh_enabled,true);
+  assert.equal(changes.jordan_enabled,false);
+  assert.equal(Object.keys(changes).length,12);
+  context.intakeBadge = {textContent:'',className:''};
+  context.document.querySelector = () => context.intakeBadge;
+  context.intakeControl = {value:'false',dataset:{intakeControl:'bangladesh',current:'true'}};
+  vm.runInContext('updateIntakeStatus(intakeControl)',context);
+  assert.equal(context.intakeBadge.textContent,'Disabled · unsaved');
+  assert.equal(context.intakeBadge.className,'badge');
+  context.intakeControl.value='true';
+  vm.runInContext('updateIntakeStatus(intakeControl)',context);
+  assert.equal(context.intakeBadge.textContent,'Enabled');
+  console.log('Dashboard status and shared-folder settings passed.');
 }
 check().catch(error=>{console.error(error);process.exitCode=1;});

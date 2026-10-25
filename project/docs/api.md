@@ -1,12 +1,12 @@
 # HTTP API reference
 
-Base URL: **http://127.0.0.1:8080**, or the selected --port. [openapi.json](openapi.json) describes all 25 implemented routes and their request/response schemas. It can be opened in an OpenAPI 3.1-compatible viewer; no Swagger service is installed or exposed.
+Base URL: **http://127.0.0.1:8080**, or the selected --port. [openapi.json](openapi.json) describes all 26 implemented routes and their request/response schemas. It can be opened in an OpenAPI 3.1-compatible viewer; no Swagger service is installed or exposed.
 
-India/Jordan Stage 2 adds a read-only `region` value (BD/INDIA/JORDAN) to job records and new attempt metadata, plus the actual `template_path` in new attempt metadata. Migrated jobs are BD; historical attempt metadata may omit both fields. There is no region-changing HTTP command and the production watcher supports Bangladesh and opt-in India; Jordan stays disabled. India Fix 11 enables versioned India editing through the existing edit URLs; India goods rows require `hs_code`, and India header changes allow port/terms but protect country and omit BD-only fields. The server selects the contract using the job's immutable region. See [manual editing](user-guide.md) and the regional OpenAPI schemas.
+Job records have an immutable `region` (BD/INDIA/JORDAN); new attempt metadata records region and the actual `template_path`. Migrated jobs are BD; historical metadata can omit both fields. There is no region-changing command. Bangladesh and opt-in India watching/editing are supported; Jordan stays disabled. India edits require goods `hs_code`, allow port/terms, protect country and omit BD-only fields. The server selects the contract using the saved job region. See [editing](operations.md#edit-and-add-information) and the regional OpenAPI schemas.
 
-This is a local, unauthenticated dashboard API. GET/HEAD routes read retained state. Stage 6 adds five protected POST commands; later additions provide guarded settings, editing and recoverable Clear data commands. There is no upload, forced cancellation or arbitrary shell-command endpoint. The scanner accepts PDFs from the configured filesystem inbox. All timestamps are UTC unless explicitly described as the PC's local date/time.
+This is a local, unauthenticated dashboard API. GET/HEAD routes read retained state; guarded POST commands control the queue, settings, versioned editing and recoverable Clear data. There is no upload, forced cancellation or arbitrary shell-command endpoint. The scanner accepts PDFs from configured filesystem inboxes. All timestamps are UTC unless explicitly described as the PC's local date/time.
 
-India Fix 12 makes the HTML detail page region-aware and adjusts human-readable summary/image labels. The JSON `data` and original `issues` remain intact, including legacy net-weight fields/notes even when omitted from India's presentation. Existing endpoints and edit contracts are unchanged; no new Postman request is required.
+HTML detail pages use regional labels. JSON `data` and original `issues` retain historical values, including net-weight fields/notes omitted from India's presentation.
 
 ## Access and response rules
 
@@ -24,13 +24,15 @@ India Fix 12 makes the HTML detail page region-aware and adjusts human-readable 
 | /api/status | Live Status object: web availability/uptime, checked_at, counts, attempts, completed_with_issues, today, scanner, worker, active, intake_counts, intake_issues |
 | /api/ollama | state, model, optional digest/checked_at; state is disabled, available, model_missing or unavailable |
 | /api/system | folders/disk space, dependency versions, application/Python/platform, template, fingerprints, model/defaults and scan interval |
-| /api/jobs | q, status, date, issues, page; returns jobs, total, page, pages |
+| /api/jobs | q, status, region, date, issues, page; returns jobs, total, page, pages |
 | /api/jobs/{job_id} | attempt and event_page; selected attempt plus verified data, explanations, events and evidence |
 | /api/jobs/{job_id}/status | Small poll response: job_id, state, status_label, updated_at |
 
 ### List filters and pagination
 
 q is a literal case-insensitive SQL-LIKE substring of filename or recorded invoice number, with wildcard characters escaped; maximum 200 characters. status accepts waiting_for_file, queued, running, waiting_to_save, completed, failed or interrupted. date is extracted document date YYYY-MM-DD, not arrival date. issues=yes/no filters the latest attempt's recorded issue list. Omit/leave blank filters to include all.
+
+region filters the recorded intake country: BD (Bangladesh), INDIA or JORDAN. It combines with the other filters on /jobs and /api/jobs, including pagination and refreshed results. Country labels describe the job's assigned intake country, rather than guessing from its filename.
 
 page defaults to 1, with 25 rows ordered newest job ID first. page, attempt, event_page and event query numbers must be in 1–1,000,000. An out-of-range positive list page returns no rows rather than being silently clamped. total counts jobs, not attempts.
 
@@ -94,11 +96,15 @@ Invoke-RestMethod http://127.0.0.1:8080/api/jobs/12
 Invoke-WebRequest http://127.0.0.1:8080/files/attempts/12/invoice -OutFile C:/shipments/download.xlsx
 ~~~
 
-IDs 12/5188 above illustrate the development demo; discover real IDs from /api/jobs and /api/jobs/{job_id}. GET examples do not create processing work. [CLI](cli.md) and [Python](code-reference.md) interfaces are documented separately.
+IDs 12/5188 above illustrate the development demo; discover real IDs from /api/jobs and /api/jobs/{job_id}. GET examples do not create processing work. [CLI](operations.md#maintenance-command-reference) and [Python](architecture.md) interfaces are documented separately.
 
 ## Postman
 
-Import the collection (`project/development/postman/FOC-Invoice.postman_collection.json` in the development checkout) and local environment (`project/development/postman/Local.postman_environment.json` in the development checkout). See usage and ID selection (`project/development/postman/README.md` in the development checkout). These development files are not shipped in the production ZIP; OpenAPI remains included.
+Development checkout files: `project/development/postman/FOC-Invoice.postman_collection.json` and `Local.postman_environment.json`. They are not packaged; OpenAPI is included in production. Import both into the desktop Postman app/agent, select the local environment and send getStatus, then listJobs.
+
+Set base_url (default http://127.0.0.1:8080), job_id, attempt_id, event_id and pdf_page from actual job responses. Example IDs are placeholders; pdf_page starts at 1 and attempt_id is a database ID, not an attempt sequence. Optional query parameters start disabled. Empty queues and absent-ID errors are valid; a blind full collection run is not an acceptance test.
+
+For protected commands fetch getControls first for the current csrf_token. Match Origin, choose the current eligible attempt and use a new UUID request_id for each action. Reuse the same UUID only when replaying an uncertain request. Refresh the token after restart. The collection can pause, retry, reprocess, edit, change settings and clear data: use an isolated test queue for experimentation. No credentials or customer responses are shipped. Keep downloaded data local.
 
 ## Stage 6 commands
 
@@ -122,8 +128,16 @@ All commands return 200 with their accepted result; acceptance does not prove co
 
 Bangladesh extracted data now includes optional tin_number and import_cover_note from the PDF. Net weight is not applicable to BD and is omitted from printed/audit fields and unresolved-field lists. Other regions retain the shared model property. TIN/import cover notes use PDF values only. Bangladesh and India do not print net weight. See [configuration](configuration.md).
 
-See [manual invoice editing](user-guide.md) for the simplified dashboard and safe versioned editing workflow.
+See [manual invoice editing](operations.md) for the simplified dashboard and safe versioned editing workflow.
 
-See [invoice downloads, web preview and development reset](user-guide.md) for clean filenames, local viewing and the Clear data option on the main or isolated launcher.
+See [invoice downloads, web preview and development reset](operations.md) for clean filenames, local viewing and the Clear data option on the main or isolated launcher.
 
-See [editable processing settings](configuration.md#editable-dashboard-settings) for POST `/api/settings`, its ten fields (or the compatible legacy seven-field request), persistence, validation and idle-only application.
+See [editable processing settings](configuration.md#editable-dashboard-settings) for POST `/api/settings`, its twelve fields (or compatible legacy ten/seven-field requests), persistence, validation and idle-only application.
+
+## Folder selection
+
+POST `/api/folders/browse` accepts `{ "kind": "incoming" }` or output, plus an optional absolute `path`. It requires the combined launcher and normal JSON/Origin/CSRF protection. Omit path or use null to start at the configured parent. The response contains path, name, parent, directories and Home/drive locations. Files, dot-prefixed directories and redirected paths are not offered. No files, settings or job records are changed; no UUID is needed. A bad/unavailable directory returns 409.
+
+The System form offers a folder-browser dialog inside the dashboard, with navigation, location entry and an explicit Use this folder button. One intake parent and one output parent each expand to country subfolders. The existing POST `/api/settings` contract now has twelve fields, with exact legacy ten/seven-field requests still supported: the browser submits Bangladesh/India child paths. Existing separate custom paths are retained unless replaced. Save settings applies selections and creates missing country directories; Jordan intake stays disabled.
+
+Country controls add bangladesh_enabled and jordan_enabled to the settings payload. Submit all twelve fields or exact legacy ten/seven-field requests; omitted controls keep their current values. Jordan must remain false.

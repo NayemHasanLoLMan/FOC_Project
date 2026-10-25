@@ -39,9 +39,12 @@ class PipelineConfig:
     india_enabled: bool = False
     india_incoming_dir: Path | None = None
     india_output_dir: Path | None = None
+    bangladesh_enabled: bool = True
+    jordan_enabled: bool = False
 
     def inboxes(self):
-        return {'BD': self.incoming_dir, **({'INDIA': self.india_incoming_dir} if self.india_enabled else {})}
+        return {**({'BD': self.incoming_dir} if self.bangladesh_enabled else {}),
+                **({'INDIA': self.india_incoming_dir} if self.india_enabled else {})}
 
     def output_for(self, region):
         # Legacy manually registered regional jobs retain the original single-output behavior.
@@ -77,6 +80,12 @@ def parse_config(raw, base: Path) -> PipelineConfig:
     enabled = raw.get('india_enabled', False)
     if type(enabled) is not bool:
         raise ValueError('india_enabled must be true or false')
+    bd_enabled=raw.get('bangladesh_enabled',True)
+    jordan_enabled=raw.get('jordan_enabled',False)
+    if type(bd_enabled) is not bool or type(jordan_enabled) is not bool:
+        raise ValueError('Country intake settings must be true or false')
+    if jordan_enabled:
+        raise ValueError('Jordan intake cannot be enabled until its template workflow is ready')
     if bool(directories['india_incoming_dir']) != bool(directories['india_output_dir']):
         raise ValueError('Provide both India input and output folders')
     if enabled and directories['india_incoming_dir'] is None:
@@ -98,7 +107,8 @@ def parse_config(raw, base: Path) -> PipelineConfig:
             raise ValueError(f'{key} must be a positive whole number')
     if vision['vision_output_tokens'] > vision['vision_context_tokens']:
         raise ValueError('Vision context must be at least as large as the output token limit')
-    return PipelineConfig(**directories, scan_interval_seconds=interval, local_model=model, india_enabled=enabled, **vision)
+    return PipelineConfig(**directories, scan_interval_seconds=interval, local_model=model, india_enabled=enabled,
+                          bangladesh_enabled=bd_enabled,jordan_enabled=jordan_enabled,**vision)
 
 
 def attempt_metadata(config: PipelineConfig, region='BD') -> dict:

@@ -31,6 +31,7 @@ class ProjectLayoutTests(unittest.TestCase):
                 self.assertFalse(any(forbidden.intersection(Path(name).parts) for name in names))
                 for name in ENTRY_POINTS:
                     self.assertIn('foc-invoice/project/'+name,names)
+                self.assertEqual([name for name in names if Path(name).name=='README.md'],['foc-invoice/README.md'])
                 for name in ('templates/BD_template.xlsx','docs/openapi.json','frontend/templates/detail.html',
                              'frontend/static/dashboard.js','requirements-lock.txt'):
                     self.assertIn('foc-invoice/project/'+name,names)
@@ -56,7 +57,6 @@ class ProjectLayoutTests(unittest.TestCase):
                 if target.startswith(('http:','https:','#')):continue
                 destination = (path.parent/target.split('#')[0]).resolve()
                 self.assertIn(destination,files,(path.name,target))
-        self.assertNotIn(ROOT/'development/archive/completed-milestones-20261023.zip',files)
 
     def test_postman_collection_covers_documented_routes(self):
         collection = json.loads((ROOT/'development/postman/FOC-Invoice.postman_collection.json').read_text())

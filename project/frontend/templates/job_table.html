@@ -1,6 +1,6 @@
 <div class="table-scroll"><table class="job-cards"><caption class="sr-only">Invoices and job actions</caption><thead><tr><th>Invoice / PDF</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody>
 {% for job in listing.jobs %}{% set document_name = job.filename[:-4] if job.filename.lower().endswith('.pdf') else job.filename %}<tr>
-<td><a class="file-link" href="{{ url_for('detail',job_id=job.id) }}">{{ document_name }}</a><small class="subline">{{ job.invoice_number or 'Invoice number pending' }}</small></td>
+<td><a class="file-link" href="{{ url_for('detail',job_id=job.id) }}">{{ document_name }}</a><small class="subline">{{ job.invoice_number or 'Invoice number pending' }}</small><small class="subline">Country: <strong>{{ countries.get(job.region, 'Not recorded') }}</strong></small></td>
 <td data-label="Document date">{{ job.export_date or '—' }}</td><td data-label="Status"><span class="badge state-{{ job.state }}">{{ job.state|status_label }}</span><small class="subline processing-method">Processing: {{ job.method }}</small></td>
 <td><div class="job-actions"><a class="button secondary" href="{{ url_for('detail',job_id=job.id) }}">View</a>{% if job.state=='completed' and job.attempt_id %}<a class="button secondary" href="{{ url_for('edit',job_id=job.id) }}">Edit</a><a class="button" href="{{ url_for('invoice',attempt_id=job.attempt_id) }}">Download</a>{% endif %}</div></td></tr>
 {% else %}<tr><td colspan="4"><div class="empty"><h3>No jobs found</h3><p>New PDFs appear here once accepted.</p></div></td></tr>{% endfor %}

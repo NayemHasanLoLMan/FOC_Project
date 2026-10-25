@@ -83,7 +83,9 @@ class FolderScanner:
 
     def scan_once(self):
         scans = {region: self._scan_folder(folder, region) for region, folder in self.config.inboxes().items()}
-        result = dict(scans['BD'])
+        result = dict(scans['BD']) if 'BD' in scans else {
+            'scanned_at':datetime.fromtimestamp(time.time(),timezone.utc).isoformat(),
+            'incoming_dir':str(self.config.incoming_dir),'region':'BD'}
         result['folders'] = scans
         result['accepted_job_ids'] = [job for scan in scans.values() for job in scan['accepted_job_ids']]
         result['errors'] = [error for scan in scans.values() for error in scan['errors']]

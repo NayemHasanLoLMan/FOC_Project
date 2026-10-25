@@ -11,7 +11,7 @@ ENTRY_POINTS = ('run_system.py', 'main.py', 'run_batch.py', 'init_pipeline.py', 
 
 
 def release_files(root=ROOT):
-    fixed = [root.parent/'README.md', root/'README.md', root/'requirements.txt', root/'requirements-lock.txt',
+    fixed = [root.parent/'README.md', root/'requirements.txt', root/'requirements-lock.txt',
              root/'pipeline_config.json', root/'valuation_rates.json', *(root/name for name in ENTRY_POINTS)]
     selected = fixed + [p for folder, suffixes in [('src', {'.py'}), ('frontend', {'.html','.css','.js'}),
                                                   ('templates',{'.xlsx'}), ('docs',{'.md','.json'})]

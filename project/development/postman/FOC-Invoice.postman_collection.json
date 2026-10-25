@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "FOC Invoice - Local dashboard and admin controls",
-    "description": "All 22 dashboard routes, including guarded manual invoice editing. Fetch getControls first. Manual saves create versioned invoices without OCR; use an isolated test queue.",
+    "description": "All 26 dashboard routes, including protected settings, local folder browsing and versioned invoice editing. Fetch getControls first; use an isolated queue for changes.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -57,6 +57,10 @@
     {
       "key": "india_enabled",
       "value": "false"
+    },
+    {
+      "key": "bangladesh_enabled",
+      "value": "true"
     }
   ],
   "item": [
@@ -222,6 +226,12 @@
                   "value": "",
                   "disabled": true,
                   "description": "Optional; enable before sending."
+                },
+                {
+                  "key": "region",
+                  "value": "INDIA",
+                  "disabled": true,
+                  "description": "Country filter: BD, INDIA or JORDAN; omit for all countries."
                 },
                 {
                   "key": "date",
@@ -466,6 +476,12 @@
                   "value": "",
                   "disabled": true,
                   "description": "Optional; enable before sending."
+                },
+                {
+                  "key": "region",
+                  "value": "INDIA",
+                  "disabled": true,
+                  "description": "Country filter: BD, INDIA or JORDAN; omit for all countries."
                 },
                 {
                   "key": "date",
@@ -940,10 +956,53 @@
               ],
               "query": []
             },
-            "description": "Set all four dedicated folder variables and india_enabled before saving while idle. Use getControls first. To preserve existing India settings with a legacy request, omit all three India fields together. Settings persist; existing invoices are not moved.",
+            "description": "Save twelve fields while idle; getControls first. Bangladesh/India intake controls affect new PDFs only; Jordan stays false. Exact old ten/seven-field requests preserve the omitted flags.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"request_id\": \"{{$guid}}\",\n  \"changes\": {\n    \"local_model\": \"qwen3-vl:latest\",\n    \"scan_interval_seconds\": 5,\n    \"vision_output_tokens\": 4096,\n    \"vision_context_tokens\": 8192,\n    \"vision_timeout_seconds\": 7200,\n    \"incoming_dir\": \"{{incoming_dir}}\",\n    \"output_dir\": \"{{output_dir}}\",\n    \"india_enabled\": {{india_enabled}},\n    \"india_incoming_dir\": \"{{india_incoming_dir}}\",\n    \"india_output_dir\": \"{{india_output_dir}}\"\n  }\n}",
+              "raw": "{\n  \"request_id\": \"{{$guid}}\",\n  \"changes\": {\n    \"local_model\": \"qwen3-vl:latest\",\n    \"scan_interval_seconds\": 5,\n    \"vision_output_tokens\": 4096,\n    \"vision_context_tokens\": 8192,\n    \"vision_timeout_seconds\": 7200,\n    \"incoming_dir\": \"{{incoming_dir}}\",\n    \"output_dir\": \"{{output_dir}}\",\n    \"india_enabled\": {{india_enabled}},\n    \"bangladesh_enabled\": {{bangladesh_enabled}},\n    \"jordan_enabled\": false,\n    \"india_incoming_dir\": \"{{india_incoming_dir}}\",\n    \"india_output_dir\": \"{{india_output_dir}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Browse local folders",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrf_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/folders/browse",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "folders",
+                "browse"
+              ],
+              "query": []
+            },
+            "description": "Lists local directories only. Fetch getControls first; no request_id is needed. Optional path selects an absolute folder. No files/settings are changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"incoming\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

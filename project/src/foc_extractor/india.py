@@ -22,14 +22,15 @@ INVOICE_PROMPT = ('Read only the handwritten invoice reference in this image. Tr
 INVOICE_FALLBACK_MODEL = 'qwen3.5:4b'
 
 
-def resolve_invoice_number(ocr, pdf_path, model, cache_dir=None):
+def resolve_invoice_number(ocr, pdf_path, model, cache_dir=None, *, verify_handwriting=False):
     """Prefer source readings; use one bounded header image when page OCR misses it."""
     text = re.sub(r'[\\⁄／]','/',ocr.content or '\n'.join(ocr.pages))
     value = _extract_invoice_number(text)
     emit('field_evidence',field='invoice_number',evidence={
         'pdf_candidates':[f'S/{n}/{y}' for n,y in re.findall(r'\b[S5]\s*/\s*(\d{3,5})\s*/\s*(\d{2})\b',text,re.I)],
         'filename_used':False})
-    if value:
+    fallback = value
+    if value and (not verify_handwriting or not model):
         emit('field_source',field='invoice_number',value=value,method='pdf_invoice_reference')
         return value
     if not model:
@@ -43,9 +44,15 @@ def resolve_invoice_number(ocr, pdf_path, model, cache_dir=None):
         right = min((w.x0-5 for w in words if w.x0>label.x1 and abs(w.y0-label.y0)<=height
                      and re.search(r'[A-Z]{2}',w.text,re.I) and not re.search(r'\d',w.text)),
                     default=label.x1+max(label.x1-label.x0,12*height))
+        bottom = label.y1 + 4*height
+        if verify_handwriting:
+            bottom = min((w.y0 for w in words if w.y0>label.y1
+                          and label.x0-20<=w.x0<right
+                          and re.search(r'[A-Z]{3}',w.text,re.I) and not re.search(r'\d',w.text)),
+                         default=label.y1+8*height)
         readings = [w for w in words if re.search(r'\d',w.text)
                     and label.x0-20<=(w.x0+w.x1)/2<right
-                    and w.y0>=label.y0-height*.25 and w.y1<=label.y1+4*height]
+                    and w.y0>=label.y0-height*.25 and w.y1<=bottom]
         if not readings:
             continue
         from .local_vision import transcribe_cell, SCHEMA
@@ -57,9 +64,10 @@ def resolve_invoice_number(ocr, pdf_path, model, cache_dir=None):
             transform = ocr.page_transforms[label.page] if label.page<len(ocr.page_transforms) else None
             image = _cached_page_image(pdf_path,label.page,dpi=ocr.dpi,transform=transform)
             bbox = [max(0,min(label.x0,min(w.x0 for w in readings))-20),max(0,min(w.y0 for w in readings)-20),
-                    min(image.width,right,max(w.x1 for w in readings)+20),min(image.height,max(w.y1 for w in readings)+20)]
+                    min(image.width,right if verify_handwriting else min(right,max(w.x1 for w in readings)+20)),
+                    min(image.height,max(w.y1 for w in readings)+20)]
             if bbox[2]-bbox[0]<5 or bbox[3]-bbox[1]<5:
-                return None
+                return fallback
             crop = image.crop(tuple(map(int,bbox)))
             crop = crop.resize((crop.width*2,crop.height*2))
             rgb = np.asarray(crop).astype(np.int16)
@@ -75,8 +83,10 @@ def resolve_invoice_number(ocr, pdf_path, model, cache_dir=None):
                 answer,provenance = transcribe_cell(crop,reading_model,cache_dir,prompt=INVOICE_PROMPT,schema=SCHEMA,context=context)
                 candidate = answer.get('text') if answer else None
                 normalized = re.sub(r'[\\⁄／]','/',candidate) if isinstance(candidate,str) else ''
+                if verify_handwriting:
+                    normalized = re.sub(r'^\s*S\s*[TI|]?\s*(?=\d{3,5}\s*/\s*\d{2}\s*$)', 'S/', normalized, flags=re.I)
                 match = re.fullmatch(r'\s*[S58]\s*/\s*(\d{3,5})\s*/\s*(\d{2})\s*',normalized,re.I)
-                # Only the known S prefix repairs S/5/8 glyphs; serial/year digits are never repaired.
+                # Only known prefix/separator glyphs are repaired; serial/year digits are unchanged.
                 value = f'S/{match[1]}/{match[2]}' if match else None
                 emit('vision_decision',**context,candidate=candidate,value=value,accepted=value is not None,
                      reason='Bounded S-prefix/serial/year reference; original response retained, serial/year unchanged')
@@ -84,12 +94,12 @@ def resolve_invoice_number(ocr, pdf_path, model, cache_dir=None):
                     emit('field_source',field='invoice_number',value=value,method='local_vision_invoice_header',
                          source_ref=context['source_ref'],provenance=provenance)
                     return value
-            return None
+            return fallback
         except (OSError,ValueError,KeyError,TypeError,RuntimeError) as exc:
             emit('field_decision',field='invoice_number',accepted=False,
                  reason='Header reading unavailable; existing OCR/filename fallback retained',error=str(exc))
-            return None
-    return None
+            return fallback
+    return fallback
 
 
 def source_currency(ocr):

@@ -46,21 +46,6 @@ class RegionTests(unittest.TestCase):
         data = self.data(region)
         path = self.root/(region+'.xlsx')
         populate_template(ROOT/f'templates/{region}_template.xlsx', path, data)
-        if region == 'JORDAN':
-            # Synthetic layout isolates the verifier; production regional master repairs belong to stages 3/5.
-            book = load_workbook(path); sheet = book.active; layout = REGIONS[region]
-            for merge in list(sheet.merged_cells.ranges):
-                if merge.min_row >= layout['start']:sheet.unmerge_cells(str(merge))
-            for row in sheet.iter_rows(min_row=layout['start'], max_row=sheet.max_row):
-                for cell in row:
-                    cell.value = None
-            row = layout['start']; item = data.items[0]
-            for col, value in [(2,item.description),(layout['quantity'],10),(layout['unit'],'YDS'),(9,2)]:
-                sheet.cell(row,col,value)
-            sheet.cell(row,5 if region=='INDIA' else 6, '00123456' if region=='INDIA' else 3)
-            sheet.cell(row+2,layout['total_column'],'TOTAL VALUE:')
-            sheet.print_area=f'A1:J{row+5}'
-            book.save(path);book.close()
         return path, data
 
     def test_schema_five_migration_preserves_jobs_attempt_metadata_and_paths(self):
@@ -147,11 +132,12 @@ class RegionTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'page coverage'):
                 verify_workbook(path,data.to_dict(),self.pdf,region)
 
-    def test_legacy_regional_truncation_cannot_be_published(self):
-        for region,count in [('JORDAN',17)]:
-            data=self.data(region);data.items=[LineItem('ITEM '+str(i),1,'PCS') for i in range(count)]
-            path=self.root/(region+'.xlsx');populate_template(ROOT/f'templates/{region}_template.xlsx',path,data)
-            with self.assertRaises(ValueError):verify_workbook(path,data.to_dict(),self.pdf,region)
+    def test_jordan_overflow_is_preserved_and_can_be_verified(self):
+        data = self.data('JORDAN')
+        data.items = [LineItem('ITEM '+str(i), 1, 'PCS') for i in range(17)]
+        path = self.root/'JORDAN.xlsx'
+        populate_template(ROOT/'templates/JORDAN_template.xlsx', path, data)
+        verify_workbook(path, data.to_dict(), self.pdf, 'JORDAN')
 
     def test_worker_records_actual_regional_template_without_bd_fallback(self):
         job=self.store.enqueue(self.pdf,self.digest,self.pdf,region='INDIA')

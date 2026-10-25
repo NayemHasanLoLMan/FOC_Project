@@ -97,6 +97,28 @@ class IndiaFolderTests(unittest.TestCase):
         self.assertEqual(len(result['accepted_job_ids']),1)
         self.assertEqual(self.store.get_job(result['accepted_job_ids'][0])['region'],'BD')
 
+    def test_disabling_bangladesh_keeps_india_and_finishes_already_queued_jobs(self):
+        self.accept()
+        later=self.config.incoming_dir/'later.pdf';later.write_bytes((self.config.incoming_dir/'shipment.pdf').read_bytes())
+        self.scanner.config=replace(self.config,bangladesh_enabled=False)
+        self.scan(12);result=self.scan(18)
+        self.assertEqual(set(result['folders']),{'INDIA'})
+        self.assertEqual(self.store.counts()['queued'],2)
+        with patch.object(queue_worker,'run',side_effect=self.convert),queue_worker.QueueWorker(self.scanner.config,self.store) as worker:
+            worker.run_once();worker.run_once()
+        self.assertEqual(self.store.counts()['completed'],2)
+        self.scanner.config=self.config
+        self.scan(24);self.assertEqual(len(self.scan(30)['accepted_job_ids']),1)
+
+    def test_all_intake_disabled_is_a_healthy_idle_scan_and_jordan_is_blocked(self):
+        self.scanner.config=replace(self.config,bangladesh_enabled=False,india_enabled=False)
+        result=self.scanner.scan_once()
+        self.assertEqual(result['folders'],{});self.assertEqual(result['accepted_job_ids'],[])
+        self.assertIsNone(result['folder_error']);self.assertEqual(result['intake_counts'],{})
+        for changes in ({'bangladesh_enabled':1},{'jordan_enabled':'false'},{'jordan_enabled':True}):
+            with self.subTest(changes=changes),self.assertRaises(ValueError):
+                parse_config({**self.config.to_dict(),**changes},self.root)
+
     def test_publication_and_downloads_use_the_recorded_country_output(self):
         self.accept()
         with patch.object(queue_worker,'run',side_effect=self.convert),queue_worker.QueueWorker(self.config,self.store) as worker:

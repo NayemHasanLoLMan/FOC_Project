@@ -6,6 +6,7 @@
 {% block content %}
 <div class="page-heading">
   <div><p class="eyebrow">INVOICE DETAILS</p><h1>{{ document_name }}</h1>
+    <p class="hint">Country: <strong>{{ countries.get(job.region, 'Not recorded') }}</strong></p>
     {% set displayed_state=attempt.state if attempt else job.state %}
     <span class="badge state-{{ displayed_state }}">{{ displayed_state|status_label }}</span><p class="hint processing-method">Processing: {{ method }}</p>
   </div>
