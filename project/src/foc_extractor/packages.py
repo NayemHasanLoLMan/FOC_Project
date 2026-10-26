@@ -6,8 +6,8 @@ from dataclasses import asdict
 from pathlib import Path
 
 from .processing_evidence import emit, region as evidence_region
-from .ocr_engine import _cached_page_image, _column_regions, _paddle_readers
-from .parser import PACKAGE_UNIT, _carton_count, _extract_package_count, _table_fields
+from .ocr_engine import _cached_page_image, _packing_column_regions, _packing_footer, _shipment_cover, _paddle_readers
+from .parser import PACKAGE_UNIT, _carton_count, _extract_package_count, _table_fields, _shipment_summary
 from .local_vision import vision_cache_settings
 
 PACKAGE_PROMPT = ('Transcribe the handwritten package-count cell in this image, including its number and unit. '
@@ -31,6 +31,12 @@ def _read_count(text):
     if values:
         return sum(n for n,_ in values)
     return int(text) if re.fullmatch(r'[1-9]\d{0,3}',text.strip()) else None
+
+
+def _accepted_count(original,candidate):
+    match=COUNTS.fullmatch(candidate.strip()) if isinstance(candidate,str) else None
+    kinds={_package_kind(u) for u in re.findall(r'(?<![A-Z])(?:'+PACKAGE_UNIT+r')(?![A-Z])',original,re.I)}
+    return bool(match and (not kinds or {_package_kind(match[2])}==kinds))
 
 
 def _carton_ids(text):
@@ -62,8 +68,9 @@ def _package_box(ocr, table, columns, header):
 
 
 def packing_packages(ocr, carton_range=None, pdf=None, cache_dir=None, local_model=None):
-    summary='\n'.join(p for p in ocr.pages if 'SHIPPER' in p.upper() and 'PACKAGES' in p.upper())
-    total=_extract_package_count(summary or '\n'.join(line for line in ocr.content.splitlines() if re.search(r'\bTOTAL\b',line,re.I)))
+    summary=_shipment_summary(ocr)
+    total=_extract_package_count(summary if _shipment_cover(summary) else '\n'.join(
+        line for line in summary.splitlines() if re.search(r'\bTOTAL\b',line,re.I)))
     ranged=_carton_count(carton_range)
     evidence={'total':total,'basis':'declared shipment total','entries':[],'reason':None}
     if total is not None:
@@ -76,7 +83,7 @@ def packing_packages(ocr, carton_range=None, pdf=None, cache_dir=None, local_mod
         return {**evidence,'reason':'Not all PDF pages were processed.'}
     cache=None
     if pdf and cache_dir:
-        key=hashlib.sha256(Path(pdf).read_bytes()+json.dumps({'version':2,'ocr':asdict(ocr),**vision_cache_settings(local_model)},sort_keys=True).encode()).hexdigest()
+        key=hashlib.sha256(Path(pdf).read_bytes()+json.dumps({'version':4,'ocr':asdict(ocr),**vision_cache_settings(local_model)},sort_keys=True).encode()).hexdigest()
         cache=Path(cache_dir)/'packages'/(key+'.json')
         if cache.exists():
             try:
@@ -89,7 +96,12 @@ def packing_packages(ocr, carton_range=None, pdf=None, cache_dir=None, local_mod
             except (OSError,ValueError):pass
     seen=set();seen_cartons=set();images={};page_counts={};reader=None;used_vision=False
     try:
+        local_totals={p:reading for p in range(len(ocr.pages)) if (reading:=_packing_footer(ocr,p,'package_count'))}
+        for page,reading in local_totals.items():
+            page_counts[page]=int(reading['value'])
+            evidence['entries'].append({**reading,'count':int(reading['value'])})
         for table in ocr.tables:
+            if table.page in local_totals:continue
             columns,header=_table_fields(table)
             if not {'description','quantity'}<=columns.keys():continue
             page_counts.setdefault(table.page,0)
@@ -103,12 +115,7 @@ def packing_packages(ocr, carton_range=None, pdf=None, cache_dir=None, local_mod
                 box=_package_box(ocr,table,columns,header)
                 if not box:continue
                 box[2]=min(box[2],image.width)
-                quantities=[c for c in table.cells if c.row_index>header and c.column_index==columns['quantity']
-                            and c.content.strip() and c.bbox and not any(
-                                re.match(r'^(?:SUB[ -]?)?TOTAL\b',d.content.strip(),re.I)
-                                for d in table.cells if d.row_index==c.row_index)]
-                if not quantities:continue
-                for region in _column_regions(image,box,quantities,ocr.words,table.page):
+                for region in _packing_column_regions(image,box,table,columns,header,ocr.words):
                     identity=(table.page,*region)
                     if identity in seen:continue
                     seen.add(identity)
@@ -135,11 +142,10 @@ def packing_packages(ocr, carton_range=None, pdf=None, cache_dir=None, local_mod
                         print(f'  Local package transcription: page {table.page+1}',flush=True)
                         context=evidence_region('package_count',ocr,table.page,region,original=text,
                                                 preprocessing={'inset':4,'scale':2})
-                        answer,provenance=transcribe_cell(crop,local_model,cache_dir,prompt=PACKAGE_PROMPT,context=context)
+                        answer,provenance=transcribe_cell(crop,local_model,cache_dir,prompt=PACKAGE_PROMPT,context=context,
+                            accept=lambda answer:_accepted_count(text,answer.get('text') if answer else None))
                         candidate=answer.get('text') if answer else None
-                        match=COUNTS.fullmatch(candidate.strip()) if isinstance(candidate,str) else None
-                        original_kinds={_package_kind(u) for u in re.findall(r'(?<![A-Z])(?:'+PACKAGE_UNIT+r')(?![A-Z])',text,re.I)}
-                        accepted=bool(match and (not original_kinds or {_package_kind(match[2])}==original_kinds))
+                        accepted=_accepted_count(text,candidate)
                         emit('vision_decision', **context, candidate=candidate, accepted=accepted,
                              reason='Explicit count and compatible package unit' if accepted else 'Unreadable count or conflicting package unit')
                         if accepted:
@@ -154,7 +160,7 @@ def packing_packages(ocr, carton_range=None, pdf=None, cache_dir=None, local_mod
                     count=_read_count(cell.content)
                     if re.fullmatch(r'\s*\d+\s*',cell.content) and not any(
                             c.row_index==cell.row_index and c.column_index==columns['quantity'] and c.content.strip()
-                            for c in table.cells):count=None
+                            for c in table.cells):continue
                     entries.append({'page':table.page+1,'text':cell.content,'count':count})
                 if not entries and (box:=_package_box(ocr,table,columns,header)):
                     left,top,right,bottom=box
@@ -163,19 +169,29 @@ def packing_packages(ocr, carton_range=None, pdf=None, cache_dir=None, local_mod
                             entries.append({'page':table.page+1,'text':word.text,'count':_read_count(word.text)})
             evidence['entries'].extend(entries)
             page_counts[table.page]=page_counts.get(table.page,0)+sum(e['count'] or 0 for e in entries)
+        conflicts=[]
+        for page in range(len(ocr.pages)):
+            if _shipment_cover(ocr.pages[page]):continue
+            page_counts.setdefault(page,0)
         for page,count in page_counts.items():
             ids=_carton_ids(ocr.pages[page]) if page<len(ocr.pages) else set()
             if ids:
-                page_counts[page]=len(ids-seen_cartons)
+                if count in (0,len(ids)):
+                    page_counts[page]=len(ids-seen_cartons)
+                else:
+                    conflicts.append({'page':page+1,'carton_ids':sorted(ids),'explicit_count':count})
                 seen_cartons.update(ids)
         declared=sum(page_counts.values())
         unresolved={e['page'] for e in evidence['entries'] if e['count'] is None and re.search(
             r'\b(?:UNREADABLE|UNKNOWN)\b|\?|(?<![A-Z])(?:'+PACKAGE_UNIT+r')(?![A-Z])',e['text'],re.I)}
-        for page in tuple(unresolved):
-            if page<=len(ocr.pages) and _carton_ids(ocr.pages[page-1]):unresolved.remove(page)
-        evidence['total']=None if unresolved else declared or None
+        missing=[p+1 for p,count in page_counts.items() if count==0 and not (
+            p<len(ocr.pages) and _carton_ids(ocr.pages[p])<=seen_cartons and _carton_ids(ocr.pages[p]))]
+        evidence['total']=None if unresolved or missing else declared or None
         evidence['carton_ids']=sorted(seen_cartons)
+        evidence['identifier_conflicts']=conflicts
         if evidence['total'] is None:evidence['reason']='Unreadable declared package count.' if unresolved else 'No readable package entries or explicit carton identifiers.'
+        if missing:evidence['reason']='Package coverage unavailable for pages: '+', '.join(map(str,missing))
+        elif conflicts and not unresolved:evidence['reason']='Explicit package counts retained where carton identifiers disagree.'
     except (OSError,ValueError,RuntimeError,KeyError,TypeError,StopIteration) as exc:
         evidence['total']=None
         evidence['reason']=str(exc)

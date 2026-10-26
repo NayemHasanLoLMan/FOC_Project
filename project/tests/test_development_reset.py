@@ -61,9 +61,10 @@ class DevelopmentResetTests(unittest.TestCase):
         self.assertEqual(self.store.counts()['queued'],1)
         self.assertEqual(self.clear(rid).get_json(),result)
         self.assertEqual(self.store.counts()['queued'],1)
-        with patch.object(queue_worker,'run',side_effect=self.convert),QueueWorker(self.config,self.store) as worker:
+        with patch.object(queue_worker,'run',side_effect=self.convert) as convert,QueueWorker(self.config,self.store) as worker:
             attempt=worker.run_once()
             self.assertIsNone(worker.run_once())
+        self.assertEqual(convert.call_args.kwargs['cache_dir'],reset.processing_cache_dir(self.config))
         self.assertGreater(attempt,self.attempt)
         self.assertTrue(Path(self.store.get_attempt(attempt)['output_path']).is_file())
         self.scan(200);self.scan(206)
@@ -75,6 +76,83 @@ class DevelopmentResetTests(unittest.TestCase):
         with self.store._connection(write=True) as db:db.execute('UPDATE queue_control SET paused=1 WHERE id=1')
         self.assertEqual(self.clear().status_code,200)
         self.assertFalse(self.store.queue_control()['paused'])
+
+    def test_clear_archives_all_extraction_caches_and_preserves_dependencies(self):
+        cache=reset.processing_cache_dir(self.config)
+        entries=('document.json','document/0.json','local_vision/cell.json','weights/cell.json','packages/cell.json')
+        for name in entries:
+            path=cache/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(name)
+        model=cache.parent/'paddlex/model.bin';model.parent.mkdir(parents=True);model.write_bytes(b'installed model')
+        settings=self.config.state_dir/'settings.json';settings.write_text('settings')
+        rid=str(uuid4());response=self.clear(rid)
+        self.assertEqual(response.status_code,200,response.data)
+        archive=self.root/response.get_json()['archive']/'extraction-cache'
+        self.assertEqual(list(cache.iterdir()),[])
+        for name in entries:self.assertEqual((archive/name).read_text(),name)
+        self.assertEqual(model.read_bytes(),b'installed model')
+        self.assertEqual(settings.read_text(),'settings')
+        self.assertEqual(self.source.read_bytes(),self.original)
+        (cache/'new.json').write_text('new reading')
+        self.assertEqual(self.clear(rid).get_json(),response.get_json())
+        self.assertEqual((cache/'new.json').read_text(),'new reading')
+
+    def test_failure_after_cache_move_restores_cache_output_and_history(self):
+        cache=reset.processing_cache_dir(self.config);cache.mkdir(parents=True)
+        (cache/'old.json').write_text('old reading')
+        mkdir=Path.mkdir
+        def fail_cache(path,*args,**kwargs):
+            if path==cache:raise PermissionError('Cannot recreate cache folder')
+            return mkdir(path,*args,**kwargs)
+        with patch.object(Path,'mkdir',fail_cache):response=self.clear()
+        self.assertEqual(response.status_code,503)
+        self.assertTrue(self.output.is_file())
+        self.assertTrue(self.config.artifact_dir.is_dir())
+        self.assertEqual((cache/'old.json').read_text(),'old reading')
+        self.assertEqual(self.store.counts()['completed'],1)
+
+    def test_redirected_cache_is_rejected_before_moving_files(self):
+        cache=reset.processing_cache_dir(self.config);resolve=Path.resolve
+        def outside(path,*args,**kwargs):
+            return self.root.parent/'outside' if path==cache else resolve(path,*args,**kwargs)
+        with patch.object(Path,'resolve',outside),patch.object(Path,'rename') as move:
+            self.assertEqual(self.clear().status_code,409)
+        move.assert_not_called()
+        self.assertTrue(self.output.is_file())
+        self.assertEqual(self.store.counts()['completed'],1)
+
+    def test_clear_forces_fresh_document_page_and_vision_reads(self):
+        from unittest.mock import MagicMock
+        from PIL import Image
+        from src.foc_extractor import ocr_engine,local_vision
+        from src.foc_extractor.processing_evidence import observed
+        cache=reset.processing_cache_dir(self.config)
+        reader=MagicMock();orientation=MagicMock();events=[];calls=[]
+        orientation.predict.return_value=[{'label_names':['0']}]
+        reader.predict.return_value=[{'rec_texts':['TEST PDF'],'rec_scores':[.99],'rec_boxes':[[10,20,80,35]]}]
+        def request(endpoint,payload=None):
+            calls.append(endpoint)
+            return ({'models':[{'name':'test:latest','digest':'test-digest'}]} if endpoint=='tags'
+                    else {'done_reason':'stop','message':{'content':'{"text":"5 PCS"}'}})
+        @observed
+        def read():
+            ocr_engine.analyze_pdf(self.source,cache_dir=cache)
+            local_vision.transcribe_cell(Image.new('RGB',(80,40),'white'),'test',cache)
+        with patch.object(ocr_engine,'_PADDLE_READERS',(reader,orientation),create=True), \
+             patch.object(local_vision,'_request',side_effect=request):
+            read(observer=lambda event,**kwargs:events.append(event))
+            events.clear();read(observer=lambda event,**kwargs:events.append(event))
+            self.assertTrue(next(e for e in events if e['kind']=='ocr_cache')['cached'])
+            self.assertTrue(next(e for e in events if e['kind']=='vision_response')['cached'])
+            self.assertEqual(calls.count('chat'),1)
+            self.assertEqual(reader.predict.call_count,1)
+            self.assertEqual(self.clear().status_code,200)
+            events.clear();read(observer=lambda event,**kwargs:events.append(event))
+        self.assertFalse(next(e for e in events if e['kind']=='ocr_cache')['cached'])
+        self.assertFalse(next(e for e in events if e['kind']=='ocr_page')['cached'])
+        self.assertFalse(next(e for e in events if e['kind']=='vision_response')['cached'])
+        self.assertEqual(reader.predict.call_count,2)
+        self.assertEqual(orientation.predict.call_count,2)
+        self.assertEqual(calls.count('chat'),2)
 
     def test_scanner_recovers_intakes_left_by_previous_clear_implementation(self):
         with self.store._connection(write=True) as db:

@@ -39,5 +39,7 @@
     "fabric_per_yd": "0.20",
     "zipper_per_pc": "0.10",
     "fabric_sample_per_set": "0.10"
-  }
+  },
+  "rivet_per_gross": "0.35",
+  "metal_fastener_per_set": "0.05"
 }

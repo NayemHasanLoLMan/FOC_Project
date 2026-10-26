@@ -11,6 +11,11 @@ from .pipeline_config import ROOT
 DEVELOPMENT_ROOT=ROOT/'development/runtime'
 
 
+def processing_cache_dir(config):
+    base=DEVELOPMENT_ROOT if config.state_dir==DEVELOPMENT_ROOT/'state' else ROOT
+    return base/'.cache/ocr'
+
+
 def development_config(config):
     base=DEVELOPMENT_ROOT
     return replace(config,incoming_dir=base/'incoming/bangladesh',output_dir=base/'output/bangladesh',
@@ -68,6 +73,7 @@ def clear_workspace(config,store,locks,request_id, *, development=False):
                 if archive.exists():raise ValueError('A previous reset archive exists; inspect it before retrying with a new request')
                 generated=[(config.artifact_dir,'artifacts'),(config.output_dir,'output')]
                 if config.india_output_dir:generated.append((config.india_output_dir,'output-india'))
+                generated.append((processing_cache_dir(config),'extraction-cache'))
                 for folder,_ in generated:
                     for path in [folder,*folder.rglob('*')]:
                         if path.is_symlink() or path.resolve()!=path or not path.resolve().is_relative_to(folder):

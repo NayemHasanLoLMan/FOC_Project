@@ -21,6 +21,7 @@ from .process_lock import process_lock
 from .processing_evidence import EvidenceRecorder
 from .workbook_verification import verify_workbook as _verify_workbook
 from .pipeline import _resolve_template
+from .development_reset import processing_cache_dir
 
 HEARTBEAT_SECONDS = 5
 
@@ -239,7 +240,7 @@ class QueueWorker:
                 from .local_vision import vision_limits
                 with vision_limits(self.config):
                     workbook = Path(run(source, template=template, region=region, output_dir=folder,
-                                        save_json=True, cache_dir=ROOT / '.cache/ocr', local_model=self.config.local_model,
+                                        save_json=True, cache_dir=processing_cache_dir(self.config), local_model=self.config.local_model,
                                         observer=observer)).resolve()
             if workbook.parent != folder or workbook.suffix.lower() != '.xlsx':
                 raise ValueError('Converter returned an unexpected output path')

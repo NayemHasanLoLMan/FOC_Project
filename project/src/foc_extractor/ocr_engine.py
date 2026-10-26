@@ -12,7 +12,7 @@ import re
 import hashlib
 import json
 from statistics import median
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 
 
@@ -93,7 +93,7 @@ def _pdf_to_images(pdf_path: Path, dpi: int = 300, max_pages: int | None = None)
             yield page,Image.frombytes('RGB',[pix.width,pix.height],pix.samples)
 
 
-def _grid_tables(img, words, page):
+def _grid_tables(img, words, page, *, min_vertical=0):
     """Recover ruled packing-list cells using existing OpenCV and OCR boxes."""
     import cv2
     import numpy as np
@@ -102,7 +102,7 @@ def _grid_tables(img, words, page):
     ink = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
     h, w = gray.shape
     def positions(vertical, relaxed=False):
-        kernel = (1, max(25, h // 12)) if vertical else (max(25, w // 3), 1)
+        kernel = (1, max(25, h // 12, min_vertical)) if vertical else (max(25, w // 3), 1)
         tolerant = cv2.dilate(ink, cv2.getStructuringElement(cv2.MORPH_RECT, (5,1) if vertical else (1,max(3,round(w*.004)) if relaxed else 3)))
         supported=tolerant
         # Printed row gutters interrupt inner vertical rules on these packing lists.
@@ -153,6 +153,76 @@ def _grid_tables(img, words, page):
     return [OCRTable(cells, len(ys)-1, len(xs)-1, page,[xs[0],ys[0],xs[-1],ys[-1]])]
 
 
+def _recover_shipped_tables(result, pdf_path):
+    """Recover compact packing grids with separate shipped-quantity/unit columns."""
+    from .parser import _table_fields
+    recovered=[]
+    for page, content in enumerate(result.pages):
+        if not re.search(r'PACKING\s*LIST', content, re.I):continue
+        if any(t.page==page and _table_fields(t)[0] for t in result.tables):continue
+        words=[w for w in result.words if w.page==page and w.y1>w.y0]
+        shipped=[w for w in words if re.fullmatch(r'SHIPPED(?:\s+QTY)?',w.text.strip(),re.I)]
+        if len(shipped)!=1:continue
+        anchor=shipped[0]
+        height=median(w.y1-w.y0 for w in words)
+        headers=[w for w in words if abs(w.y0-anchor.y0)<height*2]
+        if not any(re.fullmatch('DESCRIPTION',w.text.strip(),re.I) for w in headers):continue
+        if not any(re.fullmatch(r'\(?UNIT\)?',w.text.strip(),re.I) for w in headers):continue
+        endings=[w.y0 for w in words if w.y0>anchor.y1+height and
+                 re.match(r'^(?:TOTAL\s*:|SHORT\s+SHIPMENT\b)',w.text.strip(),re.I)]
+        if not endings:continue
+        top=max(0,int(min(w.y0 for w in headers)-height*2))
+        bottom=int(min(endings))
+        transform=result.page_transforms[page] if page<len(result.page_transforms) else None
+        image=_cached_page_image(pdf_path,page,result.dpi,transform)
+        local=[replace(w,y0=w.y0-top,y1=w.y1-top) for w in words
+               if top<=(w.y0+w.y1)/2<bottom]
+        candidates=_grid_tables(image.crop((0,top,image.width,bottom)),local,page,
+                                min_vertical=round(height*3))
+        for table in candidates:
+            for row in range(table.row_count):
+                cells=[c for c in table.cells if c.row_index==row and c.bbox]
+                desc=[c for c in cells if re.fullmatch('DESCRIPTION',c.content.strip(),re.I)]
+                qty=[c for c in cells if re.fullmatch(r'SHIPPED\s+QTY\.?',c.content.strip(),re.I)]
+                units=[c for c in cells if re.fullmatch(r'\(?UNIT\)?',c.content.strip(),re.I)]
+                if not (len(desc)==len(qty)==len(units)==1):continue
+                desc,qty,unit=desc[0],qty[0],units[0]
+                if not (desc.column_index+1==qty.column_index and qty.column_index+1==unit.column_index):continue
+                output=[replace(desc,row_index=0,column_index=0,content='DESCRIPTION',
+                                bbox=[desc.bbox[0],desc.bbox[1]+top,desc.bbox[2],desc.bbox[3]+top]),
+                        OCRTableCell(0,1,'QTY (SHIPPED) / UNIT',page,
+                                     [qty.bbox[0],qty.bbox[1]+top,unit.bbox[2],unit.bbox[3]+top],
+                                     original_content=qty.content+' / '+unit.content)]
+                for body_row in range(row+1,table.row_count):
+                    description=next((c for c in table.cells if c.row_index==body_row and
+                                      c.column_index==desc.column_index and c.bbox),None)
+                    if description is None:continue
+                    left,yt,right,yb=description.bbox
+                    if re.match(r'^(?:TOTAL\b|SHORT\s+SHIPMENT\b)',description.content,re.I):break
+                    selected=[w for w in local if qty.bbox[0]<=(w.x0+w.x1)/2<unit.bbox[2]
+                              and yt<=(w.y0+w.y1)/2<yb]
+                    value='\n'.join(_cluster_into_lines(selected,max(3,height*.45)))
+                    index=len(output)//2
+                    output.extend([replace(description,row_index=index,column_index=0,
+                                           bbox=[left,yt+top,right,yb+top]),
+                                   OCRTableCell(index,1,value,page,
+                                                [qty.bbox[0],yt+top,unit.bbox[2],yb+top],
+                                                min((w.confidence for w in selected),default=None))])
+                if len(output)<=2:continue
+                box=[desc.bbox[0],desc.bbox[1]+top,unit.bbox[2],table.bbox[3]+top]
+                recovered.append(OCRTable(output,len(output)//2,2,page,box))
+                emit('ocr_table_recovery',page=page+1,method='ruled_shipped_quantity_and_unit',
+                     rows=len(output)//2-1,bbox=box)
+                break
+    if recovered:
+        # Superseded geometry must not enter the unstructured fallback a second time.
+        retained=[t for t in result.tables if not any(t.page==r.page and t.bbox and
+                  t.bbox[0]<r.bbox[2] and r.bbox[0]<t.bbox[2] and
+                  t.bbox[1]<r.bbox[3] and r.bbox[1]<t.bbox[3] for r in recovered)]
+        result.tables=sorted(retained+recovered,key=lambda t:(t.page,(t.bbox or [0,0])[1]))
+    return bool(recovered)
+
+
 def _cached_page_image(pdf_path, page, dpi=300, transform=None):
     """Align a PDF render with existing OCR boxes without running OCR again."""
     import pymupdf
@@ -166,7 +236,7 @@ def _cached_page_image(pdf_path, page, dpi=300, transform=None):
     return original
 
 
-def _column_regions(image, box, quantity_cells, words, page, group_braces=False):
+def _column_regions(image, box, quantity_cells, words, page, group_braces=False, extra_points=()):
     """Locate physical cells in a ruled column, using goods quantities as anchors."""
     import cv2
     import numpy as np
@@ -186,6 +256,7 @@ def _column_regions(image, box, quantity_cells, words, page, group_braces=False)
     points=[(w.y0+w.y1)/2 for w in words if w.page==page and any(
         c.bbox[0]<=(w.x0+w.x1)/2<c.bbox[2] and c.bbox[1]<=(w.y0+w.y1)/2<c.bbox[3]
         for c in quantity_cells)] if words else [(c.bbox[1]+c.bbox[3])/2 for c in quantity_cells]
+    points+=list(extra_points)
     if not points or any(not top<=y<bottom for y in points):
         raise ValueError('Goods rows cannot be assigned to physical column cells')
     regions=[[left,y0,right,y1] for y0,y1 in zip(cuts,cuts[1:]) if any(y0<=y<y1 for y in points)]
@@ -199,6 +270,45 @@ def _column_regions(image, box, quantity_cells, words, page, group_braces=False)
                 and top+y<=min(points) and top+y+h>=max(points) for x,y,w,h,area in stats[1:]):
             regions=[[left,regions[0][1],right,regions[-1][3]]]
     return regions
+
+
+def _packing_column_regions(image, box, table, columns, header, words, group_braces=False):
+    """Include declarations above quantity rows, preserving physical shared cells."""
+    quantities=[c for c in table.cells if c.row_index>header and c.column_index==columns['quantity']
+                and c.content.strip() and c.bbox and not any(
+                    re.match(r'^(?:SUB[ -]?)?TOTAL\b',d.content.strip(),re.I)
+                    for d in table.cells if d.row_index==c.row_index)]
+    left,top,right,bottom=box
+    totals=[c.bbox[1] for c in table.cells if c.row_index>header and c.bbox and
+            re.match(r'^(?:SUB[ -]?)?TOTAL\b',c.content.strip(),re.I)]
+    bottom=min([bottom]+totals)
+    box=[left,top,right,bottom]
+    declarations=[(w.y0+w.y1)/2 for w in words if w.page==table.page and re.search(r'\d',w.text)
+                  and left<=(w.x0+w.x1)/2<right and top<=(w.y0+w.y1)/2<bottom]
+    descriptions={c.row_index:c.content for c in table.cells if c.column_index==columns['description']}
+    if quantities and declarations and min(declarations)<min(c.bbox[1] for c in quantities) and all(
+            re.match(r'^\s*COL(?:OU?R)?[. :]',descriptions.get(c.row_index,''),re.I) for c in quantities):
+        quantities=[]  # A declared heading weight/package covers its colour continuations.
+    return _column_regions(image,box,quantities,words,table.page,group_braces,extra_points=declarations)
+
+
+def _shipment_cover(text):
+    return bool(re.search(r'\bSHIPPER\b',text,re.I) and re.search(r'\bCONSIGNEE\b|\bPACKAGES\b',text,re.I))
+
+
+def _packing_footer(ocr,page,field):
+    """Read a labelled local total only on the compact shipped-quantity packing form."""
+    from .parser import NUM, _number
+    text=ocr.pages[page]
+    if not (re.search(r'PACKING\s+LIST',text,re.I) and re.search(r'\bSHIPPED\b',text,re.I)):
+        return None
+    if field=='package_count' and not re.search(r'\bPKGS?\b|\bPACKAGES?\b',text,re.I):return None
+    pattern=(rf'^\s*TOTAL\s+GROSS\s+WEIGHT[^\d\n]*({NUM})\s*KGS?\b[^\n]*$'
+             if field=='gross_weight_kg' else r'^\s*TOTAL\s*:\s*([1-9]\d{0,3})\s*$')
+    matches=list(re.finditer(pattern,text,re.I|re.M))
+    if len(matches)!=1:return None
+    value=_number(matches[0][1])
+    return {'page':page+1,'text':matches[0][0].strip(),'value':value,'method':'labelled local packing total'} if 0<value<float('inf') else None
 
 
 def _skew_angle(img):
@@ -385,8 +495,12 @@ def analyze_pdf(pdf_path: Path, max_pages: int | None = None, cache_dir: Path | 
             result=OCRResult(**raw)
         except (OSError,ValueError,KeyError,TypeError):result=None
         if result is not None:
+            changed=False
             if result.table_version!=5:
                 result=_refresh_paddle_tables(result,pdf_path)
+                changed=True
+            changed=_recover_shipped_tables(result,pdf_path) or changed
+            if changed:
                 temporary=cache.with_suffix('.tmp')
                 temporary.write_text(json.dumps(asdict(result),ensure_ascii=False),encoding='utf-8')
                 temporary.replace(cache)
@@ -394,6 +508,7 @@ def analyze_pdf(pdf_path: Path, max_pages: int | None = None, cache_dir: Path | 
             return result
     emit('ocr_cache', cached=False)
     result=analyze_with_paddle(pdf_path,max_pages=max_pages,page_cache_dir=cache.with_suffix('') if cache else None)
+    _recover_shipped_tables(result,pdf_path)
     if cache:
         cache.parent.mkdir(parents=True,exist_ok=True)
         temporary=cache.with_suffix('.tmp')

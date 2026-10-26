@@ -22,10 +22,11 @@ Production uses PDFs and maintained configuration/rates; it never reads manual e
 
 ## Install
 
-Supported baseline: Windows x64 and Python 3.12. From the repository/release root:
+Supported baseline: Windows x64 and Python 3.12 with **SQLite 3.51.3 or newer** (check the Python build's bundled SQLite). The current tested runtime uses SQLite 3.53.1. Patched SQLite is required before enabling concurrent WAL state; earlier versions have a documented [WAL-reset defect](https://sqlite.org/wal.html#walresetbug). From the repository/release root:
 
 ```powershell
 py -3.12 -m venv project/.venv
+project/.venv/Scripts/python.exe -c "import sqlite3; print(sqlite3.sqlite_version); assert sqlite3.sqlite_version_info >= (3, 51, 3)"
 project/.venv/Scripts/python.exe -m pip install -r project/requirements-lock.txt
 project/.venv/Scripts/python.exe -m pip check
 ```

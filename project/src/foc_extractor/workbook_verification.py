@@ -30,6 +30,9 @@ def verify_workbook(workbook, data, source, region='BD'):
         if audit.get('template_type') not in ({region, None, 'None'} if region == 'BD' else {region}):
             raise ValueError('Workbook audit does not match the invoice region')
         sheet = book.active
+        if region == 'BD' and (sheet['A18'].value != 'SHIPMENT TO: ' + (
+                data.get('destination_city') or data.get('destination_country') or '') or sheet['A18'].data_type != 's'):
+            raise ValueError('Printed Bangladesh shipment destination does not match the conversion result')
         if region=='INDIA' and (sheet!=book.worksheets[0] or sheet.sheet_state!='visible'):
             raise ValueError('Printed India invoice sheet must be visible and active')
         layout = REGIONS[region]

@@ -177,6 +177,7 @@ def _populate_bd(ws, data: FOCData):
 
     if data.destination_country:
         _safe_write(ws, 21, 5, data.destination_country.upper())  # E21
+    _safe_write(ws, 18, 1, 'SHIPMENT TO: ' + (data.destination_city or data.destination_country or ''))
     if data.invoice_number:
         _safe_write(ws, 25, 3, data.invoice_number)  # C25
     if data.import_cover_note:

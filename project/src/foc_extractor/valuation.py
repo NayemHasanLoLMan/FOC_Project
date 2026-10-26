@@ -9,8 +9,9 @@ from pathlib import Path
 RATES_FILE = Path(__file__).resolve().parents[2] / 'valuation_rates.json'
 RULES = [
     ('fabric_per_yd', 'YDS', r'\bFABRICS?\b|%\s*(?:COTTON|POLYESTER|NYLON|LINEN|VISCOSE|RAYON|LYOCELL|POLYAMIDE)\b'),
+    ('fabric_per_yd', 'YDS', r'\bINTERLINING\b'),
     ('die_mould_per_set', 'SETS', r'^DIE MOULD(?:\s*\([^)]*\))?$'),
-    ('shank_rivet_per_pc', 'PCS', r'^SHANK\s*&\s*RIVET\b'),
+    ('shank_rivet_per_pc', 'PCS', r'^(?!.*\b(?:DIES?|MOULDS?|MOLDS?|CARDS?|TOOLS?|MACHINES?)\b).*\b(?:SHANK|RIVETS?)\b'),
     ('fabric_card_per_pc', 'PCS', r'^FABRIC CARD$'),
     ('metal_snap_per_set', 'SETS', r'^(?:METAL|MEATAL) SNAP$'),
     ('zipper_clip_per_pc', 'PCS', r'^ZIPPER CLIP$'),
@@ -24,16 +25,16 @@ RULES = [
     ('hidden_snap_per_gross', 'GROSS', r'^HIDDEN SNAP$'),
     ('fabric_swatch_card_per_set', 'SETS', r'^FABRIC SWATCH(?:ES)? CARD$'),
     ('trim_card_per_pc', 'PCS', r'^TRIM CARD$'),
-    ('ladies_cotton_stretch_pants_per_pc', 'PCS', r'^(?:LADY|LADIES|WOMENS?)\b.*\bCOTTON\b.*\b(?:SPANDEX|ELASTANE|STRETCH)\b.*\bPANTS$'),
-    ('mens_cotton_pants_per_pc', 'PCS', r"^MEN'?S?\b.*\b100% COTTON\b.*\bPANTS$"),
-    ('kids_cotton_dress_per_pc', 'PCS', r"^KIDS?'?\b.*\b100% COTTON\b.*\bDRESS$"),
-    ('ladies_cotton_dress_per_pc', 'PCS', r'^(?:LADY|LADIES|WOMENS?)\b.*\b100% COTTON\b.*\bDRESS$'),
+    ('ladies_cotton_stretch_pants_per_pc', 'PCS', r"^(?:LADY|LADIES|WOM[AE]N'?S?)\b.*\bCOTTON\b.*\b(?:SPANDEX|ELASTANE|STRETCH)\b.*\bPANTS?$"),
+    ('mens_cotton_pants_per_pc', 'PCS', r"^MEN'?S?\b.*\b100% COTTON\b.*\bPANTS?$"),
+    ('kids_cotton_dress_per_pc', 'PCS', r"^KID(?:'?S)?\b.*\b100% COTTON\b.*\bDRESS(?:ES)?$"),
+    ('ladies_cotton_dress_per_pc', 'PCS', r"^(?:LADY|LADIES|WOM[AE]N'?S?)\b.*\b100% COTTON\b.*\bDRESS(?:ES)?$"),
     # Sample evidence takes priority over garment words inside booking descriptions.
     ('fabric_sample_per_pc', 'PCS',
      r'\b(?:FABRIC (?:SWATCH(?:ES)?|SAMPLES?)|STRIKE\s*OFF|HANDLOOM|YARN DYED|FABRIC BOOKING|CVC CARRYOVER)\b'
-     r'|^(?!.*\b(?:PANTS|SHIRTS?|BLOUSES?|DRESS|JACKET)\b).*?\b\d+(?:\.\d+)?%\s*'
+     r'|^(?!.*\b(?:PANTS?|SHIRTS?|BLOUSES?|DRESS(?:ES)?|JACKETS?)\b).*?\b\d+(?:\.\d+)?%\s*'
      r'(?:COTTON|US(?:A)? COTTON|NYLON|POLYESTER|VISCOSE|RAYON|LINEN|LYOCELL|POLYAMIDE)\b'),
-    ('fabric_sample_per_set', 'SETS', r'\bFAB(?:RIC)?\b'),
+    ('fabric_sample_per_set', 'SETS', r'\bFAB(?:RIC)?\b|^(?!.*\b(?:PANTS?|SHIRTS?|BLOUSES?|DRESS(?:ES)?|JACKETS?)\b).*?\b\d+(?:\.\d+)?%\s*(?:COTTON|US(?:A)? COTTON|NYLON|POLYESTER|VISCOSE|RAYON|LINEN|LYOCELL|POLYAMIDE)\b'),
     ('zipper_per_pc', 'PCS', r'^ZIPPERS?$'),
     ('shirt_per_pc', 'PCS', r'\bSHIRTS?\b'),
     ('blouse_per_pc', 'PCS', r'\bBLOUSES?\b'),
@@ -44,8 +45,10 @@ RULES = [
     ('fabric_hanger_per_pc', 'PCS', r'^FABRIC HANGERS?$'),
     ('part_card_per_pc', 'PCS', r'^(?:EMBY\s+)?MF PART CARDS?$'),
     ('felt_patch_per_pc', 'PCS', r'^FELT PATCH(?:ES)?$'),
-    ('button_per_gross', 'GROSS', r'^(?:SHANK|SNAP) BUTTONS?$'),
-    ('pants_per_pc', 'PCS', r'\bPANTS\b'),
+    ('metal_fastener_per_set', 'SETS', r'^(?!.*\b(?:DIES?|MOULDS?|MOLDS?|CARDS?|TOOLS?|MACHINES?)\b).*\b(?:SHANK|SNAP|RIVETS?)\b'),
+    ('button_per_gross', 'GROSS', r'^(?!.*\b(?:DIES?|MOULDS?|MOLDS?|CARDS?|TOOLS?|MACHINES?)\b).*\b(?:SHANK|SNAP)\b.*\bBUTTONS?\b'),
+    ('rivet_per_gross', 'GROSS', r'^(?!.*\b(?:DIES?|MOULDS?|MOLDS?|CARDS?|TOOLS?|MACHINES?)\b).*\bRIVETS?\b'),
+    ('pants_per_pc', 'PCS', r'\bPANTS?\b'),
     ('dress_per_pc', 'PCS', r'\bDRESS(?:ES)?\b'),
     ('jacket_per_pc', 'PCS', r'\bJACKETS?\b'),
 ]
@@ -77,7 +80,7 @@ def apply_valuation(data):
     if any(rate is None for rate in rates.values()):
         raise ValueError('Valuation rates must be finite positive USD numbers')
     for item in data.items:
-        description = ' '.join(item.description.upper().split())
+        description = ' '.join(item.description.upper().replace('’', "'").split())
         for key, unit, pattern in rules:
             if not re.search(pattern, description):
                 continue
@@ -86,12 +89,12 @@ def apply_valuation(data):
                        '24l_snap_per_gross', '9_5mm_rivet_per_gross', 'hidden_snap_per_gross') and item.unit == 'G':
                 item.unit = 'GROSS'
             if item.unit == unit:
-                if item.unit_price is None and not (india and item.amount is not None):
+                if item.unit_price is None and item.amount is None:
                     item.unit_price = float(rates[key])
                     emit('valuation_rate', method='approved_approximate_rate', rule=key, rate=item.unit_price,
                          unit=item.unit, source_refs=item.source_refs, description=item.description)
                 break
-        quantity, price = _positive(item.quantity), _positive(item.unit_price, allow_zero=india)
+        quantity, price = _positive(item.quantity), _positive(item.unit_price, allow_zero=True)
         if item.amount is None and quantity is not None and price is not None:
             item.amount = float((quantity * price).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
     if not any(item.unit == 'G' for item in data.items):

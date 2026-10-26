@@ -49,6 +49,67 @@ class ValuationTests(unittest.TestCase):
         self.assertEqual(data.items[7].unit, 'GROSS')
         self.assertEqual(data.total_value, 63)
 
+    def test_garment_singular_plural_and_apostrophes_do_not_use_swatch_rates(self):
+        for description,rate in [
+            ("WOMEN'S 65% COTTON 30% POLYESTER 3% RAYON 2% SPANDEX WOVEN PANT",2.5),
+            ("WOMEN’S 98% COTTON 2% ELASTANE WOVEN PANTS",2.5),
+            ('LADIES 98% COTTON 2% STRETCH PANT',2.5),
+            ("MEN'S 100% COTTON WOVEN PANT",1.5),
+            ('100% POLYESTER WOVEN PANT',1.5),
+            ('WOMENS 100% COTTON WOVEN DRESSES',1),
+            ("KID'S 100% COTTON WOVEN DRESS",.75),
+        ]:
+            with self.subTest(description=description):
+                item=LineItem(description,2,'PCS');apply_valuation(self.data([item]))
+                self.assertEqual((item.unit_price,item.amount),(rate,rate*2))
+                self.assertEqual(item.description,description)
+
+    def test_new_fastener_interlining_and_composition_set_coverage(self):
+        for description,quantity,unit,rate in [
+            ('SHANK BUTTON OPTIONS',24,'GROSS',.35),('RIVETS',4,'GROSS',.35),
+            ('SHANK 30L DOUBLE RIM',100,'SETS',.05),('SNAP 21L DOUBLE RIM',100,'SETS',.05),
+            ('RIVET',200,'SETS',.05),('INTERLINING #NEW-CODE',40,'YDS',.2),
+            ('30L NEW LOGO SHANK BUTTON - BLUE',288,'PCS',.025),
+            ('12L NEW LOGO RIVET - BLUE',576,'PCS',.025),
+            ('55% COTTON 45% VISCOSE',5,'SETS',.1),('100% COTTON',3,'SETS',.1),
+        ]:
+            with self.subTest(description=description):
+                item=LineItem(description,quantity,unit);apply_valuation(self.data([item]))
+                self.assertEqual(item.unit_price,rate)
+                self.assertEqual((item.description,item.quantity,item.unit),(description,quantity,unit))
+                self.assertIsNotNone(item.amount)
+
+    def test_fallbacks_do_not_price_tools_garment_sets_or_invent_quantities(self):
+        for description,quantity,unit in [
+            ('SHANK BUTTON DIE MOULD',2,'SETS'),('RIVET INSTALLATION TOOL',1,'PCS'),
+            ('RIVET MACHINE',1,'GROSS'),('SHANK BUTTON CARD',1,'PCS'),
+            ('100% COTTON WOVEN PANTS',2,'SETS'),('INTERLINING',None,None),
+            ('FABRIC SAMPLES',1,None),('RIVET',2,'GRAMS'),
+        ]:
+            with self.subTest(description=description):
+                item=LineItem(description,quantity,unit);data=self.data([item]);apply_valuation(data)
+                self.assertIsNone(item.amount);self.assertIsNone(data.total_value)
+                self.assertEqual((item.quantity,item.unit),(quantity,unit))
+
+    def test_specific_and_source_rates_remain_ahead_of_new_fallbacks(self):
+        rates=json.loads(RATES_FILE.read_text())
+        rates['metal_snap_per_set']='0.09'
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'rates.json';path.write_text(json.dumps(rates))
+            with patch('src.foc_extractor.valuation.RATES_FILE',path):
+                data=self.data([LineItem('METAL SNAP',3,'SETS'),LineItem('9.5MM RIVET',2,'GROSS')])
+                apply_valuation(data)
+                self.assertEqual([i.unit_price for i in data.items],[.09,.05])
+        item=LineItem('RIVET',4,'SETS',amount=12.34);data=self.data([item]);apply_valuation(data)
+        self.assertIsNone(item.unit_price);self.assertEqual((item.amount,data.total_value),(12.34,12))
+        item=LineItem('FABRIC',5,'YDS',unit_price=0);data=self.data([item]);apply_valuation(data)
+        self.assertEqual((item.unit_price,item.amount,data.total_value),(0,0,0))
+
+    def test_interlining_does_not_expand_india_pricing_policy(self):
+        data=FOCData(source_file='unseen.pdf',template_type='INDIA',items=[LineItem('INTERLINING',40,'YDS')])
+        apply_valuation(data)
+        self.assertIsNone(data.items[0].amount);self.assertIsNone(data.total_value)
+
     def test_unsupported_rows_do_not_become_a_partial_shipment_total(self):
         for description, quantity, unit in [
             ('UNIDENTIFIED ITEM', 2, 'PCS'),

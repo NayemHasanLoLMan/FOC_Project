@@ -24,7 +24,8 @@ class WeightTests(unittest.TestCase):
             with patch('src.foc_extractor.weights._cached_page_image',return_value=image), \
                  patch('src.foc_extractor.weights._paddle_readers',return_value=(reader,None)), \
                  patch('src.foc_extractor.local_vision.transcribe_cell',side_effect=[
-                     ({'weight_kg':25},'test (abc)'),({'weight_kg':12},'test (abc)')]):
+                     ({'weight_kg':25},'test (abc)'),({'text':'25'},'check'),
+                     ({'weight_kg':12},'test (abc)'),({'text':'12'},'check')]):
                 self.assertEqual(packing_weight(ocr,pdf,local_model='test')['total_kg'],37)
 
     def test_vision_splits_failed_brace_group_and_requires_complete_positive_weights(self):
@@ -38,10 +39,11 @@ class WeightTests(unittest.TestCase):
                 with patch('src.foc_extractor.weights._cached_page_image',return_value=image), \
                      patch('src.foc_extractor.weights._paddle_readers',return_value=(reader,None)), \
                      patch('src.foc_extractor.local_vision.transcribe_cell',side_effect=[
-                         ({'weight_kg':2.5},'test (abc)'),({'weight_kg':second},'test (abc)')]) as vision:
+                         ({'weight_kg':2.5},'test (abc)'),({'text':'2.5'},'check'),
+                         ({'weight_kg':second},'test (abc)'),({'text':str(second)},'check')]) as vision:
                     result=packing_weight(ocr,pdf,Path(directory)/'cache',local_model='test')
                 self.assertEqual(result['total_kg'],total)
-                self.assertEqual(vision.call_count,2)
+                self.assertEqual(vision.call_count,4 if total else 3)
                 if total:
                     self.assertEqual(len(result['cells']),2)
                     self.assertTrue(all(c['method']=='local vision' for c in result['cells']))
@@ -51,6 +53,7 @@ class WeightTests(unittest.TestCase):
         for x in (10,150,300,400):draw.line((x,20,x,200),fill='black',width=2)
         for y in (20,60,200):draw.line((10,y,400,y),fill='black',width=2)
         draw.line((10,120,300 if shared else 400,120),fill='black',width=2)
+        draw.text((330,85),'8kg',fill='black');draw.text((330,145),'8kg',fill='black')
         cells=[OCRTableCell(0,0,'DESCRIPTION',bbox=[10,20,150,60]),
                OCRTableCell(0,1,'QTY',bbox=[150,20,300,60]),
                OCRTableCell(0,2,'WEIGHT / Kgs',bbox=[300,20,400,60]),

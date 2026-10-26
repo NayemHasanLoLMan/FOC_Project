@@ -330,8 +330,8 @@ class ParserTests(unittest.TestCase):
 
     def test_filename_is_not_silent_ground_truth(self):
         data=parse_result(OCRResult(),Path('27S9876-D.pdf'))
-        self.assertEqual(data.invoice_number,'S/9876/27')
-        self.assertTrue(any('filename' in w for w in data.warnings))
+        self.assertIsNone(data.invoice_number)
+        self.assertFalse(any('filename' in w for w in data.warnings))
         conflicting=parse_result(OCRResult(content='S/1234/28'),Path('27S9876-D.pdf'))
         self.assertEqual(conflicting.invoice_number,'S/1234/28')
         self.assertEqual(_extract_gross_weight('SHIPPER PACKAGES app . 56 KGS'),56)
@@ -393,23 +393,18 @@ class ParserTests(unittest.TestCase):
 
     def test_shipping_marks_prioritize_consignee_over_incidental_mentions(self):
         data=parse_result(OCRResult(content='To: EGMCL-FOC\nPEARL BUTTONS'),Path('new.pdf'))
-        self.assertEqual(data.consignee,'EPIC GARMENTS MANUFACTURING CO. LTD.')
+        self.assertEqual(data.consignee,'EGMCL-FOC')
 
-    def test_known_company_address_fallback_and_factory_units(self):
+    def test_source_aliases_do_not_supply_directory_identity_or_tax_numbers(self):
         for header in ('To: EGMCL 2 -FABRIC','EGMCL-2 FOC',
-                       'To: EPIC GARMENTS MANUFACTURING CO. LTD. (UNIT-2)'):
+                       'To: EPIC GARMENTS MANUFACTURING CO. LTD. (UNIT-2)',
+                       'To: EGMCL-FOC','To: CIPL-FOC','To: THE ROSE DRESSES LTD',
+                       'To: EGMCL 3 FOC','To: UNKNOWN FACTORY'):
             data=parse_result(OCRResult(content=header+'\nPACKING LIST'),Path('anonymous.pdf'))
-            self.assertIn('UNIT-2',data.consignee)
-            self.assertIn('000320579-0403',data.consignee_address)
-            self.assertNotIn('000322109-1402',data.consignee_address)
-        for header in ('To: EGMCL-FOC','To: CIPL-FOC','To: THE ROSE DRESSES LTD'):
-            data=parse_result(OCRResult(content=header+'\nPACKING LIST'),Path('anonymous.pdf'))
-            self.assertTrue(data.consignee_address)
-            self.assertIn('BIN',data.consignee_address)
-        for header in ('To: EGMCL 3 FOC','To: EGMCL 20 FOC',
-                       'To: UNKNOWN FACTORY\nPACKING LIST\nPEARL BUTTONS'):
-            data=parse_result(OCRResult(content=header),Path('anonymous.pdf'))
+            self.assertEqual(data.consignee,header.removeprefix('To: '))
             self.assertIsNone(data.consignee_address)
+            self.assertIsNone(data.destination_country)
+            self.assertIsNone(data.destination_city)
 
     def test_source_address_and_bin_take_priority_over_directory(self):
         from unittest.mock import patch
@@ -421,4 +416,4 @@ class ParserTests(unittest.TestCase):
         with patch('src.foc_extractor.parser._consignee_region',return_value='GREEN TEXTILE LIMITED\nNEW FACTORY ROAD'):
             data=parse_result(OCRResult(),Path('anonymous.pdf'))
         self.assertIn('NEW FACTORY ROAD',data.consignee_address)
-        self.assertIn('000830659-0104',data.consignee_address)
+        self.assertNotIn('000830659-0104',data.consignee_address)

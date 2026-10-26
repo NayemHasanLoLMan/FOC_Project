@@ -124,7 +124,7 @@ class IndiaInvoiceNumberTests(unittest.TestCase):
             self.assertIsNone(resolve_invoice_number(self.ocr(),Path('neutral.pdf'),'primary'))
         self.assertEqual(model.call_count,2)
 
-    def convert(self,name,ocr,answer):
+    def convert(self,name,ocr,answer,region='INDIA'):
         with tempfile.TemporaryDirectory() as directory:
             source=Path(directory)/name
             with pymupdf.open() as pdf:pdf.new_page();pdf.save(source)
@@ -133,7 +133,7 @@ class IndiaInvoiceNumberTests(unittest.TestCase):
                  patch('src.foc_extractor.parser._consignee_region',return_value='NEW INDIA FACTORY\nSOURCE ROAD'), \
                  patch('src.foc_extractor.ocr_engine._cached_page_image',return_value=Image.new('RGB',(2400,3400))), \
                  patch('src.foc_extractor.local_vision.transcribe_cell',return_value=(answer,'test')):
-                output=run(source,region='INDIA',output_dir=Path(directory)/'output',local_model='test',
+                output=run(source,region=region,output_dir=Path(directory)/'output',local_model='test',
                            observer=lambda event,**kwargs:events.append(event))
             book=load_workbook(output);number=book.active['C25'].value;book.close()
             return number,events
@@ -151,8 +151,22 @@ class IndiaInvoiceNumberTests(unittest.TestCase):
         self.assertEqual(final['vision_contributions'],[{'field':'invoice_number'}])
         self.assertNotIn('invoice_number',final['unresolved_fields'])
 
-    def test_rejected_reading_retains_filename_fallback_or_blank(self):
-        for name,expected in [('29S6743-D.pdf','S/6743/29'),('neutral.pdf',None)]:
+    def test_bangladesh_verifies_plausible_ocr_using_source_not_filename(self):
+        ocr=self.ocr();ocr.content='SHIPPER\nS/742/29';ocr.pages=[ocr.content]
+        for filename in ('29S9999-D.pdf','renamed.pdf'):
+            value,events=self.convert(filename,ocr,{'text':'S/6742/29'},region='BD')
+            self.assertEqual(value,'S/6742/29')
+            final=next(e for e in events if e['kind']=='invoice_evidence')
+            self.assertEqual(final['vision_contributions'],[{'field':'invoice_number'}])
+
+    def test_bangladesh_offline_retains_only_source_reading(self):
+        for text,expected in [('SHIPPER\nS/742/29','S/742/29'),('SHIPPER',None)]:
+            ocr=self.ocr();ocr.content=text;ocr.pages=[text]
+            value,events=self.convert('29S9999-D.pdf',ocr,{'text':None},region='BD')
+            self.assertEqual(value,expected)
+
+    def test_rejected_reading_never_uses_filename_fallback(self):
+        for name,expected in [('29S6743-D.pdf',None),('neutral.pdf',None)]:
             value,events=self.convert(name,self.ocr(),{'text':'8/5/196/1/26'})
             self.assertEqual(value,expected)
             final=next(e for e in events if e['kind']=='invoice_evidence')

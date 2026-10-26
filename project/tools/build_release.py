@@ -28,7 +28,7 @@ def build_release(output, root=ROOT):
     version = next(ast.literal_eval(node.value) for node in ast.parse((root/'src/foc_extractor/__init__.py').read_text()).body
                    if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='__version__' for t in node.targets))
     manifest = {'application':'foc-invoice', 'version':version, 'format':'production-source',
-                'requires':'Windows x64, Python 3.12, dependencies and local OCR/Ollama models installed separately',
+                'requires':'Windows x64, Python 3.12 with SQLite 3.51.3+, dependencies and local OCR/Ollama models installed separately',
                 'files':{}}
     output.parent.mkdir(parents=True,exist_ok=True)
     with output.open('xb') as handle:

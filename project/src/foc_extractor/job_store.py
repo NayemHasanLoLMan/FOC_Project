@@ -3,10 +3,12 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
 import hashlib
+import logging
 import os
 from pathlib import Path
 import re
 import sqlite3
+import time
 from uuid import UUID
 
 STATES = ('waiting_for_file', 'queued', 'running', 'waiting_to_save', 'completed', 'failed', 'interrupted')
@@ -63,6 +65,23 @@ def _attempt(row):
     return result
 
 
+def _retry_busy(action):
+    for attempt in range(3):
+        try:
+            return action()
+        except sqlite3.OperationalError as error:
+            if (getattr(error, 'sqlite_errorcode', 0) & 255) not in (sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED) or attempt == 2:
+                raise
+            logging.getLogger(__name__).warning('SQLite busy; retry %s/2', attempt + 1)
+            time.sleep(0.1 * (attempt + 1))
+
+
+class _ReadConnection(sqlite3.Connection):
+    def execute(self, sql, parameters=(), /):
+        execute = super().execute
+        return _retry_busy(lambda: execute(sql, parameters))
+
+
 class JobStore:
     def __init__(self, path: Path, *, read_only=False):
         self.path = Path(path).resolve()
@@ -75,6 +94,8 @@ class JobStore:
                         or db.execute('PRAGMA user_version').fetchone()[0] != SCHEMA_VERSION):
                     raise ValueError('Initialize/migrate pipeline state before opening the dashboard')
             return
+        if sqlite3.sqlite_version_info < (3, 51, 3):
+            raise RuntimeError('Pipeline requires SQLite 3.51.3 or newer for safe concurrent WAL access')
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self._connection(write=True) as db:
             version = db.execute('PRAGMA user_version').fetchone()[0]
@@ -109,19 +130,25 @@ class JobStore:
                 db.execute("ALTER TABLE jobs ADD COLUMN region TEXT NOT NULL DEFAULT 'BD' CHECK(region IN ('BD','INDIA','JORDAN'))")
             if version < SCHEMA_VERSION:
                 db.execute(f'PRAGMA user_version={SCHEMA_VERSION}')
+        with self._connection() as db:
+            if db.execute('PRAGMA journal_mode=WAL').fetchone()[0] != 'wal':
+                raise RuntimeError('Pipeline state requires a local disk that supports SQLite WAL mode')
 
     @contextmanager
     def _connection(self, write=False):
         if write and self.read_only:
             raise ValueError('Dashboard state connection is read-only')
-        db = sqlite3.connect(self.path.as_uri()+'?mode=ro', uri=True, timeout=5) if self.read_only else sqlite3.connect(self.path, timeout=5)
+        factory = sqlite3.Connection if write else _ReadConnection
+        db = sqlite3.connect(self.path.as_uri()+'?mode=ro', uri=True, timeout=5, factory=factory) if self.read_only else sqlite3.connect(self.path, timeout=5, factory=factory)
         db.row_factory = sqlite3.Row
         try:
             db.execute('PRAGMA foreign_keys=ON')
             with db:
                 if write:
-                    db.execute('BEGIN IMMEDIATE')
+                    _retry_busy(lambda: db.execute('BEGIN IMMEDIATE'))
                 yield db
+                # Retry the same commit, never replay the caller's writes; the context rolls back on failure.
+                _retry_busy(db.commit)
         finally:
             db.close()
 

@@ -909,7 +909,7 @@
               ],
               "query": []
             },
-            "description": "Clears current workspace jobs and archives generated invoices/evidence. Available on the main coordinated launcher at port 8080 and isolated development launcher. Inputs, templates, settings and caches are preserved. Remaining inbox PDFs are automatically rediscovered and processing resumes after clearing. Use only when you intend to clear the current history and regenerate invoices; busy operations return 409.",
+            "description": "Archives jobs, generated invoices, review evidence and derived OCR/page/vision/package/weight caches. Preserves input PDFs, templates, settings, rates and installed OCR/Ollama models. Requires an idle coordinated launcher; resumes intake for fresh processing. Repeating the same request ID does not clear newer results.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"request_id\": \"{{$guid}}\"\n}",

@@ -81,7 +81,8 @@ class PackageTests(unittest.TestCase):
     def test_partial_pdf_cannot_supply_a_detail_sum(self):
         o=OCRResult(tables=[self.table(['1 package'])],pages=['PACKING LIST'],total_pages=2)
         self.assertIsNone(packing_packages(o)['total'])
-        o.content='TOTAL 3 PACKAGES';self.assertEqual(packing_packages(o)['total'],3)
+        o.content='TOTAL 3 PACKAGES';o.pages=['SHIPPER\nCONSIGNEE\nTOTAL 3 PACKAGES']
+        self.assertEqual(packing_packages(o)['total'],3)
 
     def test_physical_shared_cell_and_separate_equal_entries(self):
         for shared,expected in [(True,1),(False,2)]:

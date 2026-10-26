@@ -1924,7 +1924,7 @@
     "/api/development/reset": {
       "post": {
         "operationId": "resetDevelopmentData",
-        "summary": "Clear current workspace jobs and archive generated files",
+        "summary": "Clear current workspace jobs and archive generated files and extraction results",
         "tags": [
           "Admin controls"
         ],
@@ -2055,7 +2055,7 @@
             }
           }
         },
-        "description": "Available in the main coordinated launcher on port 8080 and the optional isolated development launcher. Requires standard workspace paths and idle scanner/worker. The endpoint name is retained for compatibility. Inputs, templates, settings and caches are preserved. A successful reset clears intake observations and resumes processing; remaining inbox PDFs are rediscovered through stable-file checks and their invoices recreated. Replaying the same UUID does not reset later work."
+        "description": "Archives jobs, generated invoices, review evidence and derived OCR/page/vision/package/weight caches. Preserves input PDFs, templates, settings, rates and installed OCR/Ollama models. Requires an idle coordinated launcher; resumes intake for fresh processing. Repeating the same request ID does not clear newer results."
       }
     },
     "/api/settings": {

@@ -91,7 +91,8 @@ class LocalVisionTests(unittest.TestCase):
                        OCRTableCell(1,0,'LABEL'),OCRTableCell(1,1,'Z PCS',bbox=[0,0,100,50])]
                 ocr=OCRResult(tables=[OCRTable(cells,2,2)])
                 responses=[{'models':[{'name':'test:latest','digest':'abc'}]},
-                           {'done_reason':'stop','message':{'content':content}}]
+                           {'done_reason':'stop','message':{'content':content}},
+                           {'models':[{'name':'test:latest','digest':'abc'}]}]
                 with patch('src.foc_extractor.local_vision._request',side_effect=responses), \
                      patch('src.foc_extractor.local_vision._cached_page_image',return_value=Image.new('RGB',(100,50),'white')):
                     resolve_quantities(ocr,Path('unseen.pdf'),'test')

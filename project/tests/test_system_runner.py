@@ -117,6 +117,35 @@ class SystemRunnerTests(unittest.TestCase):
             with process_lock(self.config.state_dir/name):
                 pass
 
+    def test_transient_writer_lock_keeps_web_scanner_and_heartbeat_alive(self):
+        from contextlib import closing
+        import sqlite3
+        import urllib.request
+        servers=[];create=system_runner.create_server
+        def capture(*args,**kwargs):
+            server=create(*args,**kwargs);servers.append(server);return server
+        with patch.object(system_runner,'create_server',side_effect=capture), \
+             patch.object(queue_worker,'run',side_effect=self.convert), \
+             patch.object(queue_worker,'HEARTBEAT_SECONDS',.03):
+            self.start()
+            store=JobStore(self.config.state_dir/'jobs.sqlite3')
+            self.wait_for(lambda:servers and len(store.components())==2)
+            with closing(sqlite3.connect(store.path)) as holder:
+                holder.execute('BEGIN IMMEDIATE')
+                base='http://127.0.0.1:'+str(servers[0].effective_port)
+                with urllib.request.urlopen(base+'/api/status',timeout=3) as response:
+                    self.assertEqual(response.status,200)
+                time.sleep(6.5)
+                self.assertTrue(self.thread.is_alive())
+                self.assertFalse(self.stop.is_set())
+            self.wait_for(lambda:all(c['state']=='running' for c in store.components()))
+            self.source()
+            self.wait_for(lambda:store.counts()['completed']==1)
+            self.assertEqual(store.counts()['failed'],0)
+            self.finish()
+        self.assertEqual(self.errors,[])
+        self.assertTrue(all(c['state']=='stopped' for c in store.components()))
+
     def test_existing_worker_prevents_combined_start(self):
         with process_lock(self.config.state_dir/'worker.lock'):
             with self.assertRaisesRegex(RuntimeError,'Another process owns'):

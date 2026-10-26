@@ -49,6 +49,12 @@ class JordanHeaderTests(unittest.TestCase):
         data=self.parse(['SHIPPER\nEPIC DESIGNERS JORDAN'])
         for field in ('consignee','consignee_address','invoice_number','shipping_marks','destination_city','destination_country'):
             self.assertIsNone(getattr(data,field),field)
+        data=parse_result(self.ocr(['SHIPPER\nCONSIGNEE:\nEPIC DESIGNERS LTD\nNEW ROAD']),Path('99S9999-D.pdf'))
+        self.assertEqual(data.template_type,'JORDAN')
+        self.assertEqual(data.consignee,'EPIC DESIGNERS LTD')
+        self.assertEqual(data.consignee_address,'NEW ROAD')
+        for field in ('invoice_number','shipping_marks','destination_city','destination_country'):
+            self.assertIsNone(getattr(data,field),field)
 
     def test_latest_packing_date_and_explicit_export_priority(self):
         pages=[self.cover(),'PACKING LIST\nDATE: 6-Oct-2026','PACKING LIST\nDATE: 7-Oct-2026\nORDER DATE: 1-Oct-2030']

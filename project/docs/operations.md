@@ -40,9 +40,9 @@ India invoice details show IEC/PAN/GST address information, destination, carton 
 
 Unsupported/unreadable/conflicting information stays blank; no approval or validation prompt is added to the printed invoice. A completed invoice can therefore have missing information. Notes on the dashboard do not require intervention or automatically stop generation.
 
-The PDF is the shipment source. Manual expected workbooks are development references and are never needed in production. Supported company-directory fallbacks and approved approximate valuation rates may supply maintained information/estimates. See [configuration](configuration.md) before changing those rules.
+The PDF is the shipment source. Manual expected workbooks are development references and are never needed in production. Header identities come from the PDF; filenames and company-directory defaults do not supply missing invoice references, names, addresses, BINs or marks. Approved approximate valuation rates remain separate estimates. See [configuration](configuration.md) before changing those rules.
 
-The queue preserves occupied output files and chooses a versioned filename when necessary. Identical unchanged arrivals do not create another job; changed bytes create a new source version. Renaming a PDF can create a distinct job because filenames may support invoice-number extraction.
+The queue preserves occupied output files and chooses a versioned filename when necessary. Identical unchanged arrivals do not create another job; changed bytes create a new source version. Renaming a PDF can create a distinct arrival/job identity, but the filename never supplies or changes the extracted invoice reference.
 
 Do not rename, edit or delete internal job snapshots/evidence to repair a result. Use the original PDF and the existing retry controls. Use Pause processing / Resume processing on Overview. Pause lets the current invoice finish while new PDFs continue to queue. On the latest eligible job detail, use Retry this PDF, Retry saving invoice, or Create another invoice. Earlier outputs stay available. A stopped worker must be started with run_system.py before queued requests can run.
 
@@ -60,11 +60,11 @@ Downloads use clean names such as 26S8185-I.xlsx; stored versions retain interna
 
 ## Clear data for testing
 
-System → Clear data is available on the main coordinated launcher at 8080 and requires confirmation. It refuses active work; pause first if more jobs are queued. It archives job history, generated invoices from the current Bangladesh/India output folders and retained evidence, preserving input PDFs, templates, settings and model/OCR caches. A successful clear resumes scanning: remaining PDFs pass normal stable-file checks and generate invoices again. Sequence numbers are not reset; repeated delivery of the same request is idempotent.
+System → Clear data is available on the main coordinated launcher at 8080 and requires confirmation. It refuses active work; pause first if more jobs are queued. It archives job history, generated invoices from the current Bangladesh/India output folders, retained evidence and derived extraction caches (document/page OCR, vision responses, package counts and weights). Input PDFs, templates, settings, rates and installed Paddle/Ollama models are preserved. A successful clear resumes scanning: remaining PDFs pass normal stable-file checks and generate invoices from fresh OCR and vision where needed. Sequence numbers are not reset; repeated delivery of the same request is idempotent and does not clear new results a second time.
 
-Recovery copies live under runtime/cleared/<time>-<request-id>/. Other-volume output archives are recorded beside their output under .foc-cleared with matching external-output metadata. Older configured output roots are not cleared. A move failure rolls back; recovery after an OS crash must restore matching database/artifacts/outputs together. Archives are not automatically purged. A standalone dashboard cannot clear data. This intentionally exposed development feature needs an access-policy review before wider deployment.
+Recovery copies live under runtime/cleared/<time>-<request-id>/; extraction-cache contains the old derived results and is not read by normal processing. Other-volume output archives are recorded beside their output under .foc-cleared with matching external-output metadata. Older configured output roots are not cleared. A move/recreation failure rolls back; recovery after an OS crash must restore matching database/artifacts/outputs/cache together. Archives are not automatically purged. A standalone dashboard cannot clear data. This intentionally exposed development feature needs an access-policy review before wider deployment.
 
-For an isolated test workspace, run `project/.venv/Scripts/python.exe project/run_system.py --development --port 8081`. Its data stays under development/runtime; do not run tests against the main queue. Development mode cannot combine with custom config or startup installation.
+For an isolated test workspace, run `project/.venv/Scripts/python.exe project/run_system.py --development --port 8081`. Its data and derived result caches stay under development/runtime, including .cache/ocr; it does not clear the main project's result cache. Main processing retains project/.cache/ocr. Do not run tests against the main queue. Development mode cannot combine with custom config or startup installation.
 
 ## Stop and restart
 
@@ -107,7 +107,9 @@ Restore matching data together to their recorded paths while processes are stopp
 | Rejected PDF | Open original error; supply a complete readable non-password PDF that requires no structural repair |
 | Queued but idle | Start worker with the same state directory; inspect native ownership/error and component status |
 | Another process owns lock | Find the existing scanner/worker; do not steal it or delete the held lock |
-| Long model wait | Check current stage and heartbeat; existing request timeout is two hours; do not infer a hang from no token output |
+| SQLite busy | State uses native WAL on a local disk with SQLite 3.51.3+; normal readers and writers can overlap. Shared read execute calls and transaction begin/commit retry twice after the first wait, with brief backoff; warnings appear in logs. Write bodies are not replayed. The limit is per operation, not a whole request. Do not delete database/journal/ownership-lock files. Persistent contention after three attempts still fails visibly and follows managed restart/recovery; inspect long transactions and machine load. |
+| SQLite runtime/WAL prerequisite error | Check the launcher's Python with `python -c "import sqlite3; print(sqlite3.sqlite_version)"`. Use a Python build with SQLite 3.51.3+ and a local writable state directory supporting WAL; older runtimes are rejected before writable initialization. A read-only dashboard never enables WAL. |
+| Long model wait | Check current stage and heartbeat; existing request timeout is two hours; terminal output-limit failures are retained and eligible fields try the installed alternate reader. An unseen failed request may still take the configured limit. |
 | Model unavailable/missing | Check local Ollama tags and configured installed vision model; application never downloads it |
 | Missing field | Check PDF/source-reading explanation; unsupported facts remain blank under approved rules |
 | Waiting to save | Check output volume, write permissions, free space and external file interference |

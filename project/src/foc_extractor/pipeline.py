@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 
 from .processing_evidence import emit, observed, track, accepted_vision_refs
 from .ocr_engine import analyze_pdf
-from .parser import parse_result
+from .parser import parse_result, _shipment_summary
 from .excel_writer import populate_template
 from .valuation import apply_valuation
 from .local_vision import DEFAULT_MODEL
@@ -86,25 +86,28 @@ def run(
         from .local_vision import resolve_quantities
         track('goods_vision', resolve_quantities, result, pdf_path, local_model, cache_dir)
     description_refs=set()
-    if initial_region=='INDIA' and local_model:
+    if initial_region in ('BD','INDIA') and local_model:
         from .india import resolve_annotations
-        description_refs=track('india_annotations',resolve_annotations,result,pdf_path,local_model,cache_dir)
+        description_refs=track('india_annotations' if initial_region=='INDIA' else 'goods_annotations',
+                               resolve_annotations,result,pdf_path,local_model,cache_dir)
 
     # 2. Parse structured data
     data = track('parse', parse_result, result, pdf_path, **({'region':initial_region} if initial_region!='BD' else {}))
     selected = select_region(data, region or (template_region(template) if template else None),
                              (result.pages or [result.content])[0])
     active_template = _resolve_template(template, selected)
-    if selected in ('INDIA','JORDAN'):
-        if selected=='INDIA':
+    if selected in ('BD','INDIA','JORDAN'):
+        if selected in ('BD','INDIA'):
             from .india import resolve_invoice_number
         else:
             from .jordan import resolve_invoice_number
-        number = track(selected.lower()+'_invoice_number',resolve_invoice_number,result,pdf_path,local_model,cache_dir)
+        number = track(selected.lower()+'_invoice_number',resolve_invoice_number,result,pdf_path,local_model,cache_dir,
+                       **({'verify_handwriting':True,'corroborate':True} if selected=='BD' else {}))
+        data.invoice_number = number
         if number:
             data.invoice_number = number
             data.warnings = [w for w in data.warnings if not w.startswith(('Best-effort invoice number:', 'invoice_number not established'))]
-            data.warnings.append(('India' if selected=='INDIA' else 'Jordan')+' invoice number supplied by PDF reading; source candidates and any model image retained.')
+            data.warnings.append(REGIONS[selected]['country']+' invoice number supplied by PDF reading; source candidates and any model image retained.')
     if selected=='JORDAN':
         from .jordan import resolve_date
         data.export_date = track('jordan_date',resolve_date,result,pdf_path,local_model,cache_dir)
@@ -125,7 +128,7 @@ def run(
     data.warnings.append(f'Package count basis: {package_evidence["basis"]}; selected count {data.package_count}.')
     if package_evidence['reason']:
         data.warnings.append('Package extraction: '+package_evidence['reason'])
-    if data.gross_weight_kg is None and not re.search(r'\bGROSS\s+WEIGHT|\bG\.?\s*W\.?(?:\s*:|\s+\d)',result.content,re.I):
+    if data.gross_weight_kg is None and not re.search(r'\bGROSS\s+WEIGHT|\bG\.?\s*W\.?(?:\s*:|\s+\d)',_shipment_summary(result),re.I):
         from .weights import packing_weight
         weight = track('weights', packing_weight, result, pdf_path, cache_dir,local_model=local_model)
         emit('field_evidence', field='gross_weight_kg', evidence=weight)
@@ -149,7 +152,7 @@ def run(
 
     track('valuation', apply_valuation, data)
     contributions=[]
-    if selected in ('INDIA','JORDAN') and any(ref.endswith(':header:invoice_number') for ref in accepted_vision_refs()):
+    if data.invoice_number and any(ref.endswith(':header:invoice_number') for ref in accepted_vision_refs()):
         contributions.append({'field':'invoice_number'})
     if selected=='JORDAN' and data.export_date is not None and any(ref.endswith(':header:export_date') for ref in accepted_vision_refs()):
         contributions.append({'field':'export_date'})

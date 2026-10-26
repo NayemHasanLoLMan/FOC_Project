@@ -81,8 +81,8 @@ Imports use src.foc_extractor with project/ on sys.path; the existing CLI script
 |---|---|
 | models.py | LineItem and FOCData dataclasses; FOCData.to_dict() |
 | ocr_engine.py | OCRWord, OCRTableCell, OCRTable, OCRResult; analyze_pdf; Paddle readers, coordinates, orientation/skew, tables and caches |
-| parser.py | parse_result; bounded field/goods extraction, composition/unit normalization, company directory, grouping/source references |
-| india.py | India source currency/evidence, bounded same-line/adjacent-line/table header reading, explicit export/latest labelled packing date, bounded adjacent-table/page color continuation, monetary columns, source-backed HS continuation/width, PDF-first invoice-number reading and optional handwritten heading transcription |
+| parser.py | parse_result; bounded field/goods extraction, composition/unit normalization, source-only Bangladesh headers, grouping/source references |
+| india.py | India source currency/evidence, bounded same-line/adjacent-line/table header reading, explicit export/latest labelled packing date, bounded adjacent-table/page color continuation, monetary columns, source-backed HS continuation/width, shared bounded invoice-number reading (with optional source-view agreement) and optional handwritten heading transcription |
 | jordan.py | Source-only cover headers and all-page recipient evidence; reuses bounded reference/date readers, optional local vision and the approved include-all-pages/cover-destination policy |
 | packages.py | packing_packages; explicit totals/ranges/IDs/physical package cells |
 | weights.py | packing_weight; complete corrected physical KG-cell sums |
@@ -179,6 +179,10 @@ The database has application ID 0x464F4349 and user_version 6. Migrations 1/2/3/
 
 Jobs uniquely identify source identity/content hash. Partial unique indexes enforce one running attempt globally and one unfinished attempt per job. Foreign keys are enabled on connections. Transactions are short; no inference runs inside them.
 
+Transaction begin and commit retry only SQLite BUSY/LOCKED result codes, at most three attempts with the existing five-second connection wait and 0.1/0.2-second backoff. Shared read scopes use a standard-library SQLite connection subclass that applies the same bounded retry to execute, including direct dashboard queries and initial read PRAGMAs. Cursors and their fetch/iteration behavior remain native. Write scopes retain ordinary connections: commit retries retain the same transaction, and caller write statements/bodies are never replayed. The connection context rolls back an unsuccessful transaction and closes its handle. Other errors, write-body failures and exhausted contention still propagate through existing recovery paths. Limits apply per operation, not to an entire HTTP request; persistent contention can still fail a request or component visibly. Schema and connection timeouts are unchanged.
+
+After writable initialization validates/migrates the database and commits, it enables native WAL journaling and verifies the returned mode. Normal reader/writer overlap no longer requires readers to wait for a writer commit. This uses SQLite's default automatic checkpoints and FULL synchronous setting; no custom checkpoint thread or reduced durability is introduced. State must reside on a local disk supporting WAL, and the runtime must bundle SQLite 3.51.3 or newer to avoid the documented WAL-reset defect. Read-only dashboards never change journal mode. Existing backup/reset code uses SQLite's backup API, which includes committed WAL data; keep database sidecars together for filesystem backups as described in operations.md. No schema migration or invoice-data rewrite is required.
+
 Attempt metadata includes configuration, application version/hash, Python version, region, actual template path/hash, rates hash, configured model, resolved model digest when known, native worker lock/PID and a compact processing summary. Historical BD attempts/receipts without region remain readable as BD. New receipts record region and recovery checks it against the job. The same accepted path/content cannot be reassigned to a different region. Issues are strings independent of success/failure; an old missing:net_weight_kg issue does not mean conversion failed. Net weight is no longer required merely because the invoice is non-BD.
 
 Processing summary counts vision attempts, fresh calls/responses, cached responses and accepted cells. vision_contributions is null until the final decision, [] for no linked contribution, or field/source-reference entries. Legacy cached evidence may lack exact historical model/image telemetry: keep unknown values unknown.
@@ -209,7 +213,7 @@ Ready receipts are written before the SQLite prepare transition. This permits re
 | ocr_cache / ocr_page | Fresh/cache state, page/word/table counts, DPI/transforms where available |
 | ocr_document | Retained original OCR JSON artifact path/hash, page count/transforms |
 | cell_ocr | Field/page/box, OCR texts/scores, candidate, acceptance and preprocessing |
-| field_source | Field, selected value and method: PDF, filename policy, directory, derived sum or approved rates |
+| field_source | Field, selected value and method: PDF reading, derived sum or approved rates; preserved older attempts may retain historical filename/directory methods |
 | field_cache / field_evidence | Cached or current package/weight basis, cells/entries, totals and reason |
 | field_decision | Accepted/rejected field decision, such as conflicting net/gross |
 | valuation_rate | Approved approximate rule/rate/unit and source references |

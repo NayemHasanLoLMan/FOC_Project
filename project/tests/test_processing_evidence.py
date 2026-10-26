@@ -49,10 +49,10 @@ class EvidenceTests(unittest.TestCase):
     def events(self, kind):
         return [e for e in self.store.events(self.job) if e['details'].get('kind') == kind]
 
-    def transcribe(self, response=None):
+    def transcribe(self, response=None, **kwargs):
         @observed
         def work():
-            return transcribe_cell(self.image, 'test', self.root / 'cache', context=self.context)
+            return transcribe_cell(self.image, 'test', self.root / 'cache', context=self.context, **kwargs)
         with patch('src.foc_extractor.local_vision._request', side_effect=[self.tags, response or self.answer]) as request:
             answer = work(observer=self.recorder)
         return answer, request
@@ -94,7 +94,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(self.events('vision_response')[-1]['details']['done_reason'], 'length')
         self.assertFalse(self.events('vision_response')[-1]['details']['structured'])
         with self.assertRaises(ValueError):
-            self.transcribe({'done_reason': 'stop', 'message': {'content': '{bad'}})
+            self.transcribe({'done_reason': 'stop', 'message': {'content': '{bad'}},prompt='separate invalid JSON test')
         self.assertEqual(self.events('vision_failed')[-1]['details']['raw_content'], '{bad')
 
     def test_quantity_acceptance_and_groupable_source_reference_are_separate_from_transport(self):
@@ -120,7 +120,7 @@ class EvidenceTests(unittest.TestCase):
         def work():
             resolve_quantities(OCRResult(tables=[OCRTable(cells, 2, 2)]), self.source, 'test')
             return accepted_vision_refs().copy()
-        with patch('src.foc_extractor.local_vision._request', side_effect=[self.tags, self.answer]), \
+        with patch('src.foc_extractor.local_vision._request', side_effect=[self.tags, self.answer,self.tags]), \
              patch('src.foc_extractor.local_vision._cached_page_image', return_value=self.image):
             self.assertEqual(work(observer=self.recorder), set())
         self.assertEqual(cells[-1].content, 'Z YDS')
@@ -176,7 +176,7 @@ class EvidenceTests(unittest.TestCase):
             self.store.processing_event(self.attempt['id'], 'foreign', {'kind': 'stage', 'stage': 'ocr', 'status': 'started'})
 
     def test_malformed_message_preserves_the_failure_record(self):
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             self.transcribe({'done_reason':'stop','message':None})
         self.assertEqual(len(self.events('vision_failed')), 1)
 
