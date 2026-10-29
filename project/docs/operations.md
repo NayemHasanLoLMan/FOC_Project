@@ -127,6 +127,8 @@ No automatic evidence retention/deletion is enabled. Keep managed artifacts and 
 
 ## Windows background operation
 
+To process one queued invoice ahead of the backlog, stop the existing service first and launch `python project/run_system.py --job-id JOB_ID` (optionally with `--background`). This selects only that job for the first claim, preserves the one-worker guard and holds the rest of the queue paused. The dashboard and folder scanner remain available. After the selected attempt, Resume processing restores ordinary queue consumption. Do not run a second coordinator alongside the managed service.
+
 Run from the repository root with the same config used at installation:
 
 ```powershell

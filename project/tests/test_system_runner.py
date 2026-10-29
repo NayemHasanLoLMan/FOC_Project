@@ -108,6 +108,32 @@ class SystemRunnerTests(unittest.TestCase):
         self.assertEqual(self.errors, [])
         self.assertEqual(JobStore(self.config.state_dir/'jobs.sqlite3').counts()['completed'],1)
 
+    def test_selected_job_runs_ahead_and_backlog_waits_until_explicit_resume(self):
+        import hashlib
+        from uuid import uuid4
+        store = JobStore(self.config.state_dir/'jobs.sqlite3')
+        for name in ('older.pdf','selected.pdf'):
+            self.source(name)
+            source = self.config.incoming_dir/name
+            store.enqueue(source, hashlib.sha256(source.read_bytes()).hexdigest(), source)
+        original = system_runner.run_system
+        def selected(*args, **kwargs):
+            return original(*args, **kwargs, only_job_id=2)
+        with patch.object(system_runner,'run_system',side_effect=selected), patch.object(queue_worker,'run',side_effect=self.convert) as convert:
+            self.start()
+            self.wait_for(lambda:store.counts()['completed']==1)
+            time.sleep(.15)
+            self.assertEqual(store.get_job(1)['state'],'queued')
+            self.assertEqual(store.get_job(2)['state'],'completed')
+            self.assertTrue(store.queue_control()['paused'])
+            self.assertEqual(convert.call_args.args[0].name,'selected.pdf')
+            self.assertEqual(convert.call_count,1)
+            store.admin_command(str(uuid4()),'resume')
+            self.wait_for(lambda:store.counts()['completed']==2)
+            self.assertEqual(store.get_job(1)['state'],'completed')
+            self.finish()
+        self.assertEqual(self.errors,[])
+
     def test_component_failure_stops_system_and_releases_locks(self):
         with patch.object(system_runner.FolderScanner,'scan_once',side_effect=OSError('scanner unavailable')):
             with self.assertRaisesRegex(RuntimeError,'scanner stopped: scanner unavailable'):

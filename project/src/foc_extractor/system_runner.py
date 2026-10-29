@@ -16,11 +16,15 @@ from .pipeline_config import initialize_folders
 from .queue_worker import QueueWorker
 
 
-def run_system(config, port=8080, stop=None, *, development=False):
+def run_system(config, port=8080, stop=None, *, development=False, only_job_id=None):
     from .runtime_settings import load_runtime_settings, save_runtime_settings
     config = load_runtime_settings(config,development=development)
     stop = stop if stop is not None else threading.Event()
     store = JobStore(config.state_dir / 'jobs.sqlite3')
+    if only_job_id is not None:
+        if type(only_job_id) is not int or only_job_id < 1 or store.get_job(only_job_id)['state'] != 'queued':
+            raise ValueError('Select a queued job using its positive job ID')
+        store.admin_command(str(uuid4()), 'pause')
     reset = None
     reset_locks = (threading.Lock(), threading.Lock())
     from .development_reset import validate_workspace, clear_workspace
@@ -75,11 +79,13 @@ def run_system(config, port=8080, stop=None, *, development=False):
                     store.component('scanner', owner, os.getpid(), 'failed' if failure else 'stopped', failure)
 
             def process():
+                selected_job = only_job_id
                 while not stop.is_set() and not worker.stop_requested.is_set():
                     with reset_locks[1]:
-                        attempt = worker.run_once()
+                        attempt = worker.run_once(job_id=selected_job) if selected_job is not None else worker.run_once()
                     if attempt is not None:
                         print(json.dumps({'attempt_id': attempt, 'jobs': store.counts()}), flush=True)
+                        selected_job = None
                     else:
                         stop.wait(config.scan_interval_seconds)
                 worker._healthy()

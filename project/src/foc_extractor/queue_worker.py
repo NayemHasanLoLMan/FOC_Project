@@ -201,10 +201,10 @@ class QueueWorker:
         self._healthy()
         self.store.finish(attempt['id'], self.owner, 'completed', output_path=target)
 
-    def run_once(self):
+    def run_once(self, *, job_id=None):
         self._healthy()
         for attempt in self.store.unfinished_attempts():
-            if attempt['state'] == 'waiting_to_save' and attempt['worker_id'] == self.owner:
+            if attempt['state'] == 'waiting_to_save' and attempt['worker_id'] == self.owner and (job_id is None or attempt['job_id'] == job_id):
                 self._publish(attempt)
         if self.stop_requested.is_set():
             return None
@@ -219,7 +219,7 @@ class QueueWorker:
                 base = self.store.get_attempt(edit['base_attempt_id'])
                 value['output_dir'] = str(Path(base['output_path']).parent)
             return value
-        attempt = self.store.claim_next(self.owner, metadata_for)
+        attempt = self.store.claim_next(self.owner, metadata_for, job_id=job_id) if job_id is not None else self.store.claim_next(self.owner, metadata_for)
         if attempt is None:
             return None
         metadata = attempt['metadata']

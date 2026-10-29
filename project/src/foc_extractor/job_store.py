@@ -235,16 +235,19 @@ class JobStore:
         with self._connection() as db:
             return {**dict.fromkeys(STATES, 0), **dict(db.execute('SELECT state,COUNT(*) FROM jobs GROUP BY state'))}
 
-    def claim_next(self, worker_id: str, metadata) -> dict | None:
+    def claim_next(self, worker_id: str, metadata, *, job_id=None) -> dict | None:
         worker_id = _text(worker_id, 'worker_id')
+        if job_id is not None and (type(job_id) is not int or job_id < 1):
+            raise ValueError('Selected job_id must be a positive integer')
         if not isinstance(metadata, dict) and not callable(metadata):
             raise ValueError('Attempt metadata must be a dictionary')
         with self._connection(write=True) as db:
-            if db.execute('SELECT paused FROM queue_control WHERE id=1').fetchone()[0]:
+            if job_id is None and db.execute('SELECT paused FROM queue_control WHERE id=1').fetchone()[0]:
                 return None
             if db.execute("SELECT 1 FROM attempts WHERE state='running'").fetchone():
                 return None
-            job = db.execute("SELECT id,manual_edit_json,region FROM jobs WHERE state='queued' ORDER BY id LIMIT 1").fetchone()
+            job = db.execute("SELECT id,manual_edit_json,region FROM jobs WHERE state='queued' AND (? IS NULL OR id=?) ORDER BY id LIMIT 1",
+                             (job_id, job_id)).fetchone()
             if job is None:
                 return None
             metadata = metadata(dict(job)) if callable(metadata) else dict(metadata)
