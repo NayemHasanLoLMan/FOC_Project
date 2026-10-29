@@ -105,6 +105,8 @@ def run_system(config, port=8080, stop=None, *, development=False):
                 print(f'PDF inbox: {config.incoming_dir}\nInvoice output: {config.output_dir}', flush=True)
                 if config.india_enabled:
                     print(f'India PDF inbox: {config.india_incoming_dir}\nIndia invoice output: {config.india_output_dir}', flush=True)
+                if config.jordan_enabled:
+                    print(f'Jordan PDF inbox: {config.jordan_incoming_dir}\nJordan invoice output: {config.jordan_output_dir}', flush=True)
                 print('Ctrl+C stops intake and waits for the current invoice to finish.', flush=True)
                 while not stop.wait(0.2):
                     if worker.stop_requested.is_set():

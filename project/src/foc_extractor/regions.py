@@ -28,8 +28,8 @@ def template_region(path):
 def select_region(data, requested=None, cover=''):
     """Check consignment evidence only; packing-page recipient conflicts need separate review."""
     selected = region_code(requested or data.template_type or 'BD')
-    if selected=='INDIA' and data.currency!='USD':
-        raise ValueError(f'India invoice supports USD only; source currency is {data.currency}. No currency conversion or USD invoice was generated')
+    if selected in ('BD', 'INDIA') and data.currency!='USD':
+        raise ValueError(f'{REGIONS[selected]["country"]} invoice supports USD only; source currency is {data.currency}. No currency conversion or USD invoice was generated')
     countries = [data.destination_country] if data.destination_country else []
     declared = re.search(r'\b(?:DESTINATION\s+COUNTRY|COUNTRY\s+OF\s+(?:ULTIMATE\s+)?DESTINATION)\s*[:\-]?\s*([A-Za-z]+)', cover, re.I)
     if declared:

@@ -97,7 +97,7 @@ class IndiaWriterTests(unittest.TestCase):
         for coord in ('C9','B11','B12','B16','H11','H12','H13','D20','C25','B27','G27','B33','E33','F33','G33','I33','I42'):
             self.assertIsNone(s[coord].value,coord)
         self.assertEqual(s['A17'].value,'SHIPMENT FROM:          TO:           BY:')
-        self.assertEqual(s['A18'].value,'ON/ABT.:')
+        self.assertEqual(s['A18'].value,'ON/ABT. ')
         self.assertEqual(s['A22'].value,'PORT OF DISCHARGE: ')
         self.assertEqual(s['A23'].value,'SHIPMENT TERMS: ')
         with zipfile.ZipFile(target) as archive:
@@ -107,7 +107,7 @@ class IndiaWriterTests(unittest.TestCase):
         self.assertFalse(any('REVIEW' in str(c.value) or 'VALIDATION' in str(c.value) for row in s for c in row))
         book.close()
 
-    def test_shipment_section_shows_source_values_in_red_without_departure_defaults(self):
+    def test_shipment_section_uses_formatted_invoice_date_and_red_source_values(self):
         data=self.data();data.destination_city='NEW CITY, INDIA'
         data.port_of_discharge='SOURCE PORT';data.shipment_terms='FOB'
         target=self.write(data);verify_workbook(target,data.to_dict(),self.pdf,'INDIA')
@@ -119,9 +119,9 @@ class IndiaWriterTests(unittest.TestCase):
             self.assertEqual(runs[0].font.color.rgb[-6:],'FF0000')
             self.assertGreaterEqual(s.row_dimensions[s[coord].row].height,20)
             self.assertNotEqual(s[coord].fill.fgColor.rgb,'FFFFFF00')
-        self.assertEqual(str(s['A18'].value),'ON/ABT.:')
+        self.assertEqual(str(s['A18'].value),'ON/ABT. FEB. 23, 2027')
         self.assertNotIn('HONG KONG',str(s['A17'].value))
-        self.assertNotIn('2027',str(s['A18'].value))
+        self.assertTrue(all(v.font.color.rgb[-6:]=='000000' for v in s['A18'].value if hasattr(v,'font')))
         self.assertEqual(s['C9'].value,datetime(2027,2,23))
         book.close()
 
@@ -136,14 +136,27 @@ class IndiaWriterTests(unittest.TestCase):
         self.assertEqual(s.page_setup.fitToWidth,1);self.assertEqual(s.page_setup.fitToHeight,0)
         book.close()
 
+    def test_on_abt_tracks_the_invoice_date_without_a_fixed_sample_date(self):
+        data=self.data()
+        for value,expected in (('2026-10-14','ON/ABT. OCT. 14, 2026'),
+                               ('2028-01-06','ON/ABT. JAN. 6, 2028'),(None,'ON/ABT. ')):
+            data.export_date=value
+            target=self.write(data);verify_workbook(target,data.to_dict(),self.pdf,'INDIA')
+            book=load_workbook(target,rich_text=True)
+            self.assertEqual(str(book.active['A18'].value),expected)
+            book.close()
+
     def test_pipeline_accepts_india_growth_with_approved_rates(self):
         data=self.data(7);data.total_value=None
+        data.port_of_discharge='SOURCE PORT';data.shipment_terms='FOB'
         for item in data.items:item.amount=None
         with patch('src.foc_extractor.pipeline.analyze_pdf',return_value=OCRResult(pages=['DESTINATION COUNTRY INDIA'])), \
              patch('src.foc_extractor.pipeline.parse_result',return_value=data):
             output=run(self.pdf,region='INDIA',output_dir=self.root/'output',local_model=None)
         verify_workbook(output,data.to_dict(),self.pdf,'INDIA')
-        book=load_workbook(output);self.assertEqual(book.active['I43'].value,1.61)
+        self.assertEqual(data.port_of_discharge,'CHENNAI, INDIA')
+        self.assertEqual(data.shipment_terms,'CPT')
+        book=load_workbook(output);self.assertEqual(book.active['I43'].value,2)
         self.assertTrue(all(item.unit_price==0.2 and item.amount==0.23 for item in data.items));book.close()
 
     def test_verifier_rejects_changed_total_text_date_and_missing_or_unprinted_declarations(self):

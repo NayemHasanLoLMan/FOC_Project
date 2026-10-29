@@ -18,6 +18,25 @@ from src.foc_extractor.queue_worker import QueueWorker
 
 
 class InvoiceEditTests(unittest.TestCase):
+    def test_description_only_keeps_source_amount_and_declared_total(self):
+        original={'source_file':'new.pdf','template_type':'BD','total_value':119.75,
+                  'items':[{'description':'MOULD','quantity':2,'unit':'SETS','unit_price':60,'amount':119.75}]}
+        row={'source_index':0,'description':'DIE MOULD','quantity':2,'unit':'SETS','unit_price':60}
+        data=edited_data(original,{'items':[row]})
+        self.assertEqual((data.items[0].unit_price,data.items[0].amount,data.total_value),(60,119.75,119.75))
+
+    def test_bangladesh_remarks_preserve_values_and_enforce_text_limits(self):
+        original={'source_file':'new.pdf','template_type':'BD','total_value':2,
+                  'items':[{'description':'MOULD','quantity':5,'unit':'SETS','unit_price':.1,'amount':.5}]}
+        remarks='MOULD\nFOR 100% EXPORT ORIENTED GARMENTS INDUSTRY.\nFree of cost,Shipment under export sales contract# ROSE-00251 Dated:24-Jun-26'
+        data=edited_data(original,{'remarks':remarks})
+        self.assertEqual(data.remarks,remarks)
+        self.assertEqual((data.total_value,data.to_dict()['items'][0]['amount']),(2,.5))
+        for invalid in (123,'x'*2001):
+            with self.assertRaises(ValueError):validate_changes({'remarks':invalid},'BD')
+        for region in ('INDIA','JORDAN'):
+            with self.assertRaises(ValueError):validate_changes({'remarks':remarks},region)
+
     def setUp(self):
         fixtures.DashboardTests.setUp(self)
         self.headers={'Origin':'http://localhost','X-CSRF-Token':self.client.get('/api/controls').get_json()['csrf_token']}
@@ -36,15 +55,16 @@ class InvoiceEditTests(unittest.TestCase):
         self.assertEqual(self.store.get_attempt(attempt)['state'],'completed',self.store.get_attempt(attempt)['error'])
         return attempt
 
-    def test_edit_adds_missing_information_and_preserves_old_invoice_without_ocr(self):
+    def test_edit_updates_current_file_and_keeps_internal_source_evidence_without_ocr(self):
         old=self.complete();path=Path(self.store.get_attempt(old)['output_path']);digest=hashlib.sha256(path.read_bytes()).hexdigest()
         receipt=Path(self.store.get_attempt(old)['receipt_path']);original_receipt=receipt.read_bytes()
         response=self.submit(old,{'tin_number':'123-4567','import_cover_note':'User supplied reference','consignee':'Changed consignee'})
         self.assertEqual(response.status_code,200,response.data)
         new=self.process_edit()
-        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),digest)
+        self.assertNotEqual(hashlib.sha256(path.read_bytes()).hexdigest(),digest)
         self.assertEqual(receipt.read_bytes(),original_receipt)
-        self.assertNotEqual(str(path),self.store.get_attempt(new)['output_path'])
+        self.assertEqual(str(path),self.store.get_attempt(new)['output_path'])
+        self.assertEqual(list(self.config.output_dir.glob('*.xlsx')),[path])
         detail=self.client.get(f'/api/jobs/{self.job}').get_json()
         self.assertEqual(detail['data']['tin_number'],'123-4567')
         self.assertEqual(detail['data']['consignee'],'Changed consignee')
@@ -92,12 +112,17 @@ class InvoiceEditTests(unittest.TestCase):
 
     def test_locked_save_retries_prepared_edit_without_creating_another_attempt(self):
         old=self.complete();self.assertEqual(self.submit(old,{'tin_number':'123-4567'}).status_code,200)
+        path=Path(self.store.get_attempt(old)['output_path']);before=path.read_bytes()
         with patch.object(queue_worker,'run') as converter,QueueWorker(self.config,self.store) as worker:
             with patch.object(queue_worker,'_publish_copy',side_effect=PermissionError('Locked')):
                 new=worker.run_once()
             self.assertEqual(self.store.get_attempt(new)['state'],'waiting_to_save')
+            self.assertEqual(path.read_bytes(),before)
+            self.assertEqual(list(path.parent.glob('*.xlsx')),[path])
             worker.run_once()
             self.assertEqual(self.store.get_attempt(new)['state'],'completed')
+            self.assertEqual(Path(self.store.get_attempt(new)['output_path']),path)
+            self.assertEqual(list(path.parent.glob('*.xlsx')),[path])
         converter.assert_not_called();self.assertEqual(len(self.store.attempts(self.job)),2)
 
     def test_restart_recovers_an_interrupted_manual_edit_without_ocr(self):
@@ -141,7 +166,7 @@ class InvoiceEditTests(unittest.TestCase):
         self.assertEqual(self.client.get(f'/jobs/{self.job}/edit').status_code,409)
         self.complete()
         page=self.client.get(f'/jobs/{self.job}/edit').get_data(as_text=True)
-        self.assertIn('Save new invoice version',page);self.assertIn('Import cover note',page)
+        self.assertIn('Save changes',page);self.assertNotIn('Save new invoice version',page);self.assertIn('Import cover note',page)
         self.assertIn('TIN',page)
         self.assertNotIn('<script>alert(1)</script>',page)
         listing=self.client.get('/jobs').get_data(as_text=True)
@@ -160,6 +185,57 @@ class InvoiceEditTests(unittest.TestCase):
         import openpyxl
         book=openpyxl.load_workbook(self.store.get_attempt(new)['output_path'])
         self.assertEqual(book.active['B33'].value,'=1+1');self.assertEqual(book.active['B33'].data_type,'s');book.close()
+
+    def test_repeated_saves_keep_the_registered_file_after_output_settings_change(self):
+        from dataclasses import replace
+        old=self.complete();path=Path(self.store.get_attempt(old)['output_path'])
+        new_folder=self.root/'new-output';new_folder.mkdir()
+        self.config=replace(self.config,output_dir=new_folder)
+        for value in ('123-4567','234-5678'):
+            self.assertEqual(self.submit(old,{'tin_number':value}).status_code,200)
+            old=self.process_edit();attempt=self.store.get_attempt(old)
+            self.assertEqual(Path(attempt['output_path']),path)
+            self.assertEqual(Path(attempt['metadata']['output_dir']),path.parent)
+        self.assertEqual(list(new_folder.glob('*.xlsx')),[])
+        self.assertEqual(list(path.parent.glob('*.xlsx')),[path])
+
+    def test_bad_prepared_copy_never_replaces_the_current_invoice(self):
+        old=self.complete();path=Path(self.store.get_attempt(old)['output_path']);before=path.read_bytes()
+        self.assertEqual(self.submit(old,{'tin_number':'123-4567'}).status_code,200)
+        def corrupt(source,target):Path(target).write_bytes(b'incomplete copy')
+        with patch.object(queue_worker.shutil,'copyfile',side_effect=corrupt),QueueWorker(self.config,self.store) as worker:
+            attempt=worker.run_once()
+        self.assertEqual(self.store.get_attempt(attempt)['state'],'failed')
+        self.assertEqual(path.read_bytes(),before)
+        self.assertEqual(list(path.parent.glob('*.xlsx')),[path])
+        self.assertEqual(list(path.parent.glob('*.tmp')),[])
+
+    def test_recovery_after_replacement_before_db_commit_creates_no_extra_file(self):
+        old=self.complete();path=Path(self.store.get_attempt(old)['output_path']);before=path.read_bytes()
+        self.assertEqual(self.submit(old,{'tin_number':'123-4567'}).status_code,200)
+        with self.assertRaises(sqlite3.OperationalError):
+            with QueueWorker(self.config,self.store) as worker:
+                with patch.object(self.store,'finish',side_effect=sqlite3.OperationalError('commit failed')):
+                    worker.run_once()
+        self.assertNotEqual(path.read_bytes(),before)
+        with patch.object(queue_worker,'run') as converter,QueueWorker(self.config,self.store) as worker:
+            worker.run_once()
+        converter.assert_not_called()
+        self.assertEqual(self.store.get_job(self.job)['state'],'completed')
+        self.assertEqual(list(path.parent.glob('*.xlsx')),[path])
+
+    def test_replacement_cannot_be_redirected_to_another_output_file(self):
+        old=self.complete();path=Path(self.store.get_attempt(old)['output_path']);before=path.read_bytes()
+        self.assertEqual(self.submit(old,{'tin_number':'123-4567'}).status_code,200)
+        with QueueWorker(self.config,self.store) as worker:
+            with patch.object(queue_worker,'_publish_copy',side_effect=PermissionError('locked')):
+                attempt=worker.run_once()
+            receipt=Path(self.store.get_attempt(attempt)['receipt_path']);ready=json.loads(receipt.read_text())
+            other=path.parent/'another-invoice.xlsx';other.write_bytes(b'another invoice')
+            ready['destination']=str(other);receipt.write_text(json.dumps(ready))
+            worker.run_once()
+        self.assertEqual(self.store.get_attempt(attempt)['state'],'failed')
+        self.assertEqual(other.read_bytes(),b'another invoice');self.assertEqual(path.read_bytes(),before)
 
     def test_failed_edit_transaction_keeps_previous_job_and_pending_data(self):
         old=self.complete()

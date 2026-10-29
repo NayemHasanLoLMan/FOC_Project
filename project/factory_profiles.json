@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "status": "approved",
+  "defaults_regions": [
+    "BD",
+    "INDIA",
+    "JORDAN"
+  ],
+  "source": {
+    "workbook": "FOC-AUTOMATION.xlsx",
+    "sha256": "739f7dc599f78c54e640464702c397bb656249ba09c6c14fd06c816c05677cd9",
+    "sheet": "Sheet1",
+    "profile_range": "B3:I9"
+  },
+  "factories": {
+    "EGMCL": {
+      "region": "BD",
+      "address_match": [
+        "ADAMJEE EPZ",
+        "SIDDHIRGANJ"
+      ],
+      "source_row": 3,
+      "consignee": "EPIC GARMENTS MANUFACTURING CO. LTD.",
+      "consignee_address": "Plot # 11- 22, 26-34, MS-SFB # 3, Plot # 265-266,\n271-272,200, 201, 202 & 209, Adamjee EPZ.\nSiddhirganj PS : Narayanganj-1431\nBangladesh\nBIN : 000322109-1402",
+      "destination_country": "BANGLADESH",
+      "import_cover_note": "Import open cover note # GDI/DEZ/07/2019/MAR/C/001352 (OPEN) Dated 03-JUL-2019",
+      "shipment_text": "SHIPMENT FROM HONG KONG TO DHAKA BY AIR",
+      "tin_number": "472-620-435136",
+      "remarks": "SAMPLE OF NO COMMERCIAL VALUE\nINVOICE ONLY FOR CUSTOMS PURPOSE",
+      "origin_country": null,
+      "aliases": [
+        "EGMCL UNIT 1"
+      ]
+    },
+    "EG2": {
+      "region": "BD",
+      "address_match": [
+        "DEPZ EXTENSION AREA",
+        "GONOK BARI"
+      ],
+      "source_row": 4,
+      "consignee": "EPIC GARMENTS MANUFACTURING CO.LTD.,(UNIT-2)",
+      "consignee_address": "SFB NO.08 (GROUND, 1ST,2ND,3RD & 4TH FLOOR)\nDEPZ EXTENSION AREA, GONOK BARI, SAVAR\nDHAKA-1349, BANGLADESH.\nBIN:000320579-0403",
+      "destination_country": "BANGLADESH",
+      "import_cover_note": "Import open cover note # GDI/DEZ/07/2019/MAR/C/001352 (OPEN) Dated 03-JUL-2019",
+      "shipment_text": "SHIPMENT FROM HONG KONG TO DHAKA BY AIR",
+      "tin_number": "211-201-7957/Coy-20",
+      "remarks": "SAMPLE OF NO COMMERCIAL VALUE\nINVOICE ONLY FOR CUSTOMS PURPOSE",
+      "origin_country": null,
+      "aliases": [
+        "EGMCL UNIT 2"
+      ]
+    },
+    "GTL": {
+      "region": "BD",
+      "address_match": [
+        "NIJHURI",
+        "BARAID",
+        "BHALUKA"
+      ],
+      "source_row": 5,
+      "consignee": "GREEN TEXTILE LIMITED",
+      "consignee_address": "NIJHURI, BARAID, 2 NO MEDUARI\nBHALUKA, MYMENSINGH, BANGLADESH.\nBIN:000830659-1302",
+      "destination_country": "BANGLADESH",
+      "import_cover_note": null,
+      "shipment_text": "SHIPMENT FROM HONG KONG TO DHAKA BY AIR",
+      "tin_number": null,
+      "remarks": "SAMPLE OF NO COMMERCIAL VALUE\nINVOICE ONLY FOR CUSTOMS PURPOSE",
+      "origin_country": null
+    },
+    "CIPL": {
+      "region": "BD",
+      "address_match": [
+        "KHEJUR BAGAN",
+        "BARA ASHULIA"
+      ],
+      "source_row": 6,
+      "consignee": "COSMOPOLITAN INDUSTRIES (PVT.) LIMITED",
+      "consignee_address": "Khejur Bagan, Bara Ashulia,Savar PS; Dhaka-1341\nBangladesh\nBIN : 000771673-0112",
+      "destination_country": "BANGLADESH",
+      "import_cover_note": null,
+      "shipment_text": "SHIPMENT FROM HONG KONG TO DHAKA BY AIR",
+      "tin_number": "105-201-6754",
+      "remarks": "SAMPLE OF NO COMMERCIAL VALUE\nINVOICE ONLY FOR CUSTOMS PURPOSE",
+      "origin_country": null
+    },
+    "PGCL": {
+      "region": "BD",
+      "address_match": [
+        "POLASHBARI",
+        "NABINAGAR"
+      ],
+      "source_row": 7,
+      "consignee": "PEARL GARMENTS CO. LTD.",
+      "consignee_address": "Polashbari, Nabinagar, Savar,PS: Dhaka-1349\nBangladesh\nBIN : 000817323-0112",
+      "destination_country": "BANGLADESH",
+      "import_cover_note": null,
+      "shipment_text": "SHIPMENT FROM HONG KONG TO DHAKA BY AIR",
+      "tin_number": null,
+      "remarks": "SAMPLE OF NO COMMERCIAL VALUE\nINVOICE ONLY FOR CUSTOMS PURPOSE",
+      "origin_country": null
+    },
+    "JORDAN": {
+      "region": "JORDAN",
+      "address_match": [
+        "AD DULAYL",
+        "ZARQA"
+      ],
+      "source_row": 8,
+      "consignee": "EPIC DESIGNERS LIMITED JORDAN",
+      "consignee_address": "AD DULAYL INDUSTRIAL PARK, LANE NO. 1201,\nAD DULAYL BASIN 5, AD DULAYL, ZARQA, JORDAN",
+      "destination_country": "JORDAN",
+      "import_cover_note": null,
+      "shipment_text": null,
+      "tin_number": null,
+      "remarks": "SAMPLE OF NO COMMERCIAL VALUE\nINVOICE ONLY FOR CUSTOMS PURPOSE",
+      "origin_country": "CHINA",
+      "aliases": [
+        "EPIC DESIGNERS LIMITED",
+        "EJU1",
+        "EJU 1"
+      ]
+    },
+    "INDIA": {
+      "region": "INDIA",
+      "address_match": [
+        "KALIBETI MOUZA",
+        "JANKIA",
+        "ODISHA"
+      ],
+      "source_row": 9,
+      "consignee": "TRIMETRO GARMENTS INDIA PVT LTD",
+      "consignee_address": "MOTA VILLAGE,KALIBETI MOUZA,IDCO,PLOT 1 AND 2,\nREVENUE PLOT NO 282,JANKIA,KHORDA ODISHA-752020,INDIA\nIEC &PAN : AAJCT7390N\nGST Number : 21AAJCT7390N1ZS",
+      "destination_country": "INDIA",
+      "import_cover_note": null,
+      "shipment_text": "SHIPMENT FROM HONG KONG TO CHENNAI BY AIR",
+      "tin_number": null,
+      "remarks": "THIS IS TRADE SAMPLES AND NOT FOR SALE.\nTHERE IS NO COMMERCIAL VALUE AND FOREIGN EXCHANGE INVOLVED.\nVALUE DECLARED FOR CUSTOMS PURPOSE ONLY.",
+      "origin_country": null,
+      "aliases": [
+        "TGPL"
+      ]
+    },
+    "ROSE": {
+      "region": "BD",
+      "address_match": [
+        "DIAKHALI",
+        "YEARPUR"
+      ],
+      "source_row": null,
+      "source": {
+        "kind": "user_instruction",
+        "approved_on": "2026-10-28"
+      },
+      "consignee": "THE ROSE DRESSES LTD",
+      "consignee_address": "DIAKHALI, YEARPUR\nJAMGORA,ASHULIA, SAVAR,\nDHAKA-1349, Bangladesh\nBIN: 000517241-0403",
+      "remarks": "MOULD\nFOR 100% EXPORT ORIENTED GARMENTS INDUSTRY.\nFree of cost,Shipment under export sales contract# ROSE-00251 Dated:24-Jun-26",
+      "aliases": [
+        "ROSE DRESSES LTD"
+      ]
+    }
+  },
+  "policies": {
+    "matched_factory_details": "use_master_instead_of_pdf",
+    "shipment_text": "use_master_when_factory_matches",
+    "jordan_origin": "always_china",
+    "no_need": "omit"
+  }
+}

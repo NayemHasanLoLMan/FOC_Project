@@ -1,4 +1,4 @@
-"""Local read-only dashboard. Web requests never claim work or invoke models."""
+"""Local dashboard. Uploads use folder intake; web requests never invoke OCR/models."""
 from datetime import datetime, time as day_time, timedelta, timezone
 import hashlib
 from importlib import metadata as packages
@@ -15,10 +15,12 @@ import threading
 import time
 import urllib.request
 
-from flask import Flask, abort, jsonify, render_template, request, send_file
+from flask import Flask, abort, jsonify, render_template, request, send_file, url_for
 from werkzeug.exceptions import HTTPException, SecurityError
 
 from . import __version__
+from .uploads import save_pdf, MAX_UPLOAD_BYTES
+from .folder_intake import InvalidPDFError
 from .job_store import JobStore, STATES
 from .regions import REGIONS
 from .pipeline_config import ROOT, IO_FIELDS, attempt_metadata
@@ -36,6 +38,8 @@ STATE_LABELS = {'completed':'Invoice ready', 'queued':'Waiting to start', 'runni
 
 
 def _field_label(value, region=None):
+    if region=='JORDAN' and value=='consignee_address':
+        return 'Consignee address'
     if region=='INDIA' and value=='consignee_address':
         return 'Consignee address / IEC / PAN / GST'
     if region=='INDIA' and value=='hs_code':
@@ -71,11 +75,11 @@ def _readable_time(value):
 def _user_summary(attempt, state, region=None):
     region = region or (attempt.get('metadata',{}).get('region') if attempt else None)
     notes = list(dict.fromkeys(_issue_text(issue,region) for issue in attempt['issues']
-                              if not (region=='INDIA' and issue=='missing:net_weight_kg'))) if attempt else []
+                              if not (region in ('INDIA','JORDAN') and issue=='missing:net_weight_kg'))) if attempt else []
     if attempt and attempt['metadata'].get('manual_edit'):
-        return {'result':{'completed':'Your edited invoice is ready to download.', 'failed':'The edited invoice could not be saved.',
+        return {'result':{'completed':'Your invoice has been updated.', 'failed':'The invoice changes could not be saved.',
                           'interrupted':'Saving the edited invoice was interrupted.', 'waiting_to_save':'Your edited invoice is waiting to be saved.'}.get(state,'Your invoice changes are being saved.'),
-                'how':'Manual changes use the saved invoice information. The original PDF readings and earlier invoices are preserved.',
+                'how':'Changes update the current invoice file using its saved information. Original PDF readings remain available.',
                 'notes':notes}
     result = {'completed':'The invoice was created and is ready to download.',
               'waiting_to_save':'The invoice has been created. Saving it to the output folder is still pending.',
@@ -148,14 +152,10 @@ def _prepared(job, attempt, kind, *, with_name=False):
     name = ready[key+'_name']
     if Path(name).name != name:
         raise ValueError('Artifact name is not a basename')
-    if kind == 'invoice':
-        root = Path(attempt['metadata'].get('output_dir', attempt['metadata']['configuration']['output_dir']))
-        path = Path(attempt['output_path'])
-        if path.parent != root or path.suffix.lower() != '.xlsx':
-            raise ValueError('Invoice is outside its recorded output folder')
-    else:
-        root, path = folder, folder / name
-    content = _file_bytes(path, root, ready[key+'_sha256'])
+    if key == 'workbook' and Path(name).suffix.lower() != '.xlsx':
+        raise ValueError('Invoice is not an XLSX workbook')
+    # Published copies can acquire metadata; history uses the verified saved original.
+    content = _file_bytes(folder / name, folder, ready[key+'_sha256'])
     return (content,name) if with_name else content
 
 
@@ -323,14 +323,26 @@ class DashboardData:
                 continue
             related = [e for e in reading_events if e['details'].get('call_id')==event['details'].get('call_id')]
             response = next((e['details'] for e in related if e['details'].get('kind')=='vision_response'), {})
-            decision = next((e['details'] for e in related if e['details'].get('kind')=='vision_decision'), {})
+            decision = next((e['details'] for e in reversed(related) if e['details'].get('kind')=='vision_decision'), {})
             field = event['details'].get('field','unknown')
             summary = reading_attempt['metadata'].get('processing',{}) if reading_attempt else {}
             contributions = summary.get('vision_contributions')
             used = bool(decision.get('accepted')) and any(c['field']==field and (field!='goods_quantity' or c.get('source_ref')==event['details'].get('source_ref'))
                                                          for c in contributions or [])
+            matching_number = False
+            if field=='invoice_number' and data:
+                from .india import _invoice_reading
+                number = decision.get('value') or _invoice_reading(decision.get('candidate',(response.get('answer') or {}).get('text')),True)
+                matching_number = bool(number) and number==data.get('invoice_number')
             if used:
                 outcome = 'This reading was used in the invoice.'
+            elif matching_number and attempt and 'invoice_number' in attempt['metadata'].get('manual_edit',{}).get('changes',{}):
+                outcome = 'This reading matches the number entered in this saved revision.'
+            elif matching_number and any(e['details'].get('kind')=='vision_decision' and e['details'].get('field')=='invoice_number' and e['details'].get('accepted')
+                                        and e['details'].get('value')==number for e in reading_events):
+                outcome = 'This reading matches the invoice number confirmed by another reading.'
+            elif not decision and reading_attempt and reading_attempt['state']=='running':
+                outcome = 'This reading is waiting for the final selection.'
             elif decision.get('accepted'):
                 outcome = ('The reading was accepted, but did not produce a final invoice value.'
                            if contributions is not None else 'The reading was accepted. The final invoice is not ready yet.')
@@ -373,6 +385,8 @@ def create_app(config, *, development_reset=None, development_mode=False, update
 
     @app.before_request
     def local_requests():
+        if request.endpoint == 'upload_pdf':
+            request.max_content_length = MAX_UPLOAD_BYTES + 1024 * 1024
         if request.remote_addr not in ('127.0.0.1', '::1'):
             abort(403)
         if request.method not in ('GET', 'HEAD', 'POST'):
@@ -386,7 +400,7 @@ def create_app(config, *, development_reset=None, development_mode=False, update
                 abort(405)
             if request.headers.get('Origin') != request.host_url.rstrip('/') or not secrets.compare_digest(request.headers.get('X-CSRF-Token', ''), csrf_token):
                 abort(403, description='Reload this dashboard before sending a command.')
-            if not request.is_json:
+            if request.endpoint != 'upload_pdf' and not request.is_json:
                 abort(415, description='Commands require application/json.')
 
     @app.after_request
@@ -439,6 +453,36 @@ def create_app(config, *, development_reset=None, development_mode=False, update
     def overview():
         return render_template('overview.html', status=data.status(), listing=data.jobs({}, 1), filters={}, states=STATES)
 
+    @app.get('/upload')
+    def upload():
+        return render_template('upload.html', enabled_regions=data.config.inboxes(), max_upload_bytes=MAX_UPLOAD_BYTES)
+
+    @app.post('/api/uploads')
+    def upload_pdf():
+        if request.mimetype != 'multipart/form-data':
+            abort(415, description='Choose a PDF and a country using the upload form.')
+        if (set(request.form) != {'region'} or set(request.files) != {'file'}
+                or len(request.form.getlist('region')) != 1 or len(request.files.getlist('file')) != 1):
+            abort(400, description='Choose one PDF and one country.')
+        region = request.form['region']
+        if region not in REGIONS:
+            abort(400, description='Choose Bangladesh, India or Jordan.')
+        folder = data.config.inboxes().get(region)
+        if folder is None:
+            abort(409, description='Enable '+REGIONS[region]['country']+' intake in System before uploading.')
+        try:
+            name = save_pdf(request.files['file'], folder)
+        except FileExistsError:
+            abort(409, description='A PDF with this name already exists in this country’s incoming folder. Use Reprocess on its job, or rename your file.')
+        except InvalidPDFError:
+            abort(400, description='Upload a complete, readable PDF without a password.')
+        except ValueError as error:
+            abort(400, description=str(error))
+        except OSError:
+            abort(503, description='The PDF could not be saved. Check incoming-folder access and available disk space.')
+        return jsonify(filename=name, region=region, status='waiting_for_intake',
+                       jobs_url=url_for('jobs', region=region, q=Path(name).stem, uploaded=1)), 201
+
     @app.get('/jobs')
     def jobs():
         selected = filters()
@@ -458,8 +502,8 @@ def create_app(config, *, development_reset=None, development_mode=False, update
         if not view['data']:
             abort(409,description='The saved invoice information could not be verified.')
         region=view['job']['region']
-        if region not in ('BD','INDIA') or view['data'].get('template_type') not in (region,None if region=='BD' else region):
-            abort(409,description='Editing is available for matching Bangladesh and India invoices.')
+        if region not in REGIONS or view['data'].get('template_type') not in (region,None if region=='BD' else region):
+            abort(409,description='Editing is available for an invoice matching its recorded country.')
         return render_template('edit.html',**_public(view),edit_fields=editable_fields(region))
 
     @app.get('/system')

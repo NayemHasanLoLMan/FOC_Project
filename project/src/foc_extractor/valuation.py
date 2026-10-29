@@ -1,63 +1,12 @@
-"""Apply approved regional approximate USD rates without replacing source values."""
-from .processing_evidence import emit
+"""Apply approved unit-based estimates, preserving explicit PDF money values."""
 import json
 import re
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation, ROUND_DOWN, ROUND_HALF_UP
 from pathlib import Path
 
+from .processing_evidence import emit
 
 RATES_FILE = Path(__file__).resolve().parents[2] / 'valuation_rates.json'
-RULES = [
-    ('fabric_per_yd', 'YDS', r'\bFABRICS?\b|%\s*(?:COTTON|POLYESTER|NYLON|LINEN|VISCOSE|RAYON|LYOCELL|POLYAMIDE)\b'),
-    ('fabric_per_yd', 'YDS', r'\bINTERLINING\b'),
-    ('die_mould_per_set', 'SETS', r'^DIE MOULD(?:\s*\([^)]*\))?$'),
-    ('shank_rivet_per_pc', 'PCS', r'^(?!.*\b(?:DIES?|MOULDS?|MOLDS?|CARDS?|TOOLS?|MACHINES?)\b).*\b(?:SHANK|RIVETS?)\b'),
-    ('fabric_card_per_pc', 'PCS', r'^FABRIC CARD$'),
-    ('metal_snap_per_set', 'SETS', r'^(?:METAL|MEATAL) SNAP$'),
-    ('zipper_clip_per_pc', 'PCS', r'^ZIPPER CLIP$'),
-    ('fabric_swatch_per_set', 'SETS', r'^FABRIC SWATCH(?:ES)?$'),
-    ('bulk_trim_card_per_set', 'SETS', r'^BULK TRIM CARD$'),
-    ('27l_shank_per_gross', 'GROSS', r'^27L SHANK$'),
-    ('27l_snap_per_gross', 'GROSS', r'^27L SNAP$'),
-    ('24l_shank_per_gross', 'GROSS', r'^24L SHANK$'),
-    ('24l_snap_per_gross', 'GROSS', r'^24L SNAP$'),
-    ('9_5mm_rivet_per_gross', 'GROSS', r'^9\.5\s*MM RIVET$'),
-    ('hidden_snap_per_gross', 'GROSS', r'^HIDDEN SNAP$'),
-    ('fabric_swatch_card_per_set', 'SETS', r'^FABRIC SWATCH(?:ES)? CARD$'),
-    ('trim_card_per_pc', 'PCS', r'^TRIM CARD$'),
-    ('ladies_cotton_stretch_pants_per_pc', 'PCS', r"^(?:LADY|LADIES|WOM[AE]N'?S?)\b.*\bCOTTON\b.*\b(?:SPANDEX|ELASTANE|STRETCH)\b.*\bPANTS?$"),
-    ('mens_cotton_pants_per_pc', 'PCS', r"^MEN'?S?\b.*\b100% COTTON\b.*\bPANTS?$"),
-    ('kids_cotton_dress_per_pc', 'PCS', r"^KID(?:'?S)?\b.*\b100% COTTON\b.*\bDRESS(?:ES)?$"),
-    ('ladies_cotton_dress_per_pc', 'PCS', r"^(?:LADY|LADIES|WOM[AE]N'?S?)\b.*\b100% COTTON\b.*\bDRESS(?:ES)?$"),
-    # Sample evidence takes priority over garment words inside booking descriptions.
-    ('fabric_sample_per_pc', 'PCS',
-     r'\b(?:FABRIC (?:SWATCH(?:ES)?|SAMPLES?)|STRIKE\s*OFF|HANDLOOM|YARN DYED|FABRIC BOOKING|CVC CARRYOVER)\b'
-     r'|^(?!.*\b(?:PANTS?|SHIRTS?|BLOUSES?|DRESS(?:ES)?|JACKETS?)\b).*?\b\d+(?:\.\d+)?%\s*'
-     r'(?:COTTON|US(?:A)? COTTON|NYLON|POLYESTER|VISCOSE|RAYON|LINEN|LYOCELL|POLYAMIDE)\b'),
-    ('fabric_sample_per_set', 'SETS', r'\bFAB(?:RIC)?\b|^(?!.*\b(?:PANTS?|SHIRTS?|BLOUSES?|DRESS(?:ES)?|JACKETS?)\b).*?\b\d+(?:\.\d+)?%\s*(?:COTTON|US(?:A)? COTTON|NYLON|POLYESTER|VISCOSE|RAYON|LINEN|LYOCELL|POLYAMIDE)\b'),
-    ('zipper_per_pc', 'PCS', r'^ZIPPERS?$'),
-    ('shirt_per_pc', 'PCS', r'\bSHIRTS?\b'),
-    ('blouse_per_pc', 'PCS', r'\bBLOUSES?\b'),
-    ('fabric_blanket_per_pack', 'PACKS', r'^BULK FABRIC BLANKET\b'),
-    ('taper_card_per_pack', 'PACKS', r'^TAPER CARD\b'),
-    ('lace_per_yd', 'YDS', r'\bLACE\b'),
-    ('size_sticker_per_pc', 'PCS', r'^SIZE STICKERS?$'),
-    ('fabric_hanger_per_pc', 'PCS', r'^FABRIC HANGERS?$'),
-    ('part_card_per_pc', 'PCS', r'^(?:EMBY\s+)?MF PART CARDS?$'),
-    ('felt_patch_per_pc', 'PCS', r'^FELT PATCH(?:ES)?$'),
-    ('metal_fastener_per_set', 'SETS', r'^(?!.*\b(?:DIES?|MOULDS?|MOLDS?|CARDS?|TOOLS?|MACHINES?)\b).*\b(?:SHANK|SNAP|RIVETS?)\b'),
-    ('button_per_gross', 'GROSS', r'^(?!.*\b(?:DIES?|MOULDS?|MOLDS?|CARDS?|TOOLS?|MACHINES?)\b).*\b(?:SHANK|SNAP)\b.*\bBUTTONS?\b'),
-    ('rivet_per_gross', 'GROSS', r'^(?!.*\b(?:DIES?|MOULDS?|MOLDS?|CARDS?|TOOLS?|MACHINES?)\b).*\bRIVETS?\b'),
-    ('pants_per_pc', 'PCS', r'\bPANTS?\b'),
-    ('dress_per_pc', 'PCS', r'\bDRESS(?:ES)?\b'),
-    ('jacket_per_pc', 'PCS', r'\bJACKETS?\b'),
-]
-
-INDIA_RULES = [
-    RULES[0],
-    ('zipper_per_pc', 'PCS', r'^ZIPPERS?$'),
-    ('fabric_sample_per_set', 'SETS', r'^FAB(?:RIC)? (?:SWATCH(?:ES)?|SAMPLES?|CUTTINGS?)$'),
-]
 
 
 def _positive(value, *, allow_zero=False):
@@ -69,45 +18,65 @@ def _positive(value, *, allow_zero=False):
 
 
 def apply_valuation(data):
-    if data.template_type not in ('BD', 'INDIA') or data.currency != 'USD':
+    if data.template_type not in ('BD', 'INDIA', 'JORDAN') or data.currency != 'USD':
         return
     configured = json.loads(RATES_FILE.read_text(encoding='utf-8'))
-    india = data.template_type == 'INDIA'
-    rules = INDIA_RULES if india else RULES
-    if india:
-        configured = configured['india']
-    rates = {key: _positive(configured[key]) for key, _, _ in rules}
-    if any(rate is None for rate in rates.values()):
-        raise ValueError('Valuation rates must be finite positive USD numbers')
-    for item in data.items:
-        description = ' '.join(item.description.upper().replace('’', "'").split())
-        for key, unit, pattern in rules:
-            if not re.search(pattern, description):
-                continue
-            # Only these confirmed button categories interpret abbreviated G as gross.
-            if key in ('27l_shank_per_gross', '27l_snap_per_gross', '24l_shank_per_gross',
-                       '24l_snap_per_gross', '9_5mm_rivet_per_gross', 'hidden_snap_per_gross') and item.unit == 'G':
-                item.unit = 'GROSS'
-            if item.unit == unit:
-                if item.unit_price is None and item.amount is None:
-                    item.unit_price = float(rates[key])
-                    emit('valuation_rate', method='approved_approximate_rate', rule=key, rate=item.unit_price,
-                         unit=item.unit, source_refs=item.source_refs, description=item.description)
-                break
-        quantity, price = _positive(item.quantity), _positive(item.unit_price, allow_zero=True)
+    rates = {key: _positive(configured[key]) for key in ('fabric_per_yd', 'other_per_unit', 'estimate_cap_usd')}
+    if any(value is None for value in rates.values()):
+        raise ValueError('Valuation rates and estimate cap must be finite positive USD numbers')
+    estimates = []
+    for index, item in enumerate(data.items):
+        quantity = _positive(item.quantity, allow_zero=True)
+        if item.unit == 'G' and re.fullmatch(r'(?:27L (?:SHANK|SNAP)|24L (?:SHANK|SNAP)|9\.5\s*MM RIVET|HIDDEN SNAP)', item.description.strip(), re.I):
+            item.unit = 'GROSS'
+        if item.unit_price is None and item.amount is None and quantity is not None and item.unit and item.unit.strip():
+            key = 'fabric_per_yd' if item.unit.strip().upper() in ('YD', 'YDS', 'YARD', 'YARDS') else 'other_per_unit'
+            item.unit_price = float(rates[key])
+            estimates.append((index, quantity, rates[key]))
+        price = _positive(item.unit_price, allow_zero=True)
         if item.amount is None and quantity is not None and price is not None:
-            item.amount = float((quantity * price).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+            item.amount = float((quantity * price).quantize(Decimal('.01'), rounding=ROUND_HALF_UP))
+    estimated_indices = {index for index, _, _ in estimates}
+    source_sum = sum((_positive(item.amount, allow_zero=True) or Decimal(0)
+                      for index, item in enumerate(data.items) if index not in estimated_indices), Decimal(0))
+    estimate_sum = sum((Decimal(str(data.items[index].amount)) for index in estimated_indices), Decimal(0))
+    budget = max(Decimal(0), rates['estimate_cap_usd'] - source_sum).quantize(Decimal('.01'), rounding=ROUND_DOWN)
+    factor = min(Decimal(1), budget / estimate_sum) if estimate_sum else Decimal(1)
+    if factor < 1:
+        exact = [Decimal(str(data.items[index].amount)) * factor for index, _, _ in estimates]
+        allocated = [value.quantize(Decimal('.01'), rounding=ROUND_DOWN) for value in exact]
+        cents = int((budget - sum(allocated)) * 100)
+        order = sorted(range(len(estimates)), key=lambda i: (exact[i] - allocated[i], -i), reverse=True)
+        for position in order[:cents]:
+            allocated[position] += Decimal('.01')
+        for (index, quantity, _), amount in zip(estimates, allocated):
+            data.items[index].amount = float(amount)
+            data.items[index].unit_price = float(amount / quantity) if quantity else 0.0
+        emit('valuation_cap', method='estimates_only_proportional', cap=float(rates['estimate_cap_usd']),
+             source_amount=float(source_sum), original_estimate=float(estimate_sum), factor=float(factor))
+    for index, quantity, base_rate in estimates:
+        item = data.items[index]
+        emit('valuation_rate', method='approved_unit_rate', item_index=index+1, quantity=float(quantity),
+             base_rate=float(base_rate), rate=item.unit_price, amount=item.amount, unit=item.unit,
+             capped=factor < 1, source_refs=item.source_refs, description=item.description)
     if not any(item.unit == 'G' for item in data.items):
         data.warnings = [w for w in data.warnings if w != 'Unit G is ambiguous; confirm meaning without automatic conversion.']
-    priced = sum(item.amount is not None for item in data.items)
-    rounding = 'two decimal places' if india else 'nearest whole USD'
-    data.warnings.append(f'Approved approximate USD valuation: {priced}/{len(data.items)} rows priced; final calculated total rounded to {rounding} (half up).')
-    incomplete_pdf = (data.pages_processed is not None and data.pages_total is not None
-                      and data.pages_processed < data.pages_total)
-    if incomplete_pdf:
-        data.warnings.append('Estimated shipment total unavailable: not all PDF pages processed.')
-    if data.total_value is None and data.items and priced == len(data.items) and not incomplete_pdf:
-        total = sum(Decimal(str(item.amount)) for item in data.items)
-        data.total_value = float(total.quantize(Decimal('0.01' if india else '1'), rounding=ROUND_HALF_UP))
-        emit('field_source', field='total_value', method=('approved_rates_sum_cents_half_up' if india else 'approved_rates_sum_whole_usd_half_up'), value=data.total_value)
+    incomplete = (data.pages_processed is not None and data.pages_total is not None
+                  and data.pages_processed < data.pages_total)
+    amounts = [_positive(item.amount, allow_zero=True) for item in data.items]
+    declared = _positive(data.total_value, allow_zero=True)
+    if estimates and declared is not None and all(amount is not None for amount in amounts) and declared != sum(amounts):
+        emit('field_decision', field='total_value', method='preserve_explicit_pdf_total', value=data.total_value,
+             line_sum=float(sum(amounts)), reason='Declared PDF total takes priority over estimated line sums')
+        data.warnings.append('Declared PDF total preserved; it differs from the priced line sum.')
+    if data.total_value is None and amounts and all(amount is not None for amount in amounts) and not incomplete:
+        # Preserve source-only monetary precision; round estimated shipment totals as approved.
+        total = sum(amounts).quantize(Decimal('1' if estimates else '.01'), rounding=ROUND_HALF_UP)
+        data.total_value = float(total)
+        emit('field_source', field='total_value', method='approved_unit_rates_whole_usd' if estimates else 'source_amounts_sum',
+             value=data.total_value, unrounded_sum=float(sum(amounts)), rounding_adjustment=float(total-sum(amounts)))
         data.warnings = [w for w in data.warnings if not w.startswith('total_value not established')]
+    if estimates:
+        data.warnings.append(f'Approved unit estimates: {len(estimates)} rows; estimate-only USD {rates["estimate_cap_usd"]} cap; calculated shipment total rounded half up to whole USD. Explicit PDF values preserved.')
+    if incomplete:
+        data.warnings.append('Estimated shipment total unavailable: not all PDF pages processed.')

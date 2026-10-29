@@ -32,17 +32,17 @@ The detail page explains **What happened**, shows invoice information and lists 
 
 Image readings show the exact area read by the local image model and the highlighted original page. The page explains the value found and whether it was used. A reused saved reading still comes from the image model. An accepted reading can fail to contribute when a complete final field could not be established.
 
-The source download is the accepted PDF snapshot, which may differ from a subsequently edited incoming file. The invoice download is the recorded output version, checked against its saved hash.
+The source download is the accepted PDF snapshot, which may differ from a subsequently edited incoming file. Invoice preview and download use the original system-saved workbook in retained attempt storage, checked against its saved hash. External changes or metadata updates to the output-folder copy do not break this saved version. Use Edit in the dashboard to update the current invoice file; direct edits to the output copy are not imported.
 
-India invoice details show IEC/PAN/GST address information, destination, carton references, discharge port/terms and goods HS codes. Blank values use a dash; unsupported values are not inferred. India net weight is omitted. Earlier processing runs show their own saved information; original image readings remain available after manual edits. Use Preview Excel to inspect the invoice's printed layout.
+India invoice details show IEC/PAN/GST address information, destination, carton references, discharge port/terms and goods HS codes. Blank values use a dash. New India invoices use the approved fixed discharge port CHENNAI, INDIA and shipment terms CPT; ON/ABT uses the invoice date in the format OCT. 14, 2026. If no invoice date is available, its ON/ABT date remains empty. India net weight is omitted. Earlier processing runs show their own saved information; original image readings remain available after manual edits. Use Preview Excel to inspect the invoice's printed layout.
 
-### Missing fields and preserved versions
+### Missing fields and saved records
 
 Unsupported/unreadable/conflicting information stays blank; no approval or validation prompt is added to the printed invoice. A completed invoice can therefore have missing information. Notes on the dashboard do not require intervention or automatically stop generation.
 
 The PDF is the shipment source. Manual expected workbooks are development references and are never needed in production. Header identities come from the PDF; filenames and company-directory defaults do not supply missing invoice references, names, addresses, BINs or marks. Approved approximate valuation rates remain separate estimates. See [configuration](configuration.md) before changing those rules.
 
-The queue preserves occupied output files and chooses a versioned filename when necessary. Identical unchanged arrivals do not create another job; changed bytes create a new source version. Renaming a PDF can create a distinct arrival/job identity, but the filename never supplies or changes the extracted invoice reference.
+New PDF processing preserves occupied output files and chooses a distinct filename when necessary. Manual saves replace only that invoice's registered output file. Identical unchanged arrivals do not create another job; changed bytes create a new source version. Renaming a PDF can create a distinct arrival/job identity, but the filename never supplies or changes the extracted invoice reference.
 
 Do not rename, edit or delete internal job snapshots/evidence to repair a result. Use the original PDF and the existing retry controls. Use Pause processing / Resume processing on Overview. Pause lets the current invoice finish while new PDFs continue to queue. On the latest eligible job detail, use Retry this PDF, Retry saving invoice, or Create another invoice. Earlier outputs stay available. A stopped worker must be started with run_system.py before queued requests can run.
 
@@ -50,13 +50,13 @@ Direct main.py/run_batch.py conversion remains available, but it is outside the 
 
 ## Edit and add information
 
-Choose Edit on Jobs or Edit / add information on a completed job. Add missing header information or change goods, quantities, units and unit values. Save new invoice version creates a separate workbook through the existing worker; original outputs and source images remain available. No OCR/model inference repeats for a manual save. A paused queue must resume before that save runs.
+Choose Edit on Jobs or Edit / add information on a completed job. Add missing header information or change goods, quantities, units and unit values. Save changes updates the registered Excel output at the same path through the existing worker. Verification completes before atomic replacement; if Excel locks the file, saving waits and retries without creating another filename. Output-folder setting changes do not move an existing invoice during an edit. Internal processing snapshots and source images remain available for recovery and review. No OCR/model inference repeats for a manual save. A paused queue must resume before that save runs.
 
 Only the latest completed Bangladesh or India invoice can be edited; stale/concurrent saves are rejected. Bangladesh exposes its applicable TIN/cover-note fields; India exposes HS, discharge port and terms. Country/template/currency stay protected. Net weight is not offered. New goods need a unit value; missing quantity or value leaves the calculated amount and automatic total blank. Bangladesh totals round half up to whole dollars, India to cents. An explicit total can override the automatic calculation. Description/HS-only India edits preserve source money. Manual changes do not train the extractor; Create another invoice reads the PDF afresh without those overrides.
 
 ## Download and preview
 
-Downloads use clean names such as 26S8185-I.xlsx; stored versions retain internal job/attempt suffixes for safety. Preview Excel shows the verified first invoice sheet locally, including merged cells, sizes, colors and borders. It is read-only and does not recalculate formulas or reproduce every Excel drawing/format/pagination feature. Use native Excel for final print verification. No upload, workbook macros or external links are executed by the preview.
+Downloads use clean names such as 26S8185-I.xlsx; separate processing runs may retain internal job/attempt suffixes for collision safety, while manual saves keep the current output path. Preview Excel shows the verified first invoice sheet locally, including merged cells, sizes, colors and borders. It is read-only and does not recalculate formulas or reproduce every Excel drawing/format/pagination feature. Use native Excel for final print verification. No upload, workbook macros or external links are executed by the preview.
 
 ## Clear data for testing
 
@@ -80,7 +80,7 @@ Changed application files require a worker restart before it claims another PDF.
 
 Check scanner, worker and Ollama separately. Queued files need a worker. A recent heartbeat means liveness, not progress. The last recorded stage/page can remain unchanged during a long model call. A stale running heartbeat is unknown. Inspect attempt history/technical records only when plain summaries are insufficient.
 
-waiting_to_save retains a completed prepared workbook. Fix output-folder availability/permissions/free space and let the running worker retry. Saving retries do not rerun OCR. Existing occupied filenames are preserved and versioned rather than overwritten.
+waiting_to_save retains a completed prepared workbook. Fix output-folder availability/permissions/free space and let the running worker retry. Saving retries do not rerun OCR. New processing runs preserve occupied filenames. Edits atomically replace their own registered file after verification and wait if that file is locked.
 
 Ordinary failed jobs do not retry forever. Use Retry this PDF on the latest failed job detail. Retry saving invoice requests the next normal publication check without OCR. Create another invoice explicitly reprocesses a completed saved PDF while preserving its earlier output. Pause/resume is on Overview; it does not stop an active conversion, intake or prepared saves. Refresh details after a job changes. Do not edit SQLite manually.
 
@@ -166,7 +166,7 @@ Defaults for the five managed commands select project/pipeline_config.json regar
 
 main.py/run_batch.py output defaults to project/output/bangladesh, project/output/india or project/output/jordan according to --region; omitted --region remains BD. Cache defaults to project/.cache/ocr. An explicitly conflicting destination or named regional master is rejected. The Python run API accepts region=None for legacy source-based selection, or an explicit BD/INDIA/JORDAN. Model defaults to qwen3-vl:latest. --no-local-vision overrides the model to None. max-pages must be positive; it is diagnostic, not a way to produce a complete shipment invoice. The managed worker does not expose page truncation.
 
-Regional selection does not establish regional production readiness. India has passed available-sample acceptance with separate opt-in inbox/output settings, versioned editing and cent totals. Jordan can still reject legacy row truncation/duplicate totals or incomplete print areas until its master/writer stage. Non-BD direct conversion verifies a temporary workbook before replacing its final XLSX. CLI region flags do not enable a watched country; use validated System settings for India. Jordan watching/editing stays disabled. See [readiness](roadmap.md).
+Regional selection does not establish regional production readiness. India has passed available-sample acceptance with separate opt-in inbox/output settings, manual editing and cent totals. Jordan can still reject legacy row truncation/duplicate totals or incomplete print areas until its master/writer stage. Non-BD direct conversion verifies a temporary workbook before replacing its final XLSX. CLI region flags do not enable a watched country; use validated System settings for India. Jordan watching/editing stays disabled. See [readiness](roadmap.md).
 
 Batch defaults to project/examples for the development checkout and writes output/bangladesh/run_manifest.json. Its glob is top-level and case-sensitive according to pathlib/platform behavior; continuous intake explicitly handles PDF extensions case-insensitively and checks temporary/link/hidden names. Batch/direct commands bypass queue history and managed collision versioning.
 
@@ -186,8 +186,14 @@ run_system.py is the normal entry point. Ctrl+C waits for active processing befo
 
 ## Choose shared country folders
 
-System shows Bangladesh, India and Jordan intake status. Bangladesh and India have enabled/disabled intake switches and explicit status badges. Jordan shows Disabled with a locked switch until its workflow is accepted. There is no folder/disk-space table on the page; diagnostics remain available through the API.
+System shows Bangladesh, India and Jordan intake status. Bangladesh and India have enabled/disabled intake switches and explicit status badges. Jordan has the same enabled/disabled intake control and separate output routing. There is no folder/disk-space table on the page; diagnostics remain available through the API.
 
 Use Choose folder for one PDF intake parent and one invoice output parent. A folder-browser dialog opens inside the dashboard. Navigate subfolders, Home or drives, then choose Use this folder; Location also accepts a known directory. Each parent has bangladesh, india and jordan subfolders; missing folders are created on Save settings. Selection alone changes nothing. Save while idle. Existing queued PDFs and historical downloads retain their original paths. Nonstandard separate country paths are preserved until explicitly replaced. Output and intake parents should be dedicated and separate from each other and application/state folders.
 
-Each country shows an Enabled/Disabled badge and selector. Change Bangladesh or India and choose Save settings while idle. Badges label unsaved choices. Jordan is visibly Disabled and locked until its workflow is ready; accepted jobs continue even when new intake is disabled.
+Each country shows an Enabled/Disabled badge and selector. Change Bangladesh, India or Jordan and choose Save settings while idle. Badges label unsaved choices. Accepted jobs continue even when new intake is disabled.
+
+### Upload a PDF from the dashboard
+
+Choose Upload PDF on Overview or Jobs & evidence. Select Bangladesh, India or Jordan, choose one PDF, then upload. The file is saved to that country’s configured incoming folder and the jobs list opens with the matching country and filename filter. It appears after the next intake check and follows the normal queue. Processing stays paused if you paused it.
+
+PDFs must be complete, readable, password-free and no larger than 100 MB. Disabled countries must first be enabled in System. Existing PDFs are never overwritten; for an existing shipment use its Reprocess action, or choose a different filename for a new file. Invalid uploads leave no partial PDFs in the inbox. Manual folder drops continue to work.

@@ -154,6 +154,42 @@ class DashboardTests(unittest.TestCase):
         self.assertIn('/images/jobs/1/pages/1?event=',page)
         self.assertIn('A saved reading of the same image was reused.',page)
 
+    def test_image_card_uses_final_decision_after_a_provisional_rejection(self):
+        attempt=self.store.claim_next('reader',attempt_metadata(self.config))
+        context={'call_id':'number-one','field':'invoice_number','page':1}
+        for event in [
+            {'kind':'vision_request',**context},
+            {'kind':'vision_response',**context,'answer':{'text':'S/6742/29'},'cached':False},
+            {'kind':'vision_decision',**context,'candidate':'S/6742/29','accepted':False},
+            {'kind':'vision_decision',**context,'candidate':'S/6742/29','accepted':True},
+            {'kind':'invoice_evidence','vision_contributions':[{'field':'invoice_number'}],'unresolved_fields':[]}]:
+            self.store.processing_event(attempt['id'],'reader',event)
+        detail=self.app.extensions['dashboard_data'].detail(self.job)
+        self.assertEqual(detail['evidence'][0]['outcome'],'This reading was used in the invoice.')
+        self.store.processing_event(attempt['id'],'reader',
+            {'kind':'vision_decision',**context,'candidate':'S/6742/29','accepted':False})
+        detail=self.app.extensions['dashboard_data'].detail(self.job)
+        self.assertEqual(detail['evidence'][0]['outcome'],'This reading was not accepted for the invoice.')
+
+    def test_historical_provisional_reading_can_match_the_confirmed_invoice_without_changing_events(self):
+        def convert(source,**kwargs):
+            path=self.convert(source,**kwargs)
+            for call_id,accepted in [('first',False),('second',True)]:
+                context={'call_id':call_id,'field':'invoice_number','page':1}
+                for event in [{'kind':'vision_request',**context},
+                              {'kind':'vision_response',**context,'answer':{'text':'S/TEST/26'},'cached':False},
+                              {'kind':'vision_decision',**context,'candidate':'S/TEST/26','value':'S/TEST/26','accepted':accepted}]:
+                    kwargs['observer'](event)
+            kwargs['observer']({'kind':'invoice_evidence','vision_contributions':[{'field':'invoice_number'}],'unresolved_fields':[]})
+            return path
+        with patch.object(queue_worker,'run',side_effect=convert),QueueWorker(self.config,self.store) as worker:
+            worker.run_once()
+        events=self.store.events(self.job)
+        detail=self.app.extensions['dashboard_data'].detail(self.job)
+        self.assertIn('confirmed by another reading',detail['evidence'][0]['outcome'])
+        self.assertEqual(detail['evidence'][1]['outcome'],'This reading was used in the invoice.')
+        self.assertEqual(events,self.store.events(self.job))
+
     def test_filters_pagination_and_today_counts_distinguish_attempts(self):
         self.complete()
         for number in range(27):
@@ -245,12 +281,17 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(result['models'],[])
         self.assertFalse(result['model_list_available'])
 
-    def test_output_tampering_and_outside_paths_are_not_served(self):
+    def test_retained_artifact_tampering_and_outside_paths_are_not_served(self):
         attempt = self.complete()
-        path = Path(self.store.get_attempt(attempt)['output_path'])
+        receipt = Path(self.store.get_attempt(attempt)['receipt_path'])
+        ready = json.loads(receipt.read_text(encoding='utf-8'))
+        path = receipt.parent/ready['workbook_name']
+        original = path.read_bytes()
         path.write_bytes(b'tampered')
         self.assertEqual(self.client.get(f'/files/attempts/{attempt}/invoice').status_code,409)
-        with self.store._connection(write=True) as db: db.execute('UPDATE attempts SET output_path=? WHERE id=?',(str(self.source),attempt))
+        path.write_bytes(original)
+        ready['workbook_name'] = str(self.source)
+        receipt.write_text(json.dumps(ready),encoding='utf-8')
         self.assertEqual(self.client.get(f'/files/attempts/{attempt}/invoice').status_code,409)
         self.source.write_bytes(b'changed')
         self.assertEqual(self.client.get('/files/jobs/1/source').status_code,409)

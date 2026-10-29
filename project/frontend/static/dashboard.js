@@ -163,13 +163,13 @@ if (editor) {
   total.addEventListener('input', () => { manualTotal = true; });
   const updateTotal = () => {
     manualTotal = false;
-    if (editor.dataset.region === 'INDIA') { total.value = ''; return; }
+    if (['INDIA','JORDAN'].includes(editor.dataset.region)) { total.value = ''; return; }
     const rows = collect().items;
     total.value = rows.length && rows.every(row => row.quantity !== '' && row.unit_price !== '')
       ? String(Math.round(rows.reduce((sum,row) => sum + Math.round((Number(row.quantity)*Number(row.unit_price)+Number.EPSILON)*100)/100,0))) : '';
   };
   editor.addEventListener('input', event => {
-    if (event.target.closest('.editor-good') && (editor.dataset.region !== 'INDIA' || ['quantity','unit','unit_price'].includes(event.target.dataset.field))) updateTotal();
+    if (event.target.closest('.editor-good') && (!['INDIA','JORDAN'].includes(editor.dataset.region) || ['quantity','unit','unit_price'].includes(event.target.dataset.field))) updateTotal();
   });
   editor.addEventListener('click', event => {
     if (event.target.closest('.remove-goods')) { event.target.closest('.editor-good').remove(); updateTotal(); }
@@ -220,13 +220,14 @@ function settingsChanges(form) {
     if (root) {
       changes[kind + '_dir'] = root.replace(/[\\/]+$/, '') + '/bangladesh';
       changes['india_' + kind + '_dir'] = root.replace(/[\\/]+$/, '') + '/india';
+      changes['jordan_' + kind + '_dir'] = root.replace(/[\\/]+$/, '') + '/jordan';
     }
   }
   changes.local_model = changes.local_model.trim() || null;
   changes.india_enabled = changes.india_enabled === 'true';
   changes.bangladesh_enabled = changes.bangladesh_enabled === 'true';
-  changes.jordan_enabled = false;
-  for (const field of ['india_incoming_dir','india_output_dir']) changes[field] = changes[field].trim() || null;
+  changes.jordan_enabled = changes.jordan_enabled === 'true';
+  for (const field of ['india_incoming_dir','india_output_dir','jordan_incoming_dir','jordan_output_dir']) changes[field] = changes[field].trim() || null;
   for (const field of ['scan_interval_seconds','vision_output_tokens','vision_context_tokens','vision_timeout_seconds']) changes[field] = Number(changes[field]);
   return changes;
 }
@@ -305,7 +306,7 @@ if (settingsEditor) settingsEditor.addEventListener('submit', async event => {
   const button = settingsEditor.querySelector('button[type="submit"]');
   if (button.disabled) return;
   const changes = settingsChanges(settingsEditor);
-  if (Boolean(changes.india_incoming_dir) !== Boolean(changes.india_output_dir)) {
+  if (['india','jordan'].some(country => Boolean(changes[country + '_incoming_dir']) !== Boolean(changes[country + '_output_dir']))) {
     text('#settings-result','Choose both parent folders before saving: PDF intake and invoice output.');
     return;
   }
@@ -327,3 +328,35 @@ if (settingsEditor) settingsEditor.addEventListener('submit', async event => {
     text('#settings-result',error.name === 'TimeoutError' || error.name === 'TypeError' ? 'No response received. Save again to check the same request safely.' : error.message);
   } finally { button.disabled = false; }
 });
+
+const pdfUpload = document.querySelector('#pdf-upload');
+if (pdfUpload) {
+  pdfUpload.addEventListener('submit', async event => {
+    event.preventDefault();
+    const feedback = document.querySelector('#upload-result');
+    const button = pdfUpload.querySelector('button[type="submit"]');
+    const file = pdfUpload.elements.namedItem('file').files[0];
+    feedback.className = 'upload-result error';
+    if (!file || !pdfUpload.elements.namedItem('region').value) {
+      feedback.textContent = 'Choose one PDF and a country.'; return;
+    }
+    if (file.size > Number(pdfUpload.dataset.maxBytes)) {
+      feedback.textContent = 'The PDF must be 100 MB or smaller.'; return;
+    }
+    button.disabled = true; button.textContent = 'Uploading…';
+    feedback.className = 'upload-result'; feedback.textContent = 'Uploading your PDF…';
+    try {
+      const response = await fetch(pdfUpload.action, {method:'POST', cache:'no-store',
+        signal:AbortSignal.timeout(120000), headers:{'X-CSRF-Token':document.querySelector('meta[name="csrf-token"]').content},
+        body:new FormData(pdfUpload)});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'The PDF could not be uploaded.');
+      feedback.className = 'upload-result success'; feedback.textContent = 'Uploaded. Opening the queue…';
+      location.assign(result.jobs_url);
+    } catch (error) {
+      feedback.className = 'upload-result error';
+      feedback.textContent = error.name === 'TimeoutError' || error.name === 'TypeError'
+        ? 'No response received. Check the jobs list before retrying; existing files will not be overwritten.' : error.message;
+    } finally { button.disabled = false; button.textContent = 'Upload PDF'; }
+  });
+}

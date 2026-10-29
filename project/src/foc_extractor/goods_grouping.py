@@ -1,0 +1,73 @@
+"""Approved invoice summaries, retaining source rows in processing evidence."""
+from collections import Counter, defaultdict
+from dataclasses import asdict
+import re
+
+from .parser import (_aggregate_items, _clean_material_description, _fabric_sample_category,
+                     _material_heading, _normalize_unit, _repair_goods_text)
+from .processing_evidence import emit
+
+
+def _heading(description):
+    text = re.sub(r'\s+', ' ', _repair_goods_text(description)).strip().upper()
+    if re.search(r'\bCARD\b', text):
+        return _clean_material_description(text)
+    sample = _fabric_sample_category(text)
+    if sample:
+        return sample
+    composition = re.search(r'\d{1,3}\s*%', text)
+    kind = re.search(r'\b(?:WOVEN|KNIT(?:TED)?)\b', text)
+    garment = re.search(r'\b(?:GARMENTS?|SHIRTS?|PANTS?|DRESS(?:ES)?|BLOUSES?|TOPS?|JACKETS?|'
+                        r'HOODIES?|CREW|JOGGERS?|SWEATPANTS?|TEES?|POLOS?|SHORTS?|SKIRTS?|SWEATERS?)\b', text)
+    if composition and kind and garment and not re.search(r'\bFABRICS?\b', text):
+        material = text[composition.start():kind.end()] if kind.start()>composition.start() else text[composition.start():]
+        material = _material_heading(re.sub(r'\bSPANDE\b', 'SPANDEX', material), kind[0])
+        if material:
+            wearer = re.search(r"\b(MEN'?S?|WOMEN'?S?|LADIES|LADY|KIDS?|CHILDREN)\b", text[:composition.start()])
+            wearer = wearer[0].replace("'", '') if wearer else ''
+            wearer = {'MEN':"MEN'S",'MENS':"MEN'S",'WOMEN':"WOMEN'S",'WOMENS':"WOMEN'S",
+                      'LADY':'LADIES','KID':'KIDS','CHILDREN':'KIDS'}.get(wearer, wearer)
+            condition = (' (NON-MUTILATED)' if re.search(r'\bNON[ -]MUTILATED\b', text) else
+                         ' (MUTILATED)' if re.search(r'\bMUTILATED\b', text) else '')
+            return (wearer+' '+material.removesuffix(' FABRICS')).strip()+condition
+    if not re.search(r'\b(?:DIES?|MOULDS?|MOLDS?)\b', text):
+        categories = [('THREAD',r'\bTHREAD\b'),('BUTTON',r'\bBUTTONS?\b'),
+                      ('ELASTIC',r'\bELASTIC\b'),('LABEL',r'\bLABELS?\b'),
+                      ('SEAL CORD',r'\bSEAL[ -]+CORD\b'),('HANGTAG',r'\bHANG\s*TAGS?E?\b'),
+                      ('INTERLINING',r'\bINTERLINING\b')]
+        matches = [name for name,pattern in categories if re.search(pattern,text)]
+        if len(matches)==1:
+            material = _material_heading(text) if composition else None
+            return ((material.removesuffix(' FABRICS')+' ') if material else '')+matches[0]
+    if re.search(r'\bFABRICS?\b', text):
+        return _material_heading(text)
+    return None
+
+
+def summarize_goods(data):
+    before = [asdict(item) for item in data.items]
+    headings = [_heading(item.description) or item.description for item in data.items]
+    units = defaultdict(dict)
+    for item,heading in zip(data.items,headings):
+        if item.unit:
+            item.unit = _normalize_unit(item.unit)
+            units[heading,item.hs_code,item.origin_country].setdefault(item.unit,[]).extend(item.source_refs)
+    recovered = []
+    for index,(item,heading) in enumerate(zip(data.items,headings)):
+        candidates = units[heading,item.hs_code,item.origin_country]
+        if not item.unit and len(candidates)==1 and set(candidates)!={'G'}:
+            item.unit = next(iter(candidates))
+            recovered.append({'item':index+1,'unit':item.unit,'source_refs':list(item.source_refs),
+                              'supporting_refs':list(dict.fromkeys(candidates[item.unit]))})
+    def key(item,heading):
+        return (heading,item.unit,item.hs_code,item.unit_price,item.origin_country,item.amount is not None)
+    counts = Counter(key(item,heading) for item,heading in zip(data.items,headings) if item.quantity is not None)
+    for item,heading in zip(data.items,headings):
+        if item.quantity is not None and counts[key(item,heading)]>1:
+            item.description = heading
+    data.items = _aggregate_items(data.items,clean=False,sum_weights=True)
+    after = [asdict(item) for item in data.items]
+    if before!=after:
+        emit('field_evidence',field='goods_grouping',evidence={
+            'source_items':before,'grouped_items':after,'recovered_units':recovered,
+            'method':'approved_category_and_composition_summary'})

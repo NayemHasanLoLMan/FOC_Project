@@ -1,6 +1,6 @@
 # FOC invoice automation
 
-Local shipment PDF → Excel invoice automation with PaddleOCR, selective Ollama vision, a durable folder queue and an admin dashboard. Bangladesh and opt-in India are implemented. Jordan is the next regional implementation; its watched folder remains disabled.
+Local shipment PDF â†’ Excel invoice automation with PaddleOCR, selective Ollama vision, a durable folder queue and an admin dashboard. Bangladesh, India and Jordan use the same durable pipeline with separate country folders, templates and intake controls.
 
 ## Start
 
@@ -10,13 +10,15 @@ From the repository root, run the entire system with one command:
 project/.venv/Scripts/python.exe project/run_system.py
 ```
 
-Open http://127.0.0.1:8080/. Drop PDFs into the configured country inbox. The scanner waits for a stable file, the worker creates the invoice and the dashboard provides View, Edit, Preview Excel and Download. Closing the browser does not stop processing. Ctrl+C waits for the active invoice before shutdown. If Windows background startup is already running, use that instance instead of starting a second one; see [operations](project/docs/operations.md#windows-background-operation).
+Open http://127.0.0.1:8080/. Use **Upload PDF** to select a country and file, or drop PDFs into the configured country inbox. The scanner waits for a stable file, the worker creates the invoice and the dashboard provides View, Edit, Preview Excel and Download. Closing the browser does not stop processing. Ctrl+C waits for the active invoice before shutdown. If Windows background startup is already running, use that instance instead of starting a second one; see [operations](project/docs/operations.md#windows-background-operation).
 
 | Country | Default incoming folder | Default output folder | Status |
 |---|---|---|---|
 | Bangladesh | `project/incoming/bangladesh/` | `project/output/bangladesh/` | Enabled |
 | India | `project/incoming/india/` | `project/output/india/` | Opt-in through System settings |
-| Jordan | `project/incoming/jordan/` | `project/output/jordan/` | Reserved; disabled |
+| Jordan | `project/incoming/jordan/` | `project/output/jordan/` | Opt-in through System settings |
+
+Factory identification uses `project/factory_profiles.json` and records a country-consistent factory ID with source evidence. Approved static factory defaults apply during new generation for all three regions. Stage 6 uses shared unit estimates (USD 0.20/YDS, USD 0.10 per other stated unit) with an estimate-only USD 80 cap; explicit PDF money values remain authoritative.
 
 Production uses PDFs and maintained configuration/rates; it never reads manual expected invoices. Unsupported information stays blank on professional invoices. Existing published files and evidence are preserved when creating new versions.
 
@@ -82,6 +84,6 @@ The stable backend/frontend and command paths are intentional: saved attempts an
 | [Operations](project/docs/operations.md) | Dashboard use, editing, preview, clear/reprocess, startup, backup and troubleshooting |
 | [Configuration](project/docs/configuration.md) | Folder/model settings, source rules, templates, rates and precedence |
 | [Architecture](project/docs/architecture.md) | Backend/frontend responsibilities, Python interfaces, schema and evidence |
-| [API](project/docs/api.md) · [OpenAPI](project/docs/openapi.json) | HTTP contracts and Postman usage |
+| [API](project/docs/api.md) Â· [OpenAPI](project/docs/openapi.json) | HTTP contracts and Postman usage |
 | [Development](project/docs/development.md) | Test/analysis commands, contribution rules, build, install, upgrade and rollback |
 | [Roadmap](project/docs/roadmap.md) | Current acceptance, remaining gates and the staged Jordan plan/source checklist |

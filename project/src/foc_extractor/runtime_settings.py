@@ -9,7 +9,7 @@ from .pipeline_config import ROOT, IO_FIELDS, parse_config, initialize_folders
 
 LEGACY_SETTINGS_FIELDS=('local_model','scan_interval_seconds','vision_output_tokens','vision_context_tokens',
                  'vision_timeout_seconds','incoming_dir','output_dir')
-SETTINGS_FIELDS=(*LEGACY_SETTINGS_FIELDS,'india_enabled','india_incoming_dir','india_output_dir','bangladesh_enabled','jordan_enabled')
+SETTINGS_FIELDS=(*LEGACY_SETTINGS_FIELDS,'india_enabled','india_incoming_dir','india_output_dir','bangladesh_enabled','jordan_enabled','jordan_incoming_dir','jordan_output_dir')
 
 
 def editable_settings(config):
@@ -21,7 +21,8 @@ def shared_folders(config):
     roots={}
     for kind,bd,india in (('incoming',config.incoming_dir,config.india_incoming_dir),
                           ('output',config.output_dir,config.india_output_dir)):
-        roots[kind]=bd.parent if bd.name=='bangladesh' and (india is None or india==bd.parent/'india') else None
+        jordan=getattr(config,'jordan_'+kind+'_dir')
+        roots[kind]=bd.parent if bd.name=='bangladesh' and (india is None or india==bd.parent/'india') and (jordan is None or jordan==bd.parent/'jordan') else None
     return roots
 
 
@@ -68,10 +69,10 @@ def validate_setting_paths(config, *, development=False):
 
 
 def settings_config(config,changes, *, development=False):
-    if not isinstance(changes,dict) or set(changes) not in (set(SETTINGS_FIELDS),set(SETTINGS_FIELDS)-{'bangladesh_enabled','jordan_enabled'},set(LEGACY_SETTINGS_FIELDS)):
-        raise ValueError('Submit all settings fields (legacy seven- and ten-field requests are also supported)')
+    if not isinstance(changes,dict) or set(changes) not in (set(SETTINGS_FIELDS),set(SETTINGS_FIELDS)-{'jordan_incoming_dir','jordan_output_dir'},set(SETTINGS_FIELDS)-{'bangladesh_enabled','jordan_enabled','jordan_incoming_dir','jordan_output_dir'},set(LEGACY_SETTINGS_FIELDS)):
+        raise ValueError('Submit all settings fields (legacy seven-, ten- and twelve-field requests are also supported)')
     for key in IO_FIELDS:
-        if key not in changes or (key.startswith('india_') and changes[key] is None):continue
+        if key not in changes or (key.startswith(('india_','jordan_')) and changes[key] is None):continue
         if not isinstance(changes[key],str) or not Path(changes[key]).is_absolute():
             raise ValueError('Use a full absolute path for the input and output folders')
         requested=Path(changes[key])
@@ -109,8 +110,10 @@ def save_runtime_settings(config,store,locks,request_id,changes,apply, *, develo
                 if db.execute("SELECT 1 FROM attempts WHERE state='running'").fetchone():
                     raise ValueError('An invoice is running. Wait for it to finish before changing settings.')
                 updated=settings_config(config,changes,development=development)
-                if config.india_output_dir and updated.india_output_dir is None and db.execute("SELECT 1 FROM jobs WHERE region='INDIA'").fetchone():
-                    raise ValueError('Keep India folders while India history exists; disable new India intake instead')
+                for region in ('INDIA','JORDAN'):
+                    field=region.lower()+'_output_dir'
+                    if getattr(config,field) and getattr(updated,field) is None and db.execute('SELECT 1 FROM jobs WHERE region=?',(region,)).fetchone():
+                        raise ValueError('Keep '+region.title()+' folders while its history exists; disable new intake instead')
                 for region,folder in updated.inboxes().items():
                     for row in db.execute('SELECT source_path,region FROM jobs WHERE region<>?',(region,)):
                         if Path(row['source_path']).parent==folder:

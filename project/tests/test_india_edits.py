@@ -71,7 +71,10 @@ class IndiaEditTests(unittest.TestCase):
                  'port_of_discharge':'USER PORT','shipment_terms':'FOB','gross_weight_kg':'5.125'}
         self.assertEqual(self.submit(old,changes).status_code,200)
         new=self.process_edit();detail=self.client.get(f'/api/jobs/{self.job}').get_json()
-        self.assertEqual((output.read_bytes(),receipt.read_bytes(),self.source.read_bytes()),before)
+        self.assertNotEqual(output.read_bytes(),before[0])
+        self.assertEqual((receipt.read_bytes(),self.source.read_bytes()),before[1:])
+        self.assertEqual(Path(self.store.get_attempt(new)['output_path']),output)
+        self.assertEqual(list(self.config.output_for('INDIA').glob('*.xlsx')),[output])
         self.assertEqual((detail['data']['template_type'],detail['data']['destination_country'],detail['data']['currency']),('INDIA','India','USD'))
         self.assertEqual(detail['data']['items'],self.original.to_dict()['items'])
         self.assertEqual(detail['data']['total_value'],2.50)
@@ -132,7 +135,7 @@ class IndiaEditTests(unittest.TestCase):
         self.assertEqual(len(self.store.attempts(self.job)),1)
         with self.assertRaises(ValueError):validate_changes({'shipment_terms':'FOB'},'BD')
         with self.assertRaises(ValueError):validate_changes({'items':self.rows()},'BD')
-        with self.assertRaises(ValueError):validate_changes({'consignee':'NEW'},'JORDAN')
+        with self.assertRaises(ValueError):validate_changes({'consignee':'NEW'},'OTHER')
 
     def test_replay_stale_version_and_original_evidence_after_two_edits(self):
         old=self.complete();request_id=str(uuid4());changes={'shipment_terms':'FOB'}

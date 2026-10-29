@@ -86,6 +86,9 @@ def run(
         from .local_vision import resolve_quantities
         track('goods_vision', resolve_quantities, result, pdf_path, local_model, cache_dir)
     description_refs=set()
+    if initial_region=='JORDAN' and local_model:
+        from .jordan import resolve_annotations
+        description_refs=track('goods_annotations',resolve_annotations,result,pdf_path,local_model,cache_dir)
     if initial_region in ('BD','INDIA') and local_model:
         from .india import resolve_annotations
         description_refs=track('india_annotations' if initial_region=='INDIA' else 'goods_annotations',
@@ -96,6 +99,17 @@ def run(
     selected = select_region(data, region or (template_region(template) if template else None),
                              (result.pages or [result.content])[0])
     active_template = _resolve_template(template, selected)
+    from .factory_profiles import identify_factory, apply_defaults, apply_jordan_origin
+    factory = track('factory_identification',identify_factory,result,selected,data.consignee)
+    track('factory_defaults',apply_defaults,data,factory)
+    from .goods_grouping import summarize_goods
+    track('goods_grouping',summarize_goods,data)
+    if selected=='INDIA':
+        for field,value in (('port_of_discharge','CHENNAI, INDIA'),('shipment_terms','CPT')):
+            original = getattr(data,field)
+            setattr(data,field,value)
+            emit('field_source',field=field,value=value,original_value=original,
+                 method='approved_regional_rule',policy='india_fixed_shipment')
     if selected in ('BD','INDIA','JORDAN'):
         if selected in ('BD','INDIA'):
             from .india import resolve_invoice_number
@@ -120,7 +134,12 @@ def run(
     emit('field_source', field='template_type', method='selected_invoice_region', value=selected,
          template=str(active_template))
     from .packages import packing_packages
-    package_evidence=track('packages', packing_packages, result,data.carton_range,pdf_path,cache_dir,local_model=local_model)
+    if selected=='JORDAN':
+        from .jordan import reconcile_packing
+        jordan_packing=track('jordan_packing',reconcile_packing,data,result,pdf_path,cache_dir,local_model)
+        package_evidence=jordan_packing['packages']
+    else:
+        package_evidence=track('packages', packing_packages, result,data.carton_range,pdf_path,cache_dir,local_model=local_model)
     emit('field_evidence', field='package_count', evidence=package_evidence)
     data.package_count=package_evidence['total']
     data.warnings=[w for w in data.warnings if not w.startswith(('Package count basis:','Package extraction:'))
@@ -128,7 +147,7 @@ def run(
     data.warnings.append(f'Package count basis: {package_evidence["basis"]}; selected count {data.package_count}.')
     if package_evidence['reason']:
         data.warnings.append('Package extraction: '+package_evidence['reason'])
-    if data.gross_weight_kg is None and not re.search(r'\bGROSS\s+WEIGHT|\bG\.?\s*W\.?(?:\s*:|\s+\d)',_shipment_summary(result),re.I):
+    if selected!='JORDAN' and data.gross_weight_kg is None and not re.search(r'\bGROSS\s+WEIGHT|\bG\.?\s*W\.?(?:\s*:|\s+\d)',_shipment_summary(result),re.I):
         from .weights import packing_weight
         weight = track('weights', packing_weight, result, pdf_path, cache_dir,local_model=local_model)
         emit('field_evidence', field='gross_weight_kg', evidence=weight)
@@ -150,6 +169,7 @@ def run(
         data.net_weight_kg = None
         data.warnings.append('Declared net weight exceeds gross weight; net weight left empty.')
 
+    if selected=='JORDAN':track('jordan_origin',apply_jordan_origin,data,factory)
     track('valuation', apply_valuation, data)
     contributions=[]
     if data.invoice_number and any(ref.endswith(':header:invoice_number') for ref in accepted_vision_refs()):
@@ -163,6 +183,11 @@ def run(
         contributions.append({'field':'package_count'})
     if data.gross_weight_kg is not None and 'weight' in locals() and weight['total_kg'] is not None and any(c.get('method')=='local vision' for c in weight['cells']):
         contributions.append({'field':'gross_weight_kg'})
+    if selected=='JORDAN':
+        if any(c['method']=='local vision' and c['allocated_items'] for c in jordan_packing['cells']):
+            contributions.append({'field':'goods_weight_kg'})
+        if jordan_packing['gross_basis']=='complete corrected packing-weight sum' and any(c['method']=='local vision' for c in jordan_packing['cells']):
+            contributions.append({'field':'gross_weight_kg'})
     unresolved=[field for field in ('invoice_number','export_date','consignee','consignee_address','shipping_marks',
                 'package_count','gross_weight_kg','total_value') if getattr(data,field) is None]
     unresolved.extend(f'goods:{i+1}:{field}' for i,item in enumerate(data.items)

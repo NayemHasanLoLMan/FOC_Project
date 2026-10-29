@@ -32,14 +32,15 @@ def _digest(path):
         return hashlib.file_digest(stream, 'sha256').hexdigest()
 
 
-def _validate_pdf(path):
+def _validate_pdf(path, *, pdf_bytes=None):
     with Path(path).open('rb') as stream:
         stream.seek(0, 2)
         stream.seek(max(0, stream.tell() - 1024))
         if not stream.read().rstrip(b'\x00 \t\r\n\f').endswith(b'%%EOF'):
             raise InvalidPDFError('PDF end marker is missing; wait for the completed copy')
     try:
-        with pymupdf.open(path) as document:
+        # Bytes keep malformed uploads from retaining a Windows file handle on open failure.
+        with (pymupdf.open(stream=pdf_bytes, filetype='pdf') if pdf_bytes is not None else pymupdf.open(path)) as document:
             if not document.is_pdf or document.page_count < 1:
                 raise InvalidPDFError('File is not a PDF with readable pages')
             if document.needs_pass:

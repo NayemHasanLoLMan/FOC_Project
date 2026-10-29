@@ -21,6 +21,8 @@ from openpyxl import load_workbook
 from openpyxl.cell.rich_text import CellRichText, TextBlock
 from openpyxl.cell.text import InlineFont
 from openpyxl.styles import Border, PatternFill, Side
+from openpyxl.worksheet.pagebreak import Break
+from openpyxl.utils import get_column_letter
 from .models import FOCData
 from .regions import REGIONS, select_region, template_region
 
@@ -78,7 +80,7 @@ def _style_goods_table(ws, region, last_row):
     groups = ((1, 1), (2, 6), (7, 9)) if region == 'BD' else ((1, 1), (2, 4), (5, 5), (6, 7), (8, 9))
     header, start, minimum = 30, 33, 38
     if region == 'JORDAN':
-        groups = ((1, 1), (2, 5), (6, 6), (7, 7), (8, 8), (9, 10))
+        groups = ((1, 1), (2, 5), (6, 6), (7, 8), (9, 10))
         header, start, minimum = 24, 27, 32
     line = Side(style='thin', color='FFB8C2CC')
     for row in range(header, max(minimum, last_row) + 1):
@@ -107,6 +109,49 @@ def _style_goods_table(ws, region, last_row):
     ws.row_dimensions[header].height = max(30, ws.row_dimensions[header].height or 0)
     for row in (header + 1, header + 2):
         ws.row_dimensions[row].height = 3
+
+
+def _finish_presentation(ws, region, total_row, last_row):
+    """Keep the closing block together without shrinking long invoices to one page."""
+    for row in ws:
+        for cell in row:
+            if cell.value is not None:
+                font = copy(cell.font)
+                font.name = 'Arial'
+                if cell.row == 1:
+                    font.sz = 18
+                cell.font = font
+    ws.page_setup.paperSize = ws.PAPERSIZE_A4
+    ws.page_setup.usePrinterDefaults = False
+    ws.page_setup.scale = None
+    for row in range(2, last_row + 1):
+        if row != REGIONS[region]['start'] and not any(cell.value is not None for cell in ws[row]):
+            if not any(rng.min_row < row <= rng.max_row for rng in ws.merged_cells.ranges):
+                ws.row_dimensions[row].height = min(ws.row_dimensions[row].height or 15, 4)
+    if region == 'BD':
+        ws.row_dimensions[7].height = 24
+        ws.row_dimensions[9].height = 24
+        for row in (21, 25, 27):
+            ws.row_dimensions[row].height = 20
+    # Estimate Excel's width scaling in points; native print QA checks the result.
+    last_col = 10 if region == 'JORDAN' else 9
+    width = sum((ws.column_dimensions[get_column_letter(c)].width * 7 + 5) * .75
+                for c in range(1, last_col + 1))
+    scale = min(1, (595.28 - 72 * (ws.page_margins.left + ws.page_margins.right)) / width)
+    capacity = (841.89 - 72 * (ws.page_margins.top + ws.page_margins.bottom)) / scale
+    heights = [ws.row_dimensions[r].height or 15 for r in range(1, last_row + 1)]
+    start = REGIONS[region]['start']
+    footer = max((r for r in range(start, total_row) if ws.cell(r, 2).value), default=total_row - 1)
+    used = sum(heights[:footer - 1])
+    remaining = sum(heights[footer - 1:])
+    header = 24 if region == 'JORDAN' else 30
+    repeat = ws.row_dimensions[header].height or 30
+    first_capacity = capacity
+    while used >= first_capacity:
+        used -= first_capacity
+        first_capacity = capacity - repeat
+    if used + remaining > first_capacity and remaining < capacity - repeat:
+        ws.row_breaks.append(Break(id=footer - 1))
 
 
 def _populate_bd(ws, data: FOCData):
@@ -139,7 +184,7 @@ def _populate_bd(ws, data: FOCData):
         _safe_write(ws, 13, 8, f'C/NO. {data.carton_range}')
         font = ws['H13'].font
         ws['H13'].value = CellRichText(
-            TextBlock(InlineFont(rFont=font.name,sz=font.sz,color='FF000000'),'C/NO. '),
+            TextBlock(InlineFont(rFont=font.name,sz=font.sz,color='FF000000'),'C/NO.\n'),
             TextBlock(InlineFont(rFont=font.name,sz=font.sz,color='FFFF0000'),data.carton_range))
         carton_alignment=copy(ws['H13'].alignment)
         carton_alignment.wrap_text=True
@@ -177,7 +222,8 @@ def _populate_bd(ws, data: FOCData):
 
     if data.destination_country:
         _safe_write(ws, 21, 5, data.destination_country.upper())  # E21
-    _safe_write(ws, 18, 1, 'SHIPMENT TO: ' + (data.destination_city or data.destination_country or ''))
+    _safe_write(ws, 18, 1, data.shipment_text if data.shipment_text is not None else
+                'SHIPMENT TO: ' + (data.destination_city or data.destination_country or ''))
     if data.invoice_number:
         _safe_write(ws, 25, 3, data.invoice_number)  # C25
     if data.import_cover_note:
@@ -254,6 +300,9 @@ def _populate_bd(ws, data: FOCData):
         ws.row_dimensions[cell.row].height=max(ws.row_dimensions[cell.row].height or 15,
                                                15*math.ceil(len(label)/max(1,ws.column_dimensions['A'].width)))
 
+    for row in range(start_row + max(len(data.items), len(carton_labels)), 39 + extra):
+        ws.row_dimensions[row].height = 4
+
     tot_row = 40 + extra
     _safe_write(ws,tot_row+1,1,None)
     if data.tin_number:
@@ -274,6 +323,16 @@ def _populate_bd(ws, data: FOCData):
     ws.row_dimensions[tot_row].height=max(30,ws.row_dimensions[tot_row].height or 0)
     for r in (tot_row+2,tot_row+3):
         ws.row_dimensions[r].height=max(15,ws.row_dimensions[r].height or 0)
+    if data.remarks is not None:
+        lines = data.remarks.splitlines()
+        for index,value in enumerate((lines[0] if lines else '', '\n'.join(lines[1:]))):
+            row = tot_row+2+index
+            _safe_write(ws,row,1,value or None)
+            alignment = copy(ws.cell(row,1).alignment)
+            alignment.wrap_text = True
+            alignment.vertical = 'top'
+            ws.cell(row,1).alignment = alignment
+            ws.row_dimensions[row].height = max(15,15*sum(max(1,math.ceil(len(line)/100)) for line in value.splitlines()))
     ws.print_area = f'A1:I{43+extra}'
     ws.print_title_rows = '30:30'
     ws.sheet_properties.pageSetUpPr.fitToPage = True
@@ -307,6 +366,7 @@ def _populate_bd(ws, data: FOCData):
         part.color = '606060'
     ws.firstFooter = copy(ws.oddFooter)
     _style_goods_table(ws, 'BD', max(33, 32 + max(len(data.items), len(carton_labels))))
+    _finish_presentation(ws, 'BD', tot_row, 43 + extra)
 
 
 def _populate_india(ws, data: FOCData):
@@ -356,10 +416,16 @@ def _populate_india(ws, data: FOCData):
             ws.row_dimensions[row].height = 5
     _safe_write(ws, 20, 4, data.destination_country.upper() if data.destination_country else None)
     fit(ws['D20'], ws['D20'].value)
-    # Keep shipment labels visible without treating packing dates or addresses as departure facts.
+    # ON/ABT uses the invoice date under the approved India shipment rule.
+    shipment_date = date.fromisoformat(data.export_date[:10]) if data.export_date else None
+    on_abt = f'{shipment_date:%b}. {shipment_date.day}, {shipment_date.year}'.upper() if shipment_date else ''
+    shipment = ('SHIPMENT FROM:          TO: ', data.destination_city, '          BY:')
+    if data.shipment_text is not None:
+        parts = re.fullmatch(r'(.*?\bTO\s+)(.+?)(\s+BY\b.*)',data.shipment_text,re.I)
+        shipment = parts.groups() if parts else (data.shipment_text,None,'')
     for row, label, value, suffix in (
-            (17, 'SHIPMENT FROM:          TO: ', data.destination_city, '          BY:'),
-            (18, 'ON/ABT.:', None, ''),
+            (17, *shipment),
+            (18, 'ON/ABT. ', on_abt, ''),
             (22, 'PORT OF DISCHARGE: ', data.port_of_discharge, ''),
             (23, 'SHIPMENT TERMS: ', data.shipment_terms, '')):
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=9)
@@ -369,7 +435,7 @@ def _populate_india(ws, data: FOCData):
         if value:
             cell.value = CellRichText(
                 TextBlock(InlineFont(rFont=font.name, sz=font.sz, color='FF000000'), label),
-                TextBlock(InlineFont(rFont=font.name, sz=font.sz, color='FFFF0000'), value))
+                TextBlock(InlineFont(rFont=font.name, sz=font.sz, color='FF000000' if row==18 else 'FFFF0000'), value))
             if suffix:
                 cell.value.append(TextBlock(InlineFont(rFont=font.name, sz=font.sz, color='FF000000'), suffix))
         fit(cell, str(cell.value), 110)
@@ -417,6 +483,9 @@ def _populate_india(ws, data: FOCData):
     for row in range(start_row + max(len(data.items), len(carton_labels)), 39 + extra):
         ws.row_dimensions[row].height = 5
     total_row = 42 + extra
+    if data.remarks is not None:
+        _safe_write(ws,47+extra,1,data.remarks or None)
+        fit(ws.cell(47+extra,1),data.remarks,110)
     _safe_write(ws, total_row, layout['total_column'], 'TOTAL VALUE:')
     _safe_write(ws, total_row, 9, data.total_value)
     ws.cell(total_row, 9).number_format = '"USD "#,##0.00'
@@ -437,10 +506,11 @@ def _populate_india(ws, data: FOCData):
         part.color = '606060'
     ws.firstFooter = copy(ws.oddFooter)
     _style_goods_table(ws, 'INDIA', max(33, 32 + max(len(data.items), len(carton_labels))))
+    _finish_presentation(ws, 'INDIA', total_row, 49 + extra)
 
 
 def _populate_jordan(ws, data: FOCData):
-    """Grow Jordan goods while preserving separate KG, quantity, unit and value."""
+    """Grow Jordan goods with units printed alongside their quantities."""
     def fit(cell, value, width, minimum=20):
         alignment = copy(cell.alignment)
         alignment.wrap_text = True
@@ -475,7 +545,12 @@ def _populate_jordan(ws, data: FOCData):
         _safe_write(ws, 12 + index, 3, value)
         fit(ws.cell(12 + index, 3), value, 58, 5 if value is None else 20)
 
+    _safe_write(ws, 24, 8, None)
+    _safe_write(ws, 24, 7, 'QUANTITY')
+    ws.merge_cells('G24:H24')
     start = REGIONS['JORDAN']['start']
+    origins = {item.origin_country for item in data.items if item.origin_country}
+    common_origin = next(iter(origins)) if len(origins) == 1 and all(item.origin_country for item in data.items) else None
     cartons = [part.strip() for part in (data.carton_range or '').split(',') if part.strip()]
     count = max(len(data.items), len(cartons))
     extra = max(0, count - 6)
@@ -498,6 +573,7 @@ def _populate_jordan(ws, data: FOCData):
             _safe_write(ws, row, col, None)
         ws.merge_cells(start_row=row, start_column=2, end_row=row, end_column=5)
         ws.merge_cells(start_row=row, start_column=9, end_row=row, end_column=10)
+        ws.merge_cells(start_row=row, start_column=7, end_row=row, end_column=8)
         ws.row_dimensions[row].height = 26 if index < count else 5
         if index < len(cartons):
             _safe_write(ws, row, 1, cartons[index])
@@ -507,17 +583,29 @@ def _populate_jordan(ws, data: FOCData):
             ws.cell(row, 1).font = font
         if index < len(data.items):
             item = data.items[index]
-            for col, value in ((2, item.description), (6, item.weight_kg), (7, item.quantity),
-                               (8, item.unit), (9, item.amount), (11, item.unit_price)):
+            description = item.description + ('\nCOUNTRY OF ORIGIN: '+item.origin_country if item.origin_country and not common_origin else '')
+            quantity = f'{item.quantity:,.4f}'.rstrip('0').rstrip('.') if item.quantity is not None else ''
+            quantity_unit = ' '.join(part for part in (quantity, item.unit) if part) or None
+            for col, value in ((2, description), (6, item.weight_kg), (7, quantity_unit),
+                               (9, item.amount), (11, item.unit_price)):
                 _safe_write(ws, row, col, value)
             if item.unit_price is not None:
                 _safe_write(ws, row, 12, data.currency)
-            fit(ws.cell(row, 2), item.description, 52, 26)
-            fit(ws.cell(row, 8), item.unit, 13, 26)
+            fit(ws.cell(row, 2), description, 52, 26)
+            fit(ws.cell(row, 7), quantity_unit, 24, 26)
             ws.cell(row, 6).number_format = '0.00############'
-            ws.cell(row, 7).number_format = '#,##0' if item.quantity is not None and float(item.quantity).is_integer() else '#,##0.####'
+            ws.cell(row, 7).number_format = '@'
             ws.cell(row, 9).number_format = '#,##0.00'
     total = 35 + extra
+    ws.merge_cells(start_row=total+1, start_column=1, end_row=total+1, end_column=10)
+    _safe_write(ws, total+1, 1, 'COUNTRY OF ORIGIN: '+common_origin if common_origin else None)
+    fit(ws.cell(total+1, 1), ws.cell(total+1, 1).value, 110, 18 if common_origin else 4)
+    if data.remarks is not None:
+        lines = data.remarks.splitlines()
+        for index,value in enumerate((lines[0] if lines else '', '\n'.join(lines[1:]))):
+            row = total+2+index
+            _safe_write(ws,row,1,value or None)
+            fit(ws.cell(row,1),value,110,18)
     _safe_write(ws, 24, 9, f'VALUE ({data.currency})')
     _safe_write(ws, total, 8, 'TOTAL VALUE:')
     _safe_write(ws, total, 9, data.total_value)
@@ -549,6 +637,8 @@ def _populate_jordan(ws, data: FOCData):
         part.color = '606060'
     ws.firstFooter = copy(ws.oddFooter)
     _style_goods_table(ws, 'JORDAN', max(start, start + count - 1))
+    ws.column_dimensions['K'].hidden = ws.column_dimensions['L'].hidden = True
+    _finish_presentation(ws, 'JORDAN', total, 39 + extra)
 
 
 def populate_template(template: Path, output: Path, data: FOCData):
@@ -609,6 +699,7 @@ def populate_template(template: Path, output: Path, data: FOCData):
     if data.items:
         items_sheet = wb.create_sheet("Extracted_Items")
         items_sheet.append(["Index", "Description", "Quantity", "Unit", "Weight_KG", "HS_Code", "Unit_Price", "Amount", "Source_Page", "Confidence", "Source_Rows"])
+        if selected == 'JORDAN':items_sheet.cell(1,12,'Origin_Country')
         for idx, it in enumerate(data.items, 1):
             items_sheet.append([
                 idx, it.description, it.quantity, it.unit,
@@ -616,6 +707,7 @@ def populate_template(template: Path, output: Path, data: FOCData):
             ])
             items_sheet.cell(idx + 1, 7).number_format = '0.00####'
             items_sheet.cell(idx + 1, 8).number_format = '0.00'
+            if selected == 'JORDAN':items_sheet.cell(idx+1,12,it.origin_country)
         items_sheet.column_dimensions['B'].width = 90
         items_sheet.freeze_panes = 'A2'
     audit.column_dimensions['A'].width = 25
@@ -624,6 +716,7 @@ def populate_template(template: Path, output: Path, data: FOCData):
     for sheet in wb.worksheets:
         if sheet is ws:
             continue
+        sheet.sheet_state = 'hidden'
         for row in sheet:
             for cell in row:
                 if isinstance(cell.value, str):

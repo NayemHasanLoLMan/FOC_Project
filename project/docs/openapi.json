@@ -3,7 +3,7 @@
   "info": {
     "title": "FOC local invoice dashboard",
     "version": "0.1.0",
-    "description": "Local invoice dashboard with Stage 6 admin controls. Loopback only. GET routes are read-only. Protected POST commands pause/resume queue consumption and retry/reprocess selected jobs without editing invoices. Startup management is provided by the local run_system.py CLI, outside the HTTP API. Manual invoice editing creates preserved versions through the worker without repeating OCR."
+    "description": "Local invoice dashboard with Stage 6 admin controls. Loopback only. GET routes are read-only. Protected POST commands pause/resume queue consumption and retry/reprocess selected jobs without editing invoices. Startup management is provided by the local run_system.py CLI, outside the HTTP API. Manual invoice editing updates its registered output file through verified atomic replacement without repeating OCR. Internal processing records remain available for recovery."
   },
   "servers": [
     {
@@ -1694,7 +1694,7 @@
     "/api/jobs/{job_id}/edit": {
       "post": {
         "operationId": "editInvoice",
-        "summary": "Save manual invoice changes as a new version through the worker; preserve source readings and previous files. No OCR rerun.",
+        "summary": "Update the current invoice file through the worker using verified atomic replacement; preserve source readings and internal recovery records. No OCR rerun. A locked file waits for saving rather than creating another output filename.",
         "tags": [
           "Admin controls"
         ],
@@ -1753,9 +1753,12 @@
                       },
                       {
                         "$ref": "#/components/schemas/IndiaInvoiceChanges"
+                      },
+                      {
+                        "$ref": "#/components/schemas/JordanInvoiceChanges"
                       }
                     ],
-                    "description": "Server selects BD or India contract from the immutable job region; Jordan rejected."
+                    "description": "Server selects BD, India or Jordan contract from the immutable job region."
                   }
                 }
               }
@@ -2166,8 +2169,22 @@
                       },
                       "jordan_enabled": {
                         "type": "boolean",
-                        "const": false,
-                        "description": "Reserved intake control; true is rejected until Jordan workflow acceptance."
+                        "description": "Enable new Jordan intake only after approval; requires paired Jordan folders. Accepted jobs continue when disabled.",
+                        "default": false
+                      },
+                      "jordan_incoming_dir": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Full absolute Jordan inbox path; paired with jordan_output_dir."
+                      },
+                      "jordan_output_dir": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "description": "Full absolute dedicated Jordan output path; retained when intake is disabled."
                       }
                     },
                     "oneOf": [
@@ -2207,6 +2224,16 @@
                               "required": [
                                 "jordan_enabled"
                               ]
+                            },
+                            {
+                              "required": [
+                                "jordan_incoming_dir"
+                              ]
+                            },
+                            {
+                              "required": [
+                                "jordan_output_dir"
+                              ]
                             }
                           ]
                         }
@@ -2235,6 +2262,16 @@
                               "required": [
                                 "jordan_enabled"
                               ]
+                            },
+                            {
+                              "required": [
+                                "jordan_incoming_dir"
+                              ]
+                            },
+                            {
+                              "required": [
+                                "jordan_output_dir"
+                              ]
                             }
                           ]
                         }
@@ -2253,10 +2290,42 @@
                           "vision_context_tokens",
                           "vision_output_tokens",
                           "vision_timeout_seconds"
+                        ],
+                        "not": {
+                          "anyOf": [
+                            {
+                              "required": [
+                                "jordan_incoming_dir"
+                              ]
+                            },
+                            {
+                              "required": [
+                                "jordan_output_dir"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "required": [
+                          "bangladesh_enabled",
+                          "incoming_dir",
+                          "india_enabled",
+                          "india_incoming_dir",
+                          "india_output_dir",
+                          "jordan_enabled",
+                          "jordan_incoming_dir",
+                          "jordan_output_dir",
+                          "local_model",
+                          "output_dir",
+                          "scan_interval_seconds",
+                          "vision_context_tokens",
+                          "vision_output_tokens",
+                          "vision_timeout_seconds"
                         ]
                       }
                     ],
-                    "description": "Submit twelve fields, or exactly the legacy ten/seven. Legacy payloads retain omitted country controls. Disabling intake never removes queued jobs. Jordan must remain false."
+                    "description": "Submit fourteen fields, or exactly the legacy twelve/ten/seven. Omitted regional settings retain their current values. Enabling Jordan requires both safe, separate Jordan folders; disabling intake never removes accepted jobs."
                   }
                 }
               }
@@ -2346,8 +2415,22 @@
                         },
                         "jordan_enabled": {
                           "type": "boolean",
-                          "const": false,
-                          "description": "Reserved intake control; true is rejected until Jordan workflow acceptance."
+                          "description": "Enable new Jordan intake only after approval; requires paired Jordan folders. Accepted jobs continue when disabled.",
+                          "default": false
+                        },
+                        "jordan_incoming_dir": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Full absolute Jordan inbox path; paired with jordan_output_dir."
+                        },
+                        "jordan_output_dir": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "Full absolute dedicated Jordan output path; retained when intake is disabled."
                         }
                       }
                     }
@@ -2486,6 +2569,272 @@
           },
           "415": {
             "description": "JSON required."
+          }
+        }
+      }
+    },
+    "/api/uploads": {
+      "post": {
+        "operationId": "uploadPdf",
+        "summary": "Upload one PDF to the selected country inbox for normal intake.",
+        "tags": [
+          "Documents and images"
+        ],
+        "security": [
+          {
+            "CsrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Exact dashboard base URL, without a trailing slash."
+          }
+        ],
+        "description": "PDFs are limited to 100 MiB. Uses the selected enabled country's current incoming folder. Files are validated and published atomically, never overwritten. The normal folder scanner queues the file after readiness checks; no OCR or model runs in this request. Paused processing stays paused.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "region",
+                  "file"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "region": {
+                    "type": "string",
+                    "enum": [
+                      "BD",
+                      "INDIA",
+                      "JORDAN"
+                    ]
+                  },
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "One complete, readable PDF without a password, up to 100 MiB."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "PDF saved; waiting for normal folder intake.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "filename",
+                    "region",
+                    "status",
+                    "jobs_url"
+                  ],
+                  "properties": {
+                    "filename": {
+                      "type": "string"
+                    },
+                    "region": {
+                      "type": "string",
+                      "enum": [
+                        "BD",
+                        "INDIA",
+                        "JORDAN"
+                      ]
+                    },
+                    "status": {
+                      "const": "waiting_for_intake"
+                    },
+                    "jobs_url": {
+                      "type": "string",
+                      "description": "Relative jobs-page URL filtered by country and filename."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields, filename or unreadable PDF.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Missing/invalid local Origin or CSRF token, cross-site or nonlocal request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Country intake disabled or filename already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "PDF or multipart request too large.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Use multipart/form-data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Incoming folder or storage unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upload": {
+      "get": {
+        "operationId": "uploadPage",
+        "summary": "Country and PDF upload form.",
+        "tags": [
+          "Pages"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful read.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid filter/number or untrusted Host.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Nonlocal, cross-site or mismatched Origin request.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job, attempt, event or retained file not found.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Only GET/HEAD are accepted.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State or retained artifact verification prevents this request.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Data is temporarily unavailable; no stack trace is returned.",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         }
       }
@@ -2657,8 +3006,22 @@
           },
           "jordan_enabled": {
             "type": "boolean",
-            "const": false,
-            "description": "Reserved intake control; true is rejected until Jordan workflow acceptance."
+            "description": "Enable new Jordan intake only after approval; requires paired Jordan folders. Accepted jobs continue when disabled.",
+            "default": false
+          },
+          "jordan_incoming_dir": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Full absolute Jordan inbox path; paired with jordan_output_dir."
+          },
+          "jordan_output_dir": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Full absolute dedicated Jordan output path; retained when intake is disabled."
           }
         },
         "required": [
@@ -2887,6 +3250,13 @@
       "LineItem": {
         "type": "object",
         "properties": {
+          "origin_country": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Stored item origin. Automatic Jordan generation uses the approved CHINA regional rule; original parsed origins remain in field_source audit events. Manual versions preserve explicitly entered origins. Other regions retain source handling."
+          },
           "quantity": {
             "type": [
               "number",
@@ -3084,14 +3454,28 @@
               "string",
               "null"
             ],
-            "description": "Unique labelled PDF TIN, preserving identifier suffixes; never copied from manual references."
+            "description": "Labelled PDF TIN, or the approved master value/omission for a confidently matched factory. Original PDF reading remains in processing evidence."
           },
           "import_cover_note": {
             "type": [
               "string",
               "null"
             ],
-            "description": "PDF-provided import cover note; absent/conflicting text stays null."
+            "description": "PDF-provided import cover note, or the approved master value/omission for a confidently matched factory."
+          },
+          "shipment_text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Stored regional shipment wording. Null preserves the historical template line; an empty string explicitly omits it. Jordan's master omits the shipment line. Approved master wording is applied only during generation."
+          },
+          "remarks": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Stored regional customs declarations separated by newlines. Null preserves historical template declarations; an empty string explicitly omits them."
           }
         },
         "required": [
@@ -3851,6 +4235,14 @@
                 }
               }
             }
+          },
+          "remarks": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000,
+            "description": "Bangladesh invoice remarks; line breaks are preserved. Creates a new saved invoice version."
           }
         },
         "description": "Bangladesh edit changes; the immutable job region selects the accepted contract."
@@ -4059,6 +4451,155 @@
             }
           }
         }
+      },
+      "JordanInvoiceChanges": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": false,
+        "properties": {
+          "invoice_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "export_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "consignee": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "consignee_address": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "shipping_marks": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "carton_range": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "destination_city": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "package_count": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ],
+            "description": "Nonnegative finite numeric value or blank; packages require a positive whole number. Maximum 1e12."
+          },
+          "gross_weight_kg": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ],
+            "description": "Nonnegative finite numeric value or blank; packages require a positive whole number. Maximum 1e12."
+          },
+          "total_value": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ],
+            "description": "Nonnegative finite numeric value or blank; packages require a positive whole number. Maximum 1e12."
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source_index",
+                "description",
+                "quantity",
+                "unit",
+                "unit_price",
+                "origin_country",
+                "weight_kg"
+              ],
+              "properties": {
+                "source_index": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "quantity": {
+                  "type": [
+                    "number",
+                    "string",
+                    "null"
+                  ]
+                },
+                "unit": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 20
+                },
+                "unit_price": {
+                  "type": [
+                    "number",
+                    "string",
+                    "null"
+                  ]
+                },
+                "origin_country": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 100,
+                  "description": "Required Jordan row field; blank/null clears."
+                },
+                "weight_kg": {
+                  "type": [
+                    "number",
+                    "string",
+                    "null"
+                  ],
+                  "description": "Required Jordan row field; blank/null clears, finite nonnegative values up to 1e12."
+                }
+              }
+            }
+          }
+        },
+        "description": "Jordan edit changes. Country/template/currency/source are immutable. Rows require origin_country and weight_kg. Monetary changes use cent totals; description/origin/weight-only changes preserve supplied amounts and total. No OCR, generation defaults, CHINA-origin enforcement or automatic revaluation occurs during manual save."
       }
     },
     "parameters": {

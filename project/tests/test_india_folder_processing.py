@@ -110,7 +110,7 @@ class IndiaFolderTests(unittest.TestCase):
         self.scanner.config=self.config
         self.scan(24);self.assertEqual(len(self.scan(30)['accepted_job_ids']),1)
 
-    def test_all_intake_disabled_is_a_healthy_idle_scan_and_jordan_is_blocked(self):
+    def test_all_intake_disabled_is_healthy_and_jordan_requires_folders(self):
         self.scanner.config=replace(self.config,bangladesh_enabled=False,india_enabled=False)
         result=self.scanner.scan_once()
         self.assertEqual(result['folders'],{});self.assertEqual(result['accepted_job_ids'],[])
@@ -195,7 +195,7 @@ class IndiaFolderTests(unittest.TestCase):
         self.assertTrue(system['settings']['india_enabled'])
         self.assertEqual(len(system['folders']),6)
         html=client.get('/system').get_data(as_text=True)
-        self.assertIn('name="india_enabled"',html);self.assertIn('Jordan intake is disabled',html)
+        self.assertIn('name="india_enabled"',html);self.assertIn('data-intake-control="jordan"',html)
 
     def test_clear_archives_both_outputs_and_rediscovery_preserves_country(self):
         self.accept()

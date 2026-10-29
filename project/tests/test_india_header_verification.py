@@ -42,7 +42,11 @@ class IndiaHeaderVerificationTests(unittest.TestCase):
 
     def change(self,action):
         book=load_workbook(self.target)
-        try:action(book.active);book.save(self.target)
+        try:
+            action(book.active)
+            if not any(sheet.sheet_state == 'visible' for sheet in book):
+                book['Extraction_Audit'].sheet_state = 'visible'
+            book.save(self.target)
         finally:book.close()
 
     def test_all_supported_headers_and_identifier_leading_zeros_pass(self):

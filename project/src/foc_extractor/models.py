@@ -13,6 +13,7 @@ class LineItem:
     source_page: Optional[int] = None
     confidence: Optional[float] = None
     source_refs: list[str] = field(default_factory=list)
+    origin_country: Optional[str] = None
 
 @dataclass
 class FOCData:
@@ -35,6 +36,8 @@ class FOCData:
     net_weight_kg: Optional[float] = None
     tin_number: Optional[str] = None
     import_cover_note: Optional[str] = None
+    shipment_text: Optional[str] = None
+    remarks: Optional[str] = None
     currency: str = "USD"
     total_value: Optional[float] = None
     template_type: Optional[str] = None

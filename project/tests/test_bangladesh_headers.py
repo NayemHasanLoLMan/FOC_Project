@@ -85,22 +85,23 @@ class BangladeshHeaderTests(unittest.TestCase):
         with patch('src.foc_extractor.ocr_engine._cached_page_image',return_value=image), \
              patch('src.foc_extractor.local_vision.transcribe_cell',side_effect=[
                  ({'text':'S/16742/29'},'primary'),({'text':'S/6742/29'},'fallback'),
-                 ({'text':'S/6742/29'},'fallback')]) as read:
+                 ({'serial':'6742','year':'29'},'fallback')]) as read:
             value=observed(resolve_invoice_number)(ocr,Path('99S9999-D.pdf'),'primary',
                 verify_handwriting=True,corroborate=True,observer=lambda e,**kw:events.append(e))
         self.assertEqual(value,'S/6742/29')
-        self.assertEqual([e['accepted'] for e in events if e['kind']=='vision_decision'],[False,False,True])
+        latest={e['call_id']:e for e in events if e['kind']=='vision_decision'}
+        self.assertEqual([e['accepted'] for e in latest.values()],[False,True,True])
         self.assertEqual([call.kwargs['context']['preprocessing']['blue_ink'] for call in read.call_args_list],
                          [True,True,False])
 
-    def test_disagreement_does_not_publish_an_uncorroborated_model_correction(self):
+    def test_disagreement_uses_best_effort_without_inventing_or_truncating_serial_digits(self):
         ocr=OCRResult(content='S/742/29',pages=['SHIPPER'],
             words=[OCRWord('To The Agent',1,100,50,220,70),OCRWord('S/742/29',.7,110,80,300,180)])
         with patch('src.foc_extractor.ocr_engine._cached_page_image',return_value=Image.new('RGB',(500,500))), \
              patch('src.foc_extractor.local_vision.transcribe_cell',side_effect=[
-                 ({'text':'S/16742/29'},'primary'),({'text':'S/6742/29'},'fallback')]):
+                 ({'text':'S/16742/29'},'primary'),({'text':'S/6742/29'},'fallback'),({'serial':None,'year':None},'fallback')]):
             self.assertEqual(resolve_invoice_number(ocr,Path('99S9999-D.pdf'),'primary',
-                             verify_handwriting=True,corroborate=True),'S/742/29')
+                             verify_handwriting=True,corroborate=True),'S/16742/29')
 
     def test_directory_evidence_is_never_emitted_for_missing_fields(self):
         events=[]

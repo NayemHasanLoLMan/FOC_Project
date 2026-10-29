@@ -71,15 +71,17 @@ async function check() {
   assert.equal(select.value,'');
   assert.equal(select.options.length,2);
   context.FormData = function(form) { return Object.entries(form.values); };
-  context.settingsForm = {values:{local_model:'qwen3-vl:latest',india_enabled:'true',bangladesh_enabled:'true',
+  context.settingsForm = {values:{local_model:'qwen3-vl:latest',india_enabled:'true',bangladesh_enabled:'true',jordan_enabled:'true',
     scan_interval_seconds:'5',vision_output_tokens:'4096',vision_context_tokens:'8192',vision_timeout_seconds:'7200',
-    incoming_dir:'old-bd-input',output_dir:'old-bd-output',india_incoming_dir:'old-india-input',india_output_dir:'old-india-output'},
+    incoming_dir:'old-bd-input',output_dir:'old-bd-output',india_incoming_dir:'old-india-input',india_output_dir:'old-india-output',jordan_incoming_dir:'old-jordan-input',jordan_output_dir:'old-jordan-output'},
     querySelector:selector=>({value:selector.includes('incoming') ? 'C:\\PDF inbox\\' : 'C:\\Invoices\\'})};
   let changes = vm.runInContext('settingsChanges(settingsForm)',context);
   assert.equal(changes.incoming_dir,'C:\\PDF inbox/bangladesh');
   assert.equal(changes.india_incoming_dir,'C:\\PDF inbox/india');
   assert.equal(changes.output_dir,'C:\\Invoices/bangladesh');
   assert.equal(changes.india_output_dir,'C:\\Invoices/india');
+  assert.equal(changes.jordan_incoming_dir,'C:\\PDF inbox/jordan');
+  assert.equal(changes.jordan_output_dir,'C:\\Invoices/jordan');
   assert.equal(changes.india_enabled,true);
   assert.equal(changes.vision_timeout_seconds,7200);
   context.settingsForm.querySelector=()=>({value:''});
@@ -87,8 +89,9 @@ async function check() {
   assert.equal(changes.incoming_dir,'old-bd-input');
   assert.equal(changes.india_incoming_dir,'old-india-input');
   assert.equal(changes.bangladesh_enabled,true);
-  assert.equal(changes.jordan_enabled,false);
-  assert.equal(Object.keys(changes).length,12);
+  assert.equal(changes.jordan_enabled,true);
+  assert.equal(changes.jordan_incoming_dir,'old-jordan-input');
+  assert.equal(Object.keys(changes).length,14);
   context.intakeBadge = {textContent:'',className:''};
   context.document.querySelector = () => context.intakeBadge;
   context.intakeControl = {value:'false',dataset:{intakeControl:'bangladesh',current:'true'}};

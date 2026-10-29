@@ -1,5 +1,6 @@
 {% extends 'base.html' %}{% block title %}Jobs &amp; evidence{% endblock %}{% block breadcrumb %}JOBS &amp; EVIDENCE{% endblock %}
-{% block content %}<div class="page-heading"><div><p class="eyebrow">PROCESSING HISTORY</p><h1>Jobs &amp; evidence</h1><p>View, edit or download your invoices.</p></div></div>
+{% block content %}<div class="page-heading"><div><p class="eyebrow">PROCESSING HISTORY</p><h1>Jobs &amp; evidence</h1><p>View, edit or download your invoices.</p></div><a class="button" href="{{ url_for('upload') }}">Upload PDF</a></div>
+{% if request.args.get('uploaded')=='1' %}<p class="hint" role="status">PDF uploaded. It will appear below after the next intake check.</p>{% endif %}
 <form class="filters panel" method="get" action="{{ url_for('jobs') }}">
 <label>Filename or invoice number<input name="q" type="search" maxlength="200" placeholder="Search a shipment…" value="{{ filters.q }}"></label>
 <label>Status<select name="status"><option value="">All statuses</option>{% for state in states %}<option value="{{ state }}" {% if filters.status==state %}selected{% endif %}>{{ state|replace('_',' ') }}</option>{% endfor %}</select></label>

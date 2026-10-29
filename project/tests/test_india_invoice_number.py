@@ -11,7 +11,7 @@ from openpyxl import load_workbook
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from src.foc_extractor.india import resolve_invoice_number
+from src.foc_extractor.india import resolve_invoice_number, _invoice_reading
 from src.foc_extractor.ocr_engine import OCRResult,OCRWord,OCRTable,OCRTableCell
 from src.foc_extractor.pipeline import run
 from src.foc_extractor.processing_evidence import observed,EvidenceWriteError
@@ -53,8 +53,52 @@ class IndiaInvoiceNumberTests(unittest.TestCase):
         self.assertNotIn('12345',context['original'])
 
     def test_known_prefix_glyphs_normalize_without_changing_serial_or_year(self):
-        for value in ('S/6742/29','5/6742/29','8/6742/29','S／6742／29'):
+        for value in ('S/6742/29','5/6742/29','8/6742/29','S／6742／29','5/674 2/2 9'):
             self.assertEqual(self.read(self.ocr(),{'text':value})[0],'S/6742/29')
+
+    def test_handwritten_prefix_repair_preserves_variable_serial_digits(self):
+        self.assertEqual(_invoice_reading('3/674 2/29',True),'S/6742/29')
+        self.assertEqual(_invoice_reading('S15170/26',True),'S/15170/26')
+        self.assertEqual(_invoice_reading('ST742/29',True),'S/742/29')
+        self.assertIsNone(_invoice_reading('S/5195126',True))
+
+    def test_one_good_vision_reading_survives_an_unavailable_optional_reader(self):
+        events=[]
+        with patch('src.foc_extractor.ocr_engine._cached_page_image',return_value=Image.new('RGB',(2400,3400),'white')), \
+             patch('src.foc_extractor.local_vision.transcribe_cell',side_effect=[
+                 ({'text':'5/674 2/29'},'primary'),OSError('offline')]):
+            value=observed(resolve_invoice_number)(self.ocr(),Path('99S9999-D.pdf'),'primary',
+                verify_handwriting=True,corroborate=True,observer=lambda e,**kw:events.append(e))
+        self.assertEqual(value,'S/6742/29')
+        self.assertTrue(next(e for e in reversed(events) if e['kind']=='vision_decision')['accepted'])
+        self.assertTrue(next(e for e in events if e['kind']=='field_source' and e.get('field')=='invoice_number')['best_effort'])
+
+    def test_difficult_blue_ink_uses_tight_original_colour_to_resolve_conflict(self):
+        image=Image.new('RGB',(2400,3400),'white');ImageDraw.Draw(image).rectangle((1250,150,1600,270),fill='blue')
+        events=[]
+        with patch('src.foc_extractor.ocr_engine._cached_page_image',return_value=image), \
+             patch('src.foc_extractor.local_vision.transcribe_cell',side_effect=[
+                 ({'text':'S/16742/29'},'primary'),({'text':'S/6743/29'},'fallback'),
+                 ({'serial':'6742','year':'29'},'fallback')]) as read:
+            value=observed(resolve_invoice_number)(self.ocr(),Path('29S9999-D.pdf'),'primary',
+                verify_handwriting=True,corroborate=True,observer=lambda e,**kw:events.append(e))
+        self.assertEqual(value,'S/6742/29')
+        call=read.call_args_list[-1];context=call.kwargs['context']
+        self.assertTrue(context['preprocessing']['tight_ink']);self.assertFalse(context['preprocessing']['blue_ink'])
+        self.assertIn((0,0,255),[colour for _,colour in call.args[0].getcolors(maxcolors=100)])
+        self.assertLess(context['bbox'][2]-context['bbox'][0],490)
+        latest={e['call_id']:e for e in events if e['kind']=='vision_decision'}
+        self.assertEqual([e['accepted'] for e in latest.values()],[False,False,True])
+
+    def test_unreadable_first_header_does_not_block_a_readable_later_header(self):
+        ocr=OCRResult(pages=['INVOICE NO','INVOICE NO'],words=[
+            OCRWord('Invoice No.',1,100,100,250,130,0),OCRWord('unreadable 123',.5,260,100,450,135,0),
+            OCRWord('Invoice No.',1,100,100,250,130,1),OCRWord('6742/29',.5,260,100,450,135,1)])
+        with patch('src.foc_extractor.ocr_engine._cached_page_image',return_value=Image.new('RGB',(600,500),'white')), \
+             patch('src.foc_extractor.local_vision.transcribe_cell',side_effect=[
+                 ({'text':None},'primary'),({'text':None},'fallback'),({'text':'S/6742/29'},'primary')]) as read:
+            self.assertEqual(resolve_invoice_number(ocr,Path('neutral.pdf'),'primary'),'S/6742/29')
+        self.assertEqual(read.call_args.kwargs['context']['page'],2)
 
     def test_malformed_or_unreadable_response_is_not_repaired_into_a_number(self):
         for value in (None,1234,'8/5/196/1/26','9/6742/29','6742/29','S/67/29',

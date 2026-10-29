@@ -10,13 +10,26 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from tools.build_release import build_release, ENTRY_POINTS
+from tools.build_release import build_release, release_files, ENTRY_POINTS
 from src.foc_extractor.dashboard import create_app
 from src.foc_extractor.job_store import JobStore
 from src.foc_extractor.pipeline_config import load_config
 
 
 class ProjectLayoutTests(unittest.TestCase):
+    def test_release_excludes_excel_owner_files_without_removing_them(self):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory);root = base/'project'
+            for source in release_files():
+                target = base/source.relative_to(ROOT.parent)
+                target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(source.read_bytes())
+            owner = root/'templates/~$INDIA_template.xlsx';owner.write_bytes(b'Excel owner file')
+            output = build_release(base/'release.zip',root)
+            with zipfile.ZipFile(output) as archive:
+                self.assertFalse(any(Path(name).name.startswith('~$') for name in archive.namelist()))
+                self.assertIn('foc-invoice/project/templates/INDIA_template.xlsx',archive.namelist())
+            self.assertEqual(owner.read_bytes(),b'Excel owner file')
+
     def test_production_archive_manifest_and_dependency_boundaries(self):
         with tempfile.TemporaryDirectory() as directory:
             output = build_release(Path(directory)/'release.zip')
@@ -33,7 +46,7 @@ class ProjectLayoutTests(unittest.TestCase):
                     self.assertIn('foc-invoice/project/'+name,names)
                 self.assertEqual([name for name in names if Path(name).name=='README.md'],['foc-invoice/README.md'])
                 for name in ('templates/BD_template.xlsx','docs/openapi.json','frontend/templates/detail.html',
-                             'frontend/static/dashboard.js','requirements-lock.txt'):
+                             'frontend/static/dashboard.js','requirements-lock.txt','factory_profiles.json'):
                     self.assertIn('foc-invoice/project/'+name,names)
                 for name in names:
                     if not name.endswith('.py'):continue

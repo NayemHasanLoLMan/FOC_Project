@@ -52,7 +52,7 @@ class BangladeshMetadataTests(unittest.TestCase):
                 book=openpyxl.load_workbook(output,rich_text=True);ws=book.active
                 self.assertEqual(ws['B13'].value,'BIN : 000322109-1402')
                 self.assertEqual(ws['B13'].font.color.rgb[-6:],'FF0000')
-                self.assertEqual(str(ws['H13'].value),'C/NO. E01-E14')
+                self.assertEqual(str(ws['H13'].value),'C/NO.\nE01-E14')
                 self.assertEqual(ws['H13'].value[1].font.color.rgb[-6:],'FF0000')
                 self.assertEqual(ws['A23'].value,note)
                 self.assertEqual(ws['A23'].font.color.rgb[-6:],'FF0000')

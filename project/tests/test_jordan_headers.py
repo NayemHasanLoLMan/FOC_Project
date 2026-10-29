@@ -80,7 +80,8 @@ class JordanHeaderTests(unittest.TestCase):
         @observed
         def extract():
             with patch('src.foc_extractor.parser._extract_table_data',return_value=(
-                    [LineItem('FABRIC',2,'PCS',source_page=2,source_refs=['2:1:2'])],[],{1},[])):
+                    [LineItem('FABRIC',2,'PCS',source_page=2,source_refs=['2:1:2'])],[],{1},[])), \
+                 patch('src.foc_extractor.india.enrich_money'):
                 return self.parse(pages)
         data=extract(observer=lambda event,**kwargs:events.append(event))
         self.assertEqual(select_region(data,'JORDAN',pages[0]),'JORDAN')

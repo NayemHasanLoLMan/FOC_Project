@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="page-heading"><div><p class="eyebrow">PDF TO EXCEL</p><h1>Invoice dashboard</h1><p>Follow your PDFs and open, edit or download each invoice.</p></div><a class="button secondary" href="{{ url_for('jobs') }}">View all jobs ↗</a></div>
+<div class="page-heading"><div><p class="eyebrow">PDF TO EXCEL</p><h1>Invoice dashboard</h1><p>Follow your PDFs and open, edit or download each invoice.</p></div><div class="actions"><a class="button secondary" href="{{ url_for('jobs') }}">View all jobs ↗</a><a class="button" href="{{ url_for('upload') }}">Upload PDF</a></div></div>
 <section class="panel"><div class="section-heading"><h2 id="queue-state">{% if status.queue.paused %}Processing paused{% else %}Ready to process{% endif %}</h2><button type="button" class="button" data-queue-control data-command="/api/queue/{{ 'resume' if status.queue.paused else 'pause' }}">{{ 'Resume processing' if status.queue.paused else 'Pause processing' }}</button></div><p class="hint">Pause lets the current invoice finish. New PDFs wait until you resume processing.</p></section>
 <section class="stats" aria-label="Queue counts">
   {% for name,label,hint in [('queued','Queued','Ready for processing'),('running','Running','Invoices in progress'),('waiting_to_save','Waiting to save','Generated; save needs retry'),('completed','Completed','Invoices ready to download'),('failed','Failed','Processing needs attention'),('settling','Files settling','Checking PDF readiness')] %}

@@ -52,7 +52,7 @@ class IndiaSourcePriceTests(unittest.TestCase):
         self.assertEqual([(i.quantity,i.amount) for i in data.items], [(2,1.25),(3,None)])
         apply_valuation(data)
         self.assertEqual([i.amount for i in data.items], [1.25,.3])
-        self.assertEqual(data.total_value,1.55)
+        self.assertEqual(data.total_value,2)
 
     def test_zero_source_rate_and_amount_remain_zero(self):
         for price,amount in [('0',''),('','0'),('0','0')]:
@@ -72,7 +72,7 @@ class IndiaSourcePriceTests(unittest.TestCase):
                            ['ZIPPER','3 PCS','0.125',''], ['FABRIC','10 YDS','','']])
         apply_valuation(data)
         self.assertEqual([i.amount for i in data.items], [.38,2])
-        self.assertEqual(data.total_value,2.38)
+        self.assertEqual(data.total_value,2)
 
     def test_ambiguous_values_columns_and_split_rows_are_not_copied(self):
         for headers,values in [(['UNIT PRICE','AMOUNT'],['3.00\n4.00','30.00\n40.00']),

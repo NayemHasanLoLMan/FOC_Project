@@ -3,6 +3,7 @@ import io
 from pathlib import Path
 import sys
 import unittest
+from zipfile import ZipFile
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
@@ -40,8 +41,25 @@ class InvoiceToolsTests(unittest.TestCase):
         self.assertNotIn('unsafe-inline',response.headers['Content-Security-Policy'])
         self.assertIn('Preview Excel',self.client.get('/jobs/1').get_data(as_text=True))
         self.assertEqual(path.read_bytes(),before)
-        path.write_bytes(b'changed')
+        saved=Path(self.store.get_attempt(attempt)['receipt_path']).parent/'shipment.xlsx'
+        saved.write_bytes(b'changed')
         self.assertEqual(self.client.get(f'/invoices/attempts/{attempt}').status_code,409)
+
+    def test_preview_and_download_survive_output_metadata_changes_or_removal(self):
+        attempt=self.complete();path=Path(self.store.get_attempt(attempt)['output_path'])
+        original=path.read_bytes()
+        with ZipFile(path,'a') as archive:
+            archive.writestr('customXml/item1.xml','<metadata>External document metadata</metadata>')
+        changed=path.read_bytes()
+        self.assertNotEqual(changed,original)
+        self.assertEqual(self.client.get(f'/invoices/attempts/{attempt}').status_code,200)
+        download=self.client.get(f'/files/attempts/{attempt}/invoice')
+        self.assertEqual(download.status_code,200)
+        self.assertEqual(download.data,original)
+        self.assertEqual(path.read_bytes(),changed)
+        path.unlink()
+        self.assertEqual(self.client.get(f'/invoices/attempts/{attempt}').status_code,200)
+        self.assertEqual(self.client.get(f'/files/attempts/{attempt}/invoice').data,original)
 
     def test_preview_keeps_red_rich_text_and_does_not_evaluate_formulas(self):
         from openpyxl import Workbook

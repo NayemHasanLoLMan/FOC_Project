@@ -21,6 +21,8 @@ def development_config(config):
     return replace(config,incoming_dir=base/'incoming/bangladesh',output_dir=base/'output/bangladesh',
                    india_incoming_dir=base/'incoming/india' if config.india_incoming_dir else None,
                    india_output_dir=base/'output/india' if config.india_output_dir else None,
+                   jordan_incoming_dir=base/'incoming/jordan' if config.jordan_incoming_dir else None,
+                   jordan_output_dir=base/'output/jordan' if config.jordan_output_dir else None,
                    state_dir=base/'state',artifact_dir=base/'artifacts')
 
 
@@ -73,6 +75,7 @@ def clear_workspace(config,store,locks,request_id, *, development=False):
                 if archive.exists():raise ValueError('A previous reset archive exists; inspect it before retrying with a new request')
                 generated=[(config.artifact_dir,'artifacts'),(config.output_dir,'output')]
                 if config.india_output_dir:generated.append((config.india_output_dir,'output-india'))
+                if config.jordan_output_dir:generated.append((config.jordan_output_dir,'output-jordan'))
                 generated.append((processing_cache_dir(config),'extraction-cache'))
                 for folder,_ in generated:
                     for path in [folder,*folder.rglob('*')]:
@@ -90,7 +93,7 @@ def clear_workspace(config,store,locks,request_id, *, development=False):
                             if target.resolve()!=target or not target.is_relative_to(folder.parent) or target.exists():
                                 raise ValueError('The output recovery folder is redirected or already exists')
                             target.parent.mkdir(parents=True,exist_ok=True)
-                            (archive/('external-output-india.json' if name=='output-india' else 'external-output.json')).write_text(json.dumps({'original':str(folder),'archived':str(target)}),encoding='utf-8')
+                            (archive/('external-'+name+'.json')).write_text(json.dumps({'original':str(folder),'archived':str(target)}),encoding='utf-8')
                         folder.rename(target);moved.append((folder,target))
                     folder.mkdir(parents=True,exist_ok=True)
                 # Rediscover remaining PDFs through the normal stable-file checks after clearing.

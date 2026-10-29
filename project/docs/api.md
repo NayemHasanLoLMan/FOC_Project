@@ -1,12 +1,18 @@
 # HTTP API reference
 
-Base URL: **http://127.0.0.1:8080**, or the selected --port. [openapi.json](openapi.json) describes all 26 implemented routes and their request/response schemas. It can be opened in an OpenAPI 3.1-compatible viewer; no Swagger service is installed or exposed.
+Base URL: **http://127.0.0.1:8080**, or the selected --port. [openapi.json](openapi.json) describes the implemented routes and their request/response schemas. It can be opened in an OpenAPI 3.1-compatible viewer; no Swagger service is installed or exposed.
 
-Job records have an immutable `region` (BD/INDIA/JORDAN); new attempt metadata records region and the actual `template_path`. Migrated jobs are BD; historical metadata can omit both fields. There is no region-changing command. Bangladesh and opt-in India watching/editing are supported; Jordan stays disabled. India edits require goods `hs_code`, allow port/terms, protect country and omit BD-only fields. The server selects the contract using the saved job region. See [editing](operations.md#edit-and-add-information) and the regional OpenAPI schemas.
+Job records have an immutable `region` (BD/INDIA/JORDAN); new attempt metadata records region and the actual `template_path`. Migrated jobs are BD; historical metadata can omit both fields. There is no region-changing command. Country intake is controlled by the saved Bangladesh, India and Jordan settings. India edits require goods `hs_code`, allow port/terms, protect country and omit BD-only fields. The server selects the contract using the saved job region. See [editing](operations.md#edit-and-add-information) and the regional OpenAPI schemas.
 
-This is a local, unauthenticated dashboard API. GET/HEAD routes read retained state; guarded POST commands control the queue, settings, versioned editing and recoverable Clear data. There is no upload, forced cancellation or arbitrary shell-command endpoint. The scanner accepts PDFs from configured filesystem inboxes. All timestamps are UTC unless explicitly described as the PC's local date/time.
+This is a local, unauthenticated dashboard API. GET/HEAD routes read retained state; guarded POST commands control the queue, settings, manual invoice updates and recoverable Clear data. POST /api/uploads accepts a PDF for a selected enabled country. The scanner accepts saved uploads and PDFs dropped into configured filesystem inboxes. There is no forced cancellation or arbitrary shell-command endpoint. All timestamps are UTC unless explicitly described as the PC's local date/time.
 
 HTML detail pages use regional labels. JSON `data` and original `issues` retain historical values, including net-weight fields/notes omitted from India's presentation.
+
+For newly generated, confidently matched invoices in all three countries, the approved factory master replaces consignee, address/tax identifiers, destination country, TIN and cover note, including explicit omissions. India's approved address contains IEC/PAN/GST. Under the approved 29 October 2026 regional rule, newly generated India invoices use CHENNAI, INDIA as discharge port and CPT as shipment terms, even when source values differ; originals are retained in field_source events with policy india_fixed_shipment. ON/ABT repeats the invoice export_date in uppercase month/day/year format (for example OCT. 14, 2026), or stays empty when that date is unavailable. The optional `data.shipment_text` and `data.remarks` store printed shipment wording and newline-separated declarations; Jordan's master omits the shipment line. Null preserves historical writer behavior; an empty string explicitly omits the wording. Original parsed values, factory ID, source row and profile checksum remain in `field_source` events with `method: approved_factory_master`. These rules do not modify existing saved invoices or reapply during manual edits. Approved shared pricing applies during generation; explicit PDF monetary values are preserved.
+
+Automatic Jordan generation/reprocessing sets each `data.items[].origin_country` to CHINA under the approved regional rule, including for unmatched factories and explicit different source origins. This does not select a factory or change goods grouping, quantities, weights or prices. Per-item field_source events record method approved_regional_rule, policy jordan_always_china, original_value, item_index, source_page, source_refs and profile_sha256. These values are approved substitutions, not PDF extraction claims. Manual save retains explicitly entered origins without reapplying the generation rule.
+
+Jordan settings include jordan_enabled, jordan_incoming_dir and jordan_output_dir. Both Jordan folders are required before enabling intake. Jordan detail/edit views include item origin and weight; corrected descriptions, origins and goods weights preserve existing amounts when quantity/unit/price are unchanged. The enabled countries share one scanner, worker and database.
 
 ## Access and response rules
 
@@ -63,11 +69,13 @@ metadata.processing records attempts, fresh_calls, fresh_responses, cached_respo
 | GET route | Result / conditions |
 |---|---|
 | /files/jobs/{job_id}/source | application/pdf attachment, original accepted snapshot name and SHA |
-| /files/attempts/{attempt_id}/invoice | .xlsx attachment for a completed attempt; validates its recorded version |
+| /files/attempts/{attempt_id}/invoice | .xlsx attachment for a completed attempt; validates the original workbook in retained attempt storage |
 | /images/jobs/{job_id}/events/{event_id} | image/png, exact retained input of a vision_request from that job |
 | /images/jobs/{job_id}/pages/{page} | image/png source preview; optional event query highlights a region from the same job/attempt |
 
 Preview pages are one-based and must be within retained OCR coverage. Rendering uses the recorded DPI/rotation/skew before highlighting/resizing. At most two previews render concurrently; additional requests return 429 and can be retried later. Missing/corrupt files do not silently return another file or regenerate OCR.
+
+Invoice preview and download use the same hash-verified system-saved workbook. Changes, metadata updates or removal of the published output-folder copy do not alter this saved version. Use Edit to update the current output file; internal attempt records and verified originals remain available for recovery and source review. Missing or corrupt retained originals still fail verification.
 
 ## HTML routes
 
@@ -85,7 +93,7 @@ Preview pages are one-based and must be within retained OCR coverage. Rendering 
 | 429 | Source-preview capacity busy |
 | 503 | Temporary database/filesystem/server-data failure; check local console |
 
-A completed job remains completed if later review fails because an artifact was edited/deleted; the review/download request reports the problem. No endpoint repairs source data or overwrites an invoice.
+A completed job remains completed if later review fails because an artifact was edited/deleted; the review/download request reports the problem. Source PDFs are never changed. The guarded Edit command updates the invoice through verified atomic replacement of its registered output file.
 
 ## Examples
 
@@ -128,7 +136,7 @@ All commands return 200 with their accepted result; acceptance does not prove co
 
 Bangladesh extracted data now includes optional tin_number and import_cover_note from the PDF. Net weight is not applicable to BD and is omitted from printed/audit fields and unresolved-field lists. Other regions retain the shared model property. TIN/import cover notes use PDF values only. Bangladesh and India do not print net weight. See [configuration](configuration.md).
 
-See [manual invoice editing](operations.md) for the simplified dashboard and safe versioned editing workflow.
+See [manual invoice editing](operations.md) for the simplified dashboard and safe manual invoice updates workflow.
 
 See [invoice downloads, web preview and development reset](operations.md) for clean filenames, local viewing and the Clear data option on the main or isolated launcher.
 
@@ -141,3 +149,15 @@ POST `/api/folders/browse` accepts `{ "kind": "incoming" }` or output, plus an o
 The System form offers a folder-browser dialog inside the dashboard, with navigation, location entry and an explicit Use this folder button. One intake parent and one output parent each expand to country subfolders. The existing POST `/api/settings` contract now has twelve fields, with exact legacy ten/seven-field requests still supported: the browser submits Bangladesh/India child paths. Existing separate custom paths are retained unless replaced. Save settings applies selections and creates missing country directories; Jordan intake stays disabled.
 
 Country controls add bangladesh_enabled and jordan_enabled to the settings payload. Submit all twelve fields or exact legacy ten/seven-field requests; omitted controls keep their current values. Jordan must remain false.
+
+### Factory identification events
+
+New conversions record kind=factory_identification in retained processing-event details. Fields include factory_id (null unless matched), status (matched, unknown, ambiguous or country_conflict), region, candidates, evidence and profile_sha256. Attempt metadata also records factory_profiles_sha256. These are identification records only; they do not mean that factory defaults were applied. Historical attempts can omit these fields.
+
+Bangladesh invoice edit changes also accept optional remarks (string/null, up to 2000 characters, preserving line breaks). Saving uses the existing versioned publication workflow. Remarks are not added to India/Jordan edit changes.
+
+### PDF upload
+
+GET /upload provides the country/file form. POST /api/uploads accepts multipart/form-data with exactly one region (BD, INDIA or JORDAN) and one file. Send the same local Origin and X-CSRF-Token header used by admin commands; obtain the token through GET /api/controls. This endpoint is the multipart exception: existing command requests still require JSON and retain their 64 KiB body limit.
+
+The maximum PDF size is 100 MiB. Filename/path, complete PDF structure and password checks run before atomic publication to the currently configured country inbox. Existing filenames return 409 and are never replaced. Disabled country intake returns 409. Invalid PDF/fields/name return 400; size 413; content type 415; local/CSRF rejection 403; storage failures 503. Success returns 201 with filename, region, status=waiting_for_intake and a country/filename-filtered jobs_url. The normal folder scanner then queues the upload; no extraction or model runs in the HTTP request. A paused queue stays paused. Check the jobs list after an uncertain network result before retrying.

@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 from src.foc_extractor.excel_writer import populate_template
 from src.foc_extractor.models import FOCData, LineItem
 from src.foc_extractor.workbook_verification import verify_workbook
+from src.foc_extractor.invoice_preview import invoice_sheet
 
 
 class JordanWriterTests(unittest.TestCase):
@@ -87,8 +88,9 @@ class JordanWriterTests(unittest.TestCase):
         path = self.write(data); book = load_workbook(path); sheet = book.active
         for address in ('C9','C11','I9','I10','I11','D16','C18','B21','C12','C15'):
             self.assertIsNone(sheet[address].value,address)
-        for address in ('F21','F27','G27','I27'):
+        for address in ('F21','F27','I27'):
             self.assertEqual(sheet[address].value,0,address)
+        self.assertEqual(sheet['G27'].value,'0')
         self.assertIsNone(sheet['H27'].value)
         self.assertFalse(any('CHINA' in str(c.value) or 'TODAY(' in str(c.value) for row in sheet for c in row))
         book.close()
@@ -104,6 +106,41 @@ class JordanWriterTests(unittest.TestCase):
         self.assertGreater(sheet.row_dimensions[27].height,26)
         self.assertTrue(sheet['B27'].alignment.wrap_text)
         book.close()
+
+    def test_quantity_and_unit_share_one_printed_column_and_keep_raw_data(self):
+        data=self.data(6)
+        cases=[(90,'YDS','90 YDS'),(37,'PCS','37 PCS'),(1.125,'SETS','1.125 SETS'),
+               (0,'PCS','0 PCS'),(None,'YDS','YDS'),(None,None,None)]
+        for item,(quantity,unit,_) in zip(data.items,cases):item.quantity=quantity;item.unit=unit
+        path=self.write(data);book=load_workbook(path);sheet=book.active
+        self.assertIn('G24:H24',sheet.merged_cells)
+        self.assertEqual(sheet['G24'].value,'QUANTITY');self.assertIsNone(sheet['H24'].value)
+        for index,(quantity,unit,label) in enumerate(cases):
+            row=27+index
+            self.assertIn(f'G{row}:H{row}',sheet.merged_cells)
+            self.assertEqual(sheet.cell(row,7).value,label)
+            self.assertIsNone(sheet.cell(row,8).value)
+            self.assertEqual(book['Extracted_Items'].cell(index+2,3).value,quantity)
+            self.assertEqual(book['Extracted_Items'].cell(index+2,4).value,unit)
+        book.close()
+        cells=[cell for row in invoice_sheet(path.read_bytes())['rows'] for cell in row['cells']]
+        self.assertTrue(any(cell['colspan']==2 and cell['parts'][0]['text']=='90 YDS' for cell in cells))
+        self.assertFalse(any(part['text']=='UNIT' for cell in cells for part in cell['parts']))
+        for action in ('wrong unit','unmerged'):
+            path=self.write(data);book=load_workbook(path);sheet=book.active
+            if action=='wrong unit':sheet['G27']='90 PCS'
+            else:sheet.unmerge_cells('G27:H27')
+            book.save(path);book.close()
+            with self.assertRaises(ValueError):verify_workbook(path,data.to_dict(),self.source,'JORDAN')
+
+    def test_retained_separate_quantity_and_unit_layout_still_verifies(self):
+        data=self.data();path=self.write(data);book=load_workbook(path);sheet=book.active
+        sheet.unmerge_cells('G24:H24');sheet['H24']='UNIT'
+        for row in range(27,33):sheet.unmerge_cells(f'G{row}:H{row}')
+        sheet['G27']=data.items[0].quantity;sheet['G27'].number_format='#,##0.####'
+        sheet['H27']=data.items[0].unit
+        book.save(path);book.close()
+        verify_workbook(path,data.to_dict(),self.source,'JORDAN')
 
     def test_excessive_text_refuses_before_overwriting_existing_output(self):
         path = self.root/'invoice.xlsx'; path.write_bytes(b'previous invoice')

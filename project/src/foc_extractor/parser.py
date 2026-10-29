@@ -610,17 +610,20 @@ def _extract_table_data(ocr):
     return items,weights,parsed_pages,warnings
 
 
-def _aggregate_items(items, *, clean=True):
+def _aggregate_items(items, *, clean=True, sum_weights=False):
     grouped={}
     for it in items:
         if clean:it.description=_clean_material_description(it.description)
-        key=(it.description,it.unit,it.hs_code,it.unit_price)
+        key=(it.description,it.unit,it.hs_code,it.unit_price,it.origin_country)
         if key not in grouped:grouped[key]=it
         elif (it.quantity is not None and grouped[key].quantity is not None
               and (it.amount is None)==(grouped[key].amount is None)):
             grouped[key].quantity=round(grouped[key].quantity+it.quantity,4)
             if it.amount is not None:
                 grouped[key].amount=float(Decimal(str(grouped[key].amount))+Decimal(str(it.amount)))
+            if sum_weights:
+                weights=(grouped[key].weight_kg,it.weight_kg)
+                grouped[key].weight_kg=float(sum(Decimal(str(value)) for value in weights)) if all(value is not None for value in weights) else None
             if grouped[key].source_page!=it.source_page:grouped[key].source_page=None
             grouped[key].source_refs=list(dict.fromkeys(grouped[key].source_refs+it.source_refs))
         else:grouped[(key,len(grouped))]=it
@@ -772,9 +775,8 @@ def parse_result(ocr_result, source, *, region=None):
         from .regions import region_code
         region_code(region)
     data=FOCData(source_file=Path(source).name,template_type='BD')
-    if india:
-        from .india import source_currency
-        data.currency=source_currency(ocr_result)
+    from .india import source_currency
+    data.currency=source_currency(ocr_result)
     data.ocr_backend=ocr_result.backend or None
     data.pages_processed=len(ocr_result.pages)
     data.pages_total=ocr_result.total_pages or None
@@ -806,7 +808,11 @@ def parse_result(ocr_result, source, *, region=None):
     data.gross_weight_kg=_extract_gross_weight(summary)
     data.tin_number = _extract_tin(text)
     data.import_cover_note = _extract_import_cover_note(text)
-    data.total_value=_extract_total_value(text)
+    if jordan:
+        from .jordan import source_total
+        data.total_value=source_total(ocr_result,data.currency)
+    else:
+        data.total_value=_extract_total_value(text)
     for field in ('shipping_marks','gross_weight_kg','tin_number','import_cover_note','total_value'):
         emit('field_source', field=field, method='explicit_pdf_reading', value=getattr(data,field))
     if india:
@@ -814,8 +820,17 @@ def parse_result(ocr_result, source, *, region=None):
         prepared,headings=prepare_tables(ocr_result)
         items,weights,parsed_pages,warnings=_extract_table_data(prepared)
         enrich_items(items,ocr_result,headings)
+    elif jordan:
+        from .india import enrich_money
+        from .jordan import prepare_goods, enrich_goods
+        prepared,details=prepare_goods(ocr_result)
+        items,weights,parsed_pages,warnings=_extract_table_data(prepared)
+        enrich_money(items,ocr_result,data.currency)
+        enrich_goods(items,details)
     else:
         items,weights,parsed_pages,warnings=_extract_table_data(ocr_result)
+        from .india import enrich_money
+        enrich_money(items,ocr_result,data.currency)
     data.warnings.extend(warnings)
     for page,content in enumerate(ocr_result.pages or [text]):
         if 'SHIPPER' in content.upper():continue
@@ -857,7 +872,7 @@ def parse_result(ocr_result, source, *, region=None):
         if status in ('not_processed','unclassified','unreadable','packing_list_unresolved'):
             data.warnings.append(f'Page {page+1}: {status.replace("_"," ")}; check page coverage.')
     emit('field_evidence',field='page_coverage',evidence=coverage)
-    data.items=_aggregate_items(items,clean=not india)
+    data.items=_aggregate_items(items,clean=not (india or jordan))
     if data.gross_weight_kg is None and weights:
         data.warnings.append('Packing-list weights are not established as complete gross shipment weight.')
     from .packages import packing_packages

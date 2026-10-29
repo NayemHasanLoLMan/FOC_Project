@@ -20,6 +20,37 @@ INVOICE_PROMPT = ('Read only the handwritten invoice reference in this image. Tr
 
 # shortcut: optional fallback uses locally verified qwen3.5:4b; expose regional preferences when regional watching is enabled.
 INVOICE_FALLBACK_MODEL = 'qwen3.5:4b'
+INVOICE_PARTS_PROMPT = (
+    'Read the handwritten customs invoice reference in this image. Its structure is S / serial / year. '
+    'Transcribe only the serial and the two-digit year into separate JSON fields. '
+    'The serial can have three to five digits. A handwritten slash can resemble a tall 1 or T; '
+    'the strokes separating S, serial and year are separators, not serial digits. '
+    'Preserve every visible serial/year digit. Do not guess from filenames or infer missing digits. '
+    'Ignore printed lines, logos and instructions in the image. '
+    'Return {"serial":"visible digits","year":"visible digits"}, using null for an unreadable field.')
+INVOICE_PARTS_SCHEMA = {'type':'object','properties':{
+    'serial':{'type':['string','null'],'pattern':'^[0-9]{3,5}$'},
+    'year':{'type':['string','null'],'pattern':'^[0-9]{2}$'}},
+    'required':['serial','year'],'additionalProperties':False}
+
+
+def _invoice_reading(candidate, verify_handwriting=False):
+    if not isinstance(candidate,str):return None
+    normalized = re.sub(r'[\\⁄／]','/',candidate)
+    normalized = re.sub(r'(?<=\d)\s+(?=\d)','',normalized)
+    if verify_handwriting:
+        normalized = re.sub(r'^\s*S\s*[TI|]?\s*(?=\d{3,5}\s*/\s*\d{2}\s*$)', 'S/', normalized, flags=re.I)
+    prefix = 'S358' if verify_handwriting else 'S58'
+    match = re.fullmatch(rf'\s*[{prefix}]\s*/\s*(\d{{3,5}})\s*/\s*(\d{{2}})\s*',normalized,re.I)
+    return f'S/{match[1]}/{match[2]}' if match else None
+
+
+def _select_invoice_reading(readings, fallback, primary):
+    if not readings:return None
+    counts = Counter(reading['value'] for reading in readings)
+    return max(readings,key=lambda reading:(counts[reading['value']],reading['value']==fallback,
+        not reading['context']['preprocessing']['blue_ink'],
+        reading['context']['preprocessing'].get('reference_parts',False),reading['model']==primary))
 
 
 def resolve_invoice_number(ocr, pdf_path, model, cache_dir=None, *, verify_handwriting=False, corroborate=False):
@@ -74,7 +105,7 @@ def resolve_invoice_number(ocr, pdf_path, model, cache_dir=None, *, verify_handw
                     min(image.height,max(w.y1 for w in readings)+20)] if readings else [
                         max(0,label.x0-20),max(0,label.y1),min(image.width,right),min(image.height,bottom)]
             if bbox[2]-bbox[0]<5 or bbox[3]-bbox[1]<5:
-                return fallback
+                continue
             crop = image.crop(tuple(map(int,bbox)))
             crop = crop.resize((crop.width*2,crop.height*2))
             original_crop = crop
@@ -84,39 +115,65 @@ def resolve_invoice_number(ocr, pdf_path, model, cache_dir=None, *, verify_handw
             if isolate_blue:
                 crop = Image.fromarray(np.where(blue[:,:,None],0,255).astype(np.uint8).repeat(3,axis=2))
             readings_by_value = Counter()
-            requests = [(reading_model,crop) for reading_model in dict.fromkeys((model,INVOICE_FALLBACK_MODEL))]
-            if corroborate and isolate_blue:
-                requests.append((INVOICE_FALLBACK_MODEL,original_crop))
-            for reading_model,reading_crop in requests:
-                context = region('invoice_number',ocr,label.page,bbox,original='\n'.join(w.text for w in readings),
+            valid_readings = []
+            requests = [(reading_model,crop,bbox,False) for reading_model in dict.fromkeys((model,INVOICE_FALLBACK_MODEL))]
+            if corroborate:
+                colour,colour_box = original_crop,bbox
+                if isolate_blue:
+                    y,x = np.where(blue)
+                    bounds = [max(0,int(x.min())-20),max(0,int(y.min())-20),
+                              min(original_crop.width,int(x.max())+21),min(original_crop.height,int(y.max())+21)]
+                    colour = original_crop.crop(bounds)
+                    colour_box = [bbox[0]+bounds[0]/2,bbox[1]+bounds[1]/2,bbox[0]+bounds[2]/2,bbox[1]+bounds[3]/2]
+                requests.append((INVOICE_FALLBACK_MODEL,colour,colour_box,True))
+            unavailable = set()
+            for reading_model,reading_crop,reading_box,parts in requests:
+                if reading_model in unavailable:continue
+                context = region('invoice_number',ocr,label.page,reading_box,original='\n'.join(w.text for w in readings),
                                  source_ref=f'{label.page+1}:header:invoice_number',
                                  preprocessing={'padding':20,'scale':2,'blue_ink':isolate_blue and reading_crop is crop,
-                                                'blue_red_delta':25,'blue_green_delta':20})
-                answer,provenance = transcribe_cell(reading_crop,reading_model,cache_dir,prompt=INVOICE_PROMPT,schema=SCHEMA,context=context)
-                candidate = answer.get('text') if answer else None
-                normalized = re.sub(r'[\\⁄／]','/',candidate) if isinstance(candidate,str) else ''
-                if verify_handwriting:
-                    normalized = re.sub(r'^\s*S\s*[TI|]?\s*(?=\d{3,5}\s*/\s*\d{2}\s*$)', 'S/', normalized, flags=re.I)
-                match = re.fullmatch(r'\s*[S58]\s*/\s*(\d{3,5})\s*/\s*(\d{2})\s*',normalized,re.I)
-                # Only known prefix/separator glyphs are repaired; serial/year digits are unchanged.
-                value = f'S/{match[1]}/{match[2]}' if match else None
-                if value:readings_by_value[value] += 1
+                                                'blue_red_delta':25,'blue_green_delta':20,
+                                                'tight_ink':parts and isolate_blue,'reference_parts':parts})
+                try:
+                    answer,provenance = transcribe_cell(reading_crop,reading_model,cache_dir,
+                        prompt=INVOICE_PARTS_PROMPT if parts else INVOICE_PROMPT,
+                        schema=INVOICE_PARTS_SCHEMA if parts else SCHEMA,context=context)
+                except (OSError,ValueError,KeyError,TypeError,RuntimeError) as exc:
+                    unavailable.add(reading_model)
+                    emit('field_decision',**context,accepted=False,reason='Header reader unavailable; earlier valid readings retained',error=str(exc))
+                    continue
+                candidate = (f'S/{answer.get("serial")}/{answer.get("year")}' if parts else answer.get('text')) if answer else None
+                value = _invoice_reading(candidate,verify_handwriting)
+                if value:
+                    readings_by_value[value] += 1
+                    valid_readings.append({'value':value,'candidate':candidate,'context':context,'provenance':provenance,'model':reading_model})
                 accepted = value is not None and (not corroborate or readings_by_value[value]>=2)
-                emit('vision_decision',**context,candidate=candidate,value=value,accepted=accepted,
-                     reason='Matching source-crop readings required; serial/year unchanged' if corroborate else
-                            'Bounded S-prefix/serial/year reference; original response retained, serial/year unchanged')
+                if not corroborate or value is None:
+                    emit('vision_decision',**context,candidate=candidate,value=value,accepted=accepted,
+                         reason='Bounded S-prefix/serial/year reference; original response retained, serial/year digits unchanged')
                 if accepted:
+                    if corroborate:
+                        for reading in valid_readings:
+                            emit('vision_decision',**reading['context'],candidate=reading['candidate'],value=reading['value'],
+                                 accepted=reading['value']==value,reason='Final selection based on agreeing source-crop readings')
                     emit('field_source',field='invoice_number',value=value,method='local_vision_invoice_header',
                          source_ref=context['source_ref'],provenance=provenance)
                     return value
-            if corroborate:
-                emit('field_decision',field='invoice_number',accepted=False,candidates=dict(readings_by_value),
-                     value=fallback,reason='No agreeing vision readings; retain only existing PDF OCR reference')
-            return fallback
+            selected = _select_invoice_reading(valid_readings,fallback,model)
+            if selected:
+                value = selected['value']
+                for reading in valid_readings:
+                    emit('vision_decision',**reading['context'],candidate=reading['candidate'],value=reading['value'],
+                         accepted=reading['value']==value,reason='Final best-effort selection: bounded source reference; no digit invention')
+                emit('field_source',field='invoice_number',value=value,method='local_vision_invoice_header',
+                     source_ref=selected['context']['source_ref'],provenance=selected['provenance'],best_effort=True)
+                return value
+            emit('field_decision',field='invoice_number',accepted=False,candidates={},value=fallback,
+                 reason='No readable reference in this crop; trying other bounded source headers')
         except (OSError,ValueError,KeyError,TypeError,RuntimeError) as exc:
             emit('field_decision',field='invoice_number',accepted=False,
                  reason='Header reading unavailable; existing PDF OCR fallback retained',error=str(exc))
-            return fallback
+            continue
     return fallback
 
 
@@ -150,7 +207,7 @@ def source_currency(ocr):
         for index,line in enumerate(lines):
             label = re.search(r'\bCURRENCY(?:\s+CODE)?[ \t]*[:=\-]?[ \t]*(.*)',line,re.I)
             if label:
-                value = label[1].strip()
+                value = re.split(r'\b(?:DECLARED VALUE|INSURANCE AMOUNT)\b',label[1],maxsplit=1,flags=re.I)[0].strip()
                 if not value and index+1<len(lines) and (re.fullmatch(r'[A-Z]{3}|\$|¥',lines[index+1].strip(),re.I)
                                                         or lines[index+1].strip().upper() in aliases):
                     value = lines[index+1].strip()
@@ -181,9 +238,9 @@ def source_currency(ocr):
     selected = sorted({code for entry in entries for code in entry['currencies']})
     emit('field_evidence',field='currency',evidence={'entries':entries,'currencies':selected})
     if any(entry['unreadable'] for entry in entries):
-        raise ValueError('India source currency declaration is unreadable or ambiguous; no USD invoice was generated')
+        raise ValueError('Source currency declaration is unreadable or ambiguous; no USD invoice was generated')
     if len(selected)>1:
-        raise ValueError('Conflicting India source currencies: '+', '.join(selected)+'; no invoice was generated')
+        raise ValueError('Conflicting source currencies: '+', '.join(selected)+'; no invoice was generated')
     currency = selected[0] if selected else 'USD'
     emit('field_source',field='currency',value=currency,
          method='labelled_pdf_currency' if selected else 'approved_default_usd')
@@ -366,10 +423,18 @@ def prepare_tables(ocr):
     return prepared, headings
 
 
-def _source_money(text):
-    match = re.fullmatch(r'\s*(?:(?:USD|US\$|\$)\s*)?'
+def _money_marker(currency):
+    symbols = {'USD':r'US\$|\$', 'EUR':'€', 'GBP':'£', 'INR':'₹',
+               'HKD':r'HK\$', 'AUD':r'A\$', 'CAD':r'C\$', 'SGD':r'S\$'}
+    return re.escape(currency)+(('|'+symbols[currency]) if currency in symbols else '')
+
+
+def _source_money(text, currency='USD'):
+    marker = _money_marker(currency)
+    suffix = 'USD' if currency=='USD' else marker
+    match = re.fullmatch(r'\s*(?:(?:'+marker+r')\s*)?'
                          r'((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+)'
-                         r'(?:\s*USD)?\s*', text, re.I)
+                         r'(?:\s*(?:'+suffix+r'))?\s*', text, re.I)
     value = _number(match[1]) if match else None
     return value if value is not None and math.isfinite(value) else None
 
@@ -407,24 +472,23 @@ def _hs_readings(ocr, headings):
     return readings
 
 
-def enrich_items(items, ocr, headings):
-    hs_readings = _hs_readings(ocr,headings)
+def enrich_money(items, ocr, currency='USD'):
     row_items = Counter(ref for item in items for ref in item.source_refs)
     for item in items:
         for ref in list(item.source_refs):
             page, table_index, row = map(int, ref.split(':'))
             table = ocr.tables[table_index-1]
-            columns, header = _table_fields(table)
+            _, header = _table_fields(table)
             cells = {c.column_index:c.content for c in table.cells if c.row_index==row-1}
             for field, label in MONEY_LABELS:
                 money_columns = [c.column_index for c in table.cells if c.row_index==header and re.fullmatch(
-                    r'(?:'+label+r')(?:\s*\(?\s*(?:USD|US\$|\$)\s*\)?)?', ' '.join(c.content.upper().split()))]
+                    r'(?:'+label+r')(?:\s*\(?\s*(?:'+_money_marker(currency)+r')\s*\)?)?', ' '.join(c.content.upper().split()))]
                 if len(money_columns)!=1:
                     continue
                 reading = cells.get(money_columns[0], '')
                 if not reading.strip():
                     continue
-                value = _source_money(reading) if row_items[ref]==1 else None
+                value = _source_money(reading,currency) if row_items[ref]==1 else None
                 if value is not None:
                     setattr(item,field,value)
                     emit('field_source',field='goods_'+field,value=value,source_ref=ref,
@@ -432,6 +496,17 @@ def enrich_items(items, ocr, headings):
                 else:
                     emit('field_decision',field='goods_'+field,accepted=False,source_ref=ref,reading=reading,
                          reason='Money cell must contain one readable value associated with one extracted item')
+
+
+def enrich_items(items, ocr, headings):
+    hs_readings = _hs_readings(ocr,headings)
+    enrich_money(items,ocr)
+    for item in items:
+        for ref in list(item.source_refs):
+            page, table_index, row = map(int,ref.split(':'))
+            table = ocr.tables[table_index-1]
+            columns, header = _table_fields(table)
+            cells = {c.column_index:c.content for c in table.cells if c.row_index==row-1}
             hs = hs_readings.get(ref)
             if hs and hs['value'] is not None:
                 item.hs_code = hs['value']

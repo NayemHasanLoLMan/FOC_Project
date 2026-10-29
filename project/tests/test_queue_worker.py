@@ -82,6 +82,26 @@ class WorkerTests(unittest.TestCase):
         convert.assert_not_called()
         self.assertEqual(self.store.get_job(job)['state'], 'failed')
 
+    def test_factory_master_change_during_conversion_prevents_publication(self):
+        job = self.enqueue()
+        metadata = queue_worker.attempt_metadata
+        changed = False
+        def read_metadata(*args, **kwargs):
+            result = metadata(*args, **kwargs)
+            if changed:result['factory_profiles_sha256'] = '0'*64
+            return result
+        def convert(*args, **kwargs):
+            nonlocal changed
+            result = self.convert(*args, **kwargs)
+            changed = True
+            return result
+        with patch.object(queue_worker,'attempt_metadata',side_effect=read_metadata), \
+             patch.object(queue_worker,'run',side_effect=convert), QueueWorker(self.config,self.store) as worker:
+            attempt = worker.run_once()
+        self.assertEqual(self.store.get_attempt(attempt)['state'],'failed')
+        self.assertIn('factory master',self.store.get_attempt(attempt)['error'])
+        self.assertEqual(list(self.config.output_dir.glob('*.xlsx')),[])
+
     def test_prepared_restart_retains_evidence_and_issues_without_conversion(self):
         job = self.enqueue()
         def convert(source, **kwargs):

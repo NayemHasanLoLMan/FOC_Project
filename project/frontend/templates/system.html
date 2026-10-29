@@ -5,9 +5,9 @@
 {% if settings_available %}<form id="settings-editor">{% endif %}
 <section class="panel"><h2>Processing configuration</h2><div class="country-intake-grid">
 {% for country,label,enabled in [('bangladesh','Bangladesh',system.settings.bangladesh_enabled),('india','India',system.settings.india_enabled),('jordan','Jordan',system.settings.jordan_enabled)] %}
-  <div class="country-intake{{ ' country-unavailable' if country=='jordan' else '' }}"><div class="country-heading"><h3>{{ label }}</h3><span class="badge{{ ' state-completed' if enabled else '' }}" data-intake-status="{{ country }}">{{ 'Enabled' if enabled else 'Disabled' }}</span></div>
-  <label class="sr-only" for="{{ country }}-intake">{{ label }} automatic intake</label><select name="{{ country }}_enabled" id="{{ country }}-intake" data-intake-control="{{ country }}" data-current="{{ 'true' if enabled else 'false' }}"{% if country=='jordan' or not settings_available %} disabled{% endif %}><option value="false"{% if not enabled %} selected{% endif %}>Disabled</option><option value="true"{% if enabled %} selected{% endif %}>Enabled</option></select>
-  <p>{% if country=='jordan' %}Jordan intake is disabled until its template is ready.{% else %}Changes apply when settings are saved.{% endif %}</p></div>
+  <div class="country-intake"><div class="country-heading"><h3>{{ label }}</h3><span class="badge{{ ' state-completed' if enabled else '' }}" data-intake-status="{{ country }}">{{ 'Enabled' if enabled else 'Disabled' }}</span></div>
+  <label class="sr-only" for="{{ country }}-intake">{{ label }} automatic intake</label><select name="{{ country }}_enabled" id="{{ country }}-intake" data-intake-control="{{ country }}" data-current="{{ 'true' if enabled else 'false' }}"{% if not settings_available %} disabled{% endif %}><option value="false"{% if not enabled %} selected{% endif %}>Disabled</option><option value="true"{% if enabled %} selected{% endif %}>Enabled</option></select>
+  <p>Changes apply when settings are saved.</p></div>
 {% endfor %}
 </div><p class="hint">Intake controls new PDFs. Already queued invoices continue processing.</p></section>
 {% if settings_available %}
@@ -27,7 +27,7 @@
 <p class="hint">{{ help }}</p><div class="folder-children" aria-label="Country subfolders"><span>bangladesh</span><span>india</span><span>jordan</span></div></fieldset>
 {% endfor %}
 </div>
-{% for key in ['incoming_dir','output_dir','india_incoming_dir','india_output_dir'] %}<input type="hidden" name="{{ key }}" value="{{ system.settings[key] or '' }}">{% endfor %}
+{% for key in ['incoming_dir','output_dir','india_incoming_dir','india_output_dir','jordan_incoming_dir','jordan_output_dir'] %}<input type="hidden" name="{{ key }}" value="{{ system.settings[key] or '' }}">{% endfor %}
 <p class="hint">Choose parent folders once; country subfolders are created when you save. Existing invoices and queued PDFs stay in their recorded locations.{% if development_mode %} Test folders must remain inside this isolated development workspace.{% endif %}</p>
 <p id="folder-picker-result" role="status" aria-live="polite"></p><button type="submit" class="button">Save settings</button><p id="settings-result" role="status" aria-live="polite"></p></section></form>
 <dialog id="folder-browser" aria-labelledby="folder-browser-title"><div class="section-heading"><h2 id="folder-browser-title">Choose folder</h2><button type="button" class="button secondary" id="folder-cancel">Cancel</button></div>

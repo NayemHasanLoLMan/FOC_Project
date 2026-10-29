@@ -17,13 +17,17 @@ EDIT_FIELDS = {
 
 def editable_fields(region='BD'):
     if region == 'BD':
-        return EDIT_FIELDS
+        return {**EDIT_FIELDS,'remarks':'Remarks'}
     if region == 'INDIA':
         return {**{key:label for key,label in EDIT_FIELDS.items()
                    if key not in ('destination_country','tin_number','import_cover_note')},
                 'consignee_address':'Address / IEC / PAN / GST',
                 'port_of_discharge':'Port of discharge', 'shipment_terms':'Shipment terms'}
-    raise ValueError('Manual invoice editing is supported for Bangladesh and India')
+    if region == 'JORDAN':
+        return {**{key:label for key,label in EDIT_FIELDS.items()
+                   if key not in ('destination_country','tin_number','import_cover_note')},
+                'consignee_address':'Address', 'total_value':'Total'}
+    raise ValueError('Manual invoice editing is supported for Bangladesh, India and Jordan')
 
 
 def _number(value, name):
@@ -53,6 +57,7 @@ def validate_changes(changes, region='BD'):
             used = set()
             for row in value:
                 required = {'source_index','description','quantity','unit','unit_price'} | ({'hs_code'} if region=='INDIA' else set())
+                if region=='JORDAN':required |= {'weight_kg','origin_country'}
                 if not isinstance(row,dict) or set(row)!=required:
                     raise ValueError('Each goods row needs '+', '.join(sorted(required)))
                 index = row['source_index']
@@ -61,12 +66,19 @@ def validate_changes(changes, region='BD'):
                         raise ValueError('Invalid or repeated goods row reference')
                     used.add(index)
                 description, unit = row['description'], row['unit']
+                if region=='JORDAN' and unit is None:unit=''
                 if not isinstance(description,str) or not description.strip() or len(description)>1000:
                     raise ValueError('Each goods description needs 1–1000 characters')
                 if not isinstance(unit,str) or len(unit)>20:
                     raise ValueError('Goods units must be text up to 20 characters')
                 rows.append({'source_index':index,'description':description.strip(),'unit':unit.strip(),
                              'quantity':_number(row['quantity'],'Quantity'), 'unit_price':_number(row['unit_price'],'Unit value')})
+                if region=='JORDAN':
+                    origin=row['origin_country']
+                    if origin is not None and (not isinstance(origin,str) or len(origin)>100):
+                        raise ValueError('Origin must be text up to 100 characters or blank')
+                    rows[-1].update(unit=unit.strip() or None,origin_country=(origin.strip() or None) if origin else None,
+                                    weight_kg=_number(row['weight_kg'],'Goods weight'))
                 if region=='INDIA':
                     code=row['hs_code']
                     if code is not None and (not isinstance(code,str) or len(code)>20):
@@ -115,6 +127,7 @@ def edited_data(original, changes):
             same_money = index is not None and all(getattr(item,k)==change[k] for k in ('quantity','unit','unit_price'))
             money_changed |= not same_money or index != position
             source_keys = ('description','quantity','unit','hs_code') if region=='INDIA' else ('description','quantity','unit')
+            if region=='JORDAN':source_keys += ('origin_country','weight_kg')
             same_source = index is not None and all(getattr(item,k)==change[k] for k in source_keys)
             for key in ('description','quantity','unit','unit_price'):
                 setattr(item,key,change[key])
@@ -124,15 +137,19 @@ def edited_data(original, changes):
                 item.confidence = None
                 item.hs_code = None
                 item.weight_kg = None
+                item.origin_country = None
             if region=='INDIA':
                 item.hs_code=change['hs_code']
-            if region!='INDIA' or not same_money:
+            if region=='JORDAN':
+                item.origin_country=change['origin_country']
+                item.weight_kg=change['weight_kg']
+            if not same_money:
                 item.amount = (float((Decimal(str(item.quantity))*Decimal(str(item.unit_price))).quantize(Decimal('.01'),rounding=ROUND_HALF_UP))
                                if item.quantity is not None and item.unit_price is not None else None)
             rows.append(item)
         data.items = rows
-        if 'total_value' not in changes and (region!='INDIA' or money_changed):
-            data.total_value = (float(sum((Decimal(str(i.amount)) for i in rows),Decimal(0)).quantize(Decimal('.01' if region=='INDIA' else '1'),rounding=ROUND_HALF_UP))
+        if 'total_value' not in changes and money_changed:
+            data.total_value = (float(sum((Decimal(str(i.amount)) for i in rows),Decimal(0)).quantize(Decimal('.01' if region in ('INDIA','JORDAN') else '1'),rounding=ROUND_HALF_UP))
                                 if rows and all(i.amount is not None for i in rows) else None)
     for key,value in changes.items():
         if key != 'items':

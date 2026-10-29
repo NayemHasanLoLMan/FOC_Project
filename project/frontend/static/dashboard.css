@@ -187,6 +187,7 @@ li { margin: 8px 0; font-size: 13px; overflow-wrap: anywhere; }
 .editor-fields input, .editor-fields textarea, .editor-good input, .editor-good textarea { font-weight: 400; }
 .editor-good { display: grid; grid-template-columns: minmax(180px, 3fr) repeat(3, minmax(80px, 1fr)) auto; gap: 14px; align-items: end; padding: 20px 0; border-bottom: 1px solid #e4eaf3; }
 @media (min-width: 1251px) {
+  #invoice-editor[data-region="JORDAN"] .editor-good { grid-template-columns: minmax(180px, 3fr) repeat(5, minmax(70px, 1fr)) auto; }
   #invoice-editor[data-region="INDIA"] .editor-good { grid-template-columns: minmax(180px, 3fr) repeat(4, minmax(70px, 1fr)) auto; }
 }
 .editor-good:last-child { border-bottom: 0; padding-bottom: 0; }
@@ -320,3 +321,23 @@ li { margin: 8px 0; font-size: 13px; overflow-wrap: anywhere; }
 .folder-entry:last-child { border-bottom: 0; }
 .folder-browser-footer { align-items: center; justify-content: space-between; flex-wrap: wrap; font-size: 12px; }
 @media(max-width:760px) { .country-intake-grid, .shared-folder-grid { grid-template-columns: 1fr; } }
+
+.upload-panel { max-width: 780px; }
+.upload-panel .editor-fields { grid-template-columns: minmax(0, 1fr); }
+.upload-panel input[type="file"] {
+  width: 100%; min-width: 0; padding: 14px; border: 1px dashed #a7bcec;
+  border-radius: 10px; background: #f5f8ff; color: var(--muted);
+  font-size: 13px; cursor: pointer; overflow: hidden; text-overflow: ellipsis;
+  transition: border-color .15s, background .15s;
+}
+.upload-panel input[type="file"]::file-selector-button {
+  margin-right: 16px; padding: 11px 18px; border: 0; border-radius: 7px;
+  background: var(--accent); color: #fff; font: inherit; font-weight: 600;
+  cursor: pointer; transition: background .15s;
+}
+.upload-panel input[type="file"]:hover { border-color: var(--accent); background: #eef3ff; }
+.upload-panel input[type="file"]:hover::file-selector-button { background: var(--accent-dark); }
+.upload-panel input[type="file"]:focus-visible { border-color: var(--accent); }
+.upload-result { min-height: 1.5em; }
+.upload-result.error { color: #b42318; }
+.upload-result.success { color: #18714f; }

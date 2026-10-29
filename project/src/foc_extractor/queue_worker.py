@@ -45,15 +45,19 @@ def _output_name(folder, name, job_id, attempt_id, prefer_base=True):
         version += 1
 
 
-def _publish_copy(source, target, expected_digest):
-    """Atomically publish on the output volume without replacing any existing file."""
+def _publish_copy(source, target, expected_digest, *, replace_existing=False):
+    """Publish atomically; only a verified edit may replace its own output file."""
     with NamedTemporaryFile(dir=target.parent, suffix='.tmp', delete=False) as handle:
         temporary = Path(handle.name)
     try:
         shutil.copyfile(source, temporary)
         if _digest(temporary) != expected_digest:
             raise ValueError('Workbook changed while preparing its publication copy')
-        if os.name == 'nt':
+        if replace_existing:
+            if os.path.lexists(target) and (target.is_symlink() or not target.is_file()):
+                raise ValueError('The invoice output is not a regular file')
+            os.replace(temporary, target)
+        elif os.name == 'nt':
             os.rename(temporary, target)  # Windows rename refuses an existing destination.
         else:
             os.link(temporary, target)
@@ -131,6 +135,13 @@ class QueueWorker:
         if (not target.is_absolute() or target.parent != Path(attempt['metadata'].get('output_dir', attempt['metadata']['configuration']['output_dir']))
                 or target.suffix.lower() != '.xlsx'):
             raise ValueError('Prepared destination escapes its output directory')
+        if ready.get('replace_existing'):
+            edit = attempt['metadata'].get('manual_edit')
+            if not edit:
+                raise ValueError('Only an invoice edit can replace an output file')
+            base = self.store.get_attempt(edit['base_attempt_id'])
+            if base['job_id']!=job['id'] or base['state']!='completed' or Path(base['output_path'])!=target:
+                raise ValueError('Edited output does not belong to this invoice')
         if _digest(job['snapshot_path']) != job['source_sha256']:
             raise ValueError('Source snapshot has changed since intake')
         region = attempt['metadata'].get('region', 'BD')
@@ -165,11 +176,15 @@ class QueueWorker:
                 if os.path.lexists(target):
                     if not target.is_symlink() and target.is_file() and _digest(target) == ready['workbook_sha256']:
                         break  # Reconcile a crash after publication but before the DB commit.
-                    target = _output_name(target.parent, ready['workbook_name'], attempt['job_id'], attempt['id'], False)
-                    ready['destination'] = str(target)
-                    _write_json(receipt, ready)
+                    if not ready.get('replace_existing'):
+                        target = _output_name(target.parent, ready['workbook_name'], attempt['job_id'], attempt['id'], False)
+                        ready['destination'] = str(target)
+                        _write_json(receipt, ready)
                 try:
-                    _publish_copy(prepared, target, ready['workbook_sha256'])
+                    if ready.get('replace_existing'):
+                        _publish_copy(prepared, target, ready['workbook_sha256'], replace_existing=True)
+                    else:
+                        _publish_copy(prepared, target, ready['workbook_sha256'])
                     break
                 except FileExistsError:
                     continue
@@ -196,9 +211,15 @@ class QueueWorker:
         metadata = attempt_metadata(self.config)
         if metadata['application_sha256'] != self._startup_metadata['application_sha256']:
             raise RuntimeError('Application files changed; restart the worker before processing')
-        attempt = self.store.claim_next(self.owner, lambda job: {
-            **attempt_metadata(self.config, job['region']),
-            'worker_lock': str(self.lock_path), 'worker_pid': os.getpid()})
+        def metadata_for(job):
+            value = {**attempt_metadata(self.config, job['region']),
+                     'worker_lock':str(self.lock_path),'worker_pid':os.getpid()}
+            if job.get('manual_edit_json'):
+                edit = json.loads(job['manual_edit_json'])
+                base = self.store.get_attempt(edit['base_attempt_id'])
+                value['output_dir'] = str(Path(base['output_path']).parent)
+            return value
+        attempt = self.store.claim_next(self.owner, metadata_for)
         if attempt is None:
             return None
         metadata = attempt['metadata']
@@ -249,12 +270,18 @@ class QueueWorker:
             _verify_workbook(workbook, data, source, region)
             after = attempt_metadata(self.config, region)
             if (_digest(source) != job['source_sha256'] or any(after[key] != metadata[key]
-                    for key in ('template_sha256', 'rates_sha256', 'application_sha256'))):
-                raise ValueError('Source, template, rates or application changed during conversion')
-            target = _output_name(Path(metadata['output_dir']), workbook.name, job['id'], attempt['id'])
+                    for key in ('template_sha256', 'rates_sha256', 'application_sha256', 'factory_profiles_sha256'))):
+                raise ValueError('Source, template, rates, factory master or application changed during conversion')
+            if metadata.get('manual_edit'):
+                target = Path(base['output_path'])
+                if base['job_id']!=job['id'] or target!=Path(previous['destination']):
+                    raise ValueError('Edited output does not match the original invoice')
+            else:
+                target = _output_name(Path(metadata['output_dir']), workbook.name, job['id'], attempt['id'])
             _write_json(receipt, {'job_id': job['id'], 'attempt_id': attempt['id'], 'source_sha256': job['source_sha256'], 'region':region,
                                  'workbook_name': workbook.name, 'workbook_sha256': _digest(workbook),
-                                 'data_name': data_path.name, 'data_sha256': _digest(data_path), 'destination': str(target)})
+                                 'data_name': data_path.name, 'data_sha256': _digest(data_path), 'destination': str(target),
+                                 'replace_existing':bool(metadata.get('manual_edit'))})
         except Exception as exc:
             self.store.finish(attempt['id'], self.owner, 'failed', error=f'{type(exc).__name__}: {exc}')
             return attempt['id']

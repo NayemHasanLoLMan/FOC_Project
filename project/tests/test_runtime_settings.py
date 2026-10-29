@@ -124,7 +124,7 @@ class RuntimeSettingsTests(unittest.TestCase):
         self.assertEqual(html.count('data-folder-kind='),2)
         self.assertNotIn('Folders &amp; disk space',html)
         self.assertNotIn(str(incoming),re.sub(r'<[^>]*>','',html))
-        self.assertIn('Jordan intake is disabled',html)
+        self.assertIn('data-intake-control="jordan"',html)
 
     def test_existing_separate_paths_are_not_misrepresented_as_a_shared_root(self):
         custom=replace(self.config,incoming_dir=self.root/'input/bangladesh',india_incoming_dir=self.root/'other/india',
@@ -139,7 +139,7 @@ class RuntimeSettingsTests(unittest.TestCase):
         changes={**settings.editable_settings(original),'bangladesh_enabled':False}
         self.assertEqual(self.save(changes).status_code,200)
         self.assertFalse(settings.load_runtime_settings(original).bangladesh_enabled)
-        legacy={key:value for key,value in changes.items() if key not in ('bangladesh_enabled','jordan_enabled')}
+        legacy={key:value for key,value in changes.items() if key not in ('bangladesh_enabled','jordan_enabled','jordan_incoming_dir','jordan_output_dir')}
         self.assertEqual(self.save(legacy).status_code,200)
         self.assertFalse(self.config.bangladesh_enabled)
         self.assertEqual(self.save({**settings.editable_settings(self.config),'jordan_enabled':True}).status_code,409)
@@ -147,7 +147,7 @@ class RuntimeSettingsTests(unittest.TestCase):
         for country in ('bangladesh','india','jordan'):
             self.assertIn('name="'+country+'_enabled"',html)
             self.assertIn('data-intake-status="'+country+'"',html)
-        self.assertRegex(html,r'id="jordan-intake"[^>]* disabled')
+        self.assertNotRegex(html,r'id="jordan-intake"[^>]* disabled')
 
     def test_folder_browser_requires_protection_and_does_not_save_settings(self):
         chosen=self.root/'chosen';chosen.mkdir()

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Upload PDF{% endblock %}{% block breadcrumb %}UPLOAD PDF{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">PDF TO EXCEL</p><h1>Upload PDF</h1><p>Choose a country and add a PDF for invoice processing.</p></div><a class="button secondary" href="{{ url_for('jobs') }}">Back to jobs</a></div>
+<form id="pdf-upload" class="panel upload-panel" action="{{ url_for('upload_pdf') }}" method="post" enctype="multipart/form-data" data-max-bytes="{{ max_upload_bytes }}">
+<div class="editor-fields">
+<label>Country<select name="region" required><option value="" disabled selected>Choose a country</option>{% for code,country in countries.items() %}<option value="{{ code }}" {% if code not in enabled_regions %}disabled{% endif %}>{{ country }}{% if code not in enabled_regions %} — intake disabled{% endif %}</option>{% endfor %}</select></label>
+<label>PDF file<input name="file" type="file" accept=".pdf,application/pdf" required aria-describedby="upload-help"></label>
+</div>
+<p id="upload-help" class="hint">PDF only · Up to 100 MB · One file at a time. Existing files are never overwritten.</p>
+<p class="hint">Your PDF goes into the selected country’s incoming folder and joins the normal queue after intake checks. Paused processing stays paused.</p>
+<p id="upload-result" class="upload-result" role="status" aria-live="polite"></p>
+<div class="actions"><button type="submit">Upload PDF</button></div>
+</form>
+{% endblock %}

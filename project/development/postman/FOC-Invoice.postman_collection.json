@@ -840,7 +840,7 @@
               ],
               "query": []
             },
-            "description": "Save manual invoice changes as a new version through the worker; preserve source readings and previous files. No OCR rerun. Fill changes with intended fields/items before sending; the empty example is rejected. Reuse the same UUID/payload for an uncertain retry. India: changes may include port_of_discharge/shipment_terms; every submitted goods row must also include hs_code (text or null). India rejects destination_country, tin_number and import_cover_note. India totals use cents; Bangladesh keeps its existing contract. Fetch the job region/data first; no country-changing request is supported.",
+            "description": "Update the current invoice file through the worker using verified atomic replacement; preserve source readings and internal recovery records. No OCR rerun. A locked file waits for saving rather than creating another output filename. Fill changes with intended fields/items before sending; the empty example is rejected. Reuse the same UUID/payload for an uncertain retry. India: changes may include port_of_discharge/shipment_terms; every submitted goods row must also include hs_code (text or null). India rejects destination_country, tin_number and import_cover_note. India totals use cents; Bangladesh keeps its existing contract. Fetch the job region/data first; no country-changing request is supported.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"request_id\": \"{{$guid}}\",\n  \"attempt_id\": {{attempt_id}},\n  \"changes\": {}\n}",
@@ -1009,6 +1009,75 @@
                 }
               }
             }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "PDF upload",
+      "item": [
+        {
+          "name": "Upload page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/upload",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "upload"
+              ],
+              "query": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Upload PDF to country inbox",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{base_url}}"
+              },
+              {
+                "key": "X-CSRF-Token",
+                "value": "{{csrf_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/uploads",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "uploads"
+              ],
+              "query": []
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "region",
+                  "type": "text",
+                  "value": "BD",
+                  "description": "BD, INDIA or JORDAN; intake must be enabled."
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "Choose one PDF, up to 100 MB."
+                }
+              ]
+            },
+            "description": "Run getControls first to obtain the token. Returns 201 waiting_for_intake; the existing folder scanner queues the file. Existing files are never overwritten."
           },
           "response": []
         }

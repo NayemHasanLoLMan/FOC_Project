@@ -10,7 +10,7 @@ from threading import TIMEOUT_MAX
 from . import __version__
 
 ROOT = Path(__file__).resolve().parents[2]
-IO_FIELDS = ('incoming_dir', 'output_dir', 'india_incoming_dir', 'india_output_dir')
+IO_FIELDS = ('incoming_dir', 'output_dir', 'india_incoming_dir', 'india_output_dir', 'jordan_incoming_dir', 'jordan_output_dir')
 
 
 def initialize_folders(config):
@@ -41,13 +41,18 @@ class PipelineConfig:
     india_output_dir: Path | None = None
     bangladesh_enabled: bool = True
     jordan_enabled: bool = False
+    jordan_incoming_dir: Path | None = None
+    jordan_output_dir: Path | None = None
 
     def inboxes(self):
         return {**({'BD': self.incoming_dir} if self.bangladesh_enabled else {}),
-                **({'INDIA': self.india_incoming_dir} if self.india_enabled else {})}
+                **({'INDIA': self.india_incoming_dir} if self.india_enabled else {}),
+                **({'JORDAN': self.jordan_incoming_dir} if self.jordan_enabled else {})}
 
     def output_for(self, region):
         # Legacy manually registered regional jobs retain the original single-output behavior.
+        if region == 'JORDAN' and self.jordan_output_dir:
+            return self.jordan_output_dir
         return self.india_output_dir if region == 'INDIA' and self.india_output_dir else self.output_dir
 
     def to_dict(self):
@@ -69,7 +74,7 @@ def parse_config(raw, base: Path) -> PipelineConfig:
     directories = {}
     for key in (*IO_FIELDS, 'state_dir', 'artifact_dir'):
         value = raw.get(key)
-        if key.startswith('india_') and value is None:
+        if key.startswith(('india_', 'jordan_')) and value is None:
             directories[key] = None
             continue
         if not isinstance(value, str) or not value.strip():
@@ -84,8 +89,10 @@ def parse_config(raw, base: Path) -> PipelineConfig:
     jordan_enabled=raw.get('jordan_enabled',False)
     if type(bd_enabled) is not bool or type(jordan_enabled) is not bool:
         raise ValueError('Country intake settings must be true or false')
-    if jordan_enabled:
-        raise ValueError('Jordan intake cannot be enabled until its template workflow is ready')
+    if bool(directories['jordan_incoming_dir']) != bool(directories['jordan_output_dir']):
+        raise ValueError('Provide both Jordan input and output folders')
+    if jordan_enabled and directories['jordan_incoming_dir'] is None:
+        raise ValueError('Jordan processing requires separate input and output folders')
     if bool(directories['india_incoming_dir']) != bool(directories['india_output_dir']):
         raise ValueError('Provide both India input and output folders')
     if enabled and directories['india_incoming_dir'] is None:
@@ -130,6 +137,7 @@ def attempt_metadata(config: PipelineConfig, region='BD') -> dict:
         'template_path': str(template),
         'template_sha256': hashlib.sha256(template.read_bytes()).hexdigest(),
         'rates_sha256': hashlib.sha256((ROOT / 'valuation_rates.json').read_bytes()).hexdigest(),
+        'factory_profiles_sha256': hashlib.sha256((ROOT / 'factory_profiles.json').read_bytes()).hexdigest(),
         'local_model': config.local_model,
         'model_digest': None,  # Resolved by processing, not assumed from the configured model name.
     }
