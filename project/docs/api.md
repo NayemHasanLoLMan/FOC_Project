@@ -125,10 +125,10 @@ Every POST requires application/json, Origin equal to the exact base URL without
 | /api/queue/pause | none | Block new conversion claims after this transaction |
 | /api/queue/resume | none | Permit new claims |
 | /api/jobs/{job_id}/retry | attempt_id | Queue the latest failed/interrupted job for a new attempt |
-| /api/jobs/{job_id}/reprocess | attempt_id | Queue a completed job using its saved PDF and current settings; keep old results |
+| /api/jobs/{job_id}/reprocess | attempt_id | Rerun a completed job using its saved PDF and current settings; replace its registered invoice file, including manual changes |
 | /api/jobs/{job_id}/retry-save | attempt_id | Record a save retry request; the running worker's next regular pass retries the prepared workbook without OCR |
 
-attempt_id must match the latest eligible attempt in that job. This prevents a stale page or double-click from requeueing a newer failed attempt. Completed reprocessing creates a new attempt when the worker claims it, records current configuration/version fingerprints, and publishes a versioned filename. Historical PDF/evidence/invoice downloads remain available. No inference or publication occurs inside a web request.
+attempt_id must match the latest eligible attempt in that job. This prevents a stale page or double-click from requeueing a newer failed attempt. Completed reprocessing creates a new attempt when the worker claims it, records current configuration/version fingerprints, and atomically replaces that job's registered invoice file in its existing folder. Manual changes are replaced by current extraction/default rules. Failed conversion leaves the current file intact; locked outputs wait for save recovery. Other jobs' files are never overwritten. Historical PDF/evidence/invoice downloads remain available. No inference or publication occurs inside a web request.
 
 All commands return 200 with their accepted result; acceptance does not prove completion. A save request keeps waiting_to_save until publication succeeds. Publication already retries automatically every worker pass; this button records an explicit operator request using that same path. It does not bypass permissions, file locks or integrity checks. Stopped workers cannot perform accepted work.
 

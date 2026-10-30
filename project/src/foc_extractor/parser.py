@@ -41,6 +41,7 @@ def _number(s):
 
 
 def _quantity_text(text):
+    text=re.sub(rf'(?<=\d)\s*·\s*(?=(?:{UNITS})\b)', ' ',text,flags=re.I)
     text=re.sub(r'\b[Iil](?=\s*(?:PCS?\b|YDS\b|SETS?\b))','1',text,flags=re.I)
     text=re.sub(r'(?<=\d)\s*(?:VD[S:]?|Y[O0][S5])\b',' YDS',text,flags=re.I)
     lines=[line.strip() for line in text.splitlines() if line.strip()]
@@ -140,6 +141,7 @@ def _carton_count(value):
 
 
 def _extract_shipping_marks(text):
+    text=re.sub(r'\bF\s*\.\s*O\s*\.\s*C\s*\.?', 'FOC',text,flags=re.I)
     match=re.search(r'\b([A-Z]{2,8})([ \t-]+\d{1,2})?[ \t-]*(FOC|FABRIC|GMT)\b',text.upper())
     if not match:return None
     return match[1]+((' '+match[2].strip(' -')) if match[2] else '')+'-'+match[3]
@@ -256,7 +258,7 @@ def _material_headings(text, fabric_type=''):
     text=re.sub(r'\(\s*BW\s*\+/-\s*\d+(?:\.\d+)?\s*%\s*\)','',text,flags=re.I)
     text=re.sub(r'\b\d+(?:\s*[Xx*]\s*\d+)?\s*%\s*SHRINKAGE\b','',text,flags=re.I)
     text=re.sub(r'\b\d+\s*[Xx*]\s*\d+\s*%','',text)
-    text=re.sub(r'\bI?SHRINKAGE\s*:?[^\n]*','',text.upper())
+    text=re.sub(r'\bI?SHRINKAGE\s*:?\s*[^\n]*','',text.upper())
     # Letter-shaped digits are repaired only inside an explicit percentage token.
     text=re.sub(r'\b[0-9IO]{1,3}(?=\s*%)',lambda m:m[0].translate(str.maketrans('IO','10')),text)
     text=re.sub(r'\s+',' ',text)
@@ -596,6 +598,8 @@ def _extract_table_data(ocr):
                     parts=[('EC SAMPLE LACE',m) for m in main_matches]
             if parts:
                 for part,m in parts:
+                    if not explicit_item and _normalize_unit(m['unit']) in ('YDS','MTRS'):
+                        part=_material_heading(part,fabric_type) or part
                     items.append(LineItem(_clean_material_description(part),_number(m['qty']),_normalize_unit(m['unit']),
                                           source_page=table.page+1,source_refs=[f'{table.page+1}:{table_index+1}:{r+1}']))
             else:

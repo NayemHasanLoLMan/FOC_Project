@@ -64,7 +64,7 @@ class LocalVisionTests(unittest.TestCase):
              patch('src.foc_extractor.local_vision._cached_page_image',return_value=Image.new('RGB',(100,100),'white')):
             resolve_quantities(ocr,Path('unseen.pdf'),'test')
         self.assertEqual(request.call_count,2)
-        self.assertEqual(request.call_args.args[1]['options']['num_predict'],4096)
+        self.assertEqual(request.call_args.args[1]['options']['num_predict'],256)
         self.assertEqual(request.call_args.args[1]['options']['num_ctx'],8192)
         self.assertEqual(cells[3].content,'8.125G')
         self.assertEqual(cells[3].original_content,'8.1256')

@@ -46,7 +46,7 @@ def _output_name(folder, name, job_id, attempt_id, prefer_base=True):
 
 
 def _publish_copy(source, target, expected_digest, *, replace_existing=False):
-    """Publish atomically; only a verified edit may replace its own output file."""
+    """Publish atomically; verified edits and reruns may replace their own output."""
     with NamedTemporaryFile(dir=target.parent, suffix='.tmp', delete=False) as handle:
         temporary = Path(handle.name)
     try:
@@ -137,11 +137,12 @@ class QueueWorker:
             raise ValueError('Prepared destination escapes its output directory')
         if ready.get('replace_existing'):
             edit = attempt['metadata'].get('manual_edit')
-            if not edit:
-                raise ValueError('Only an invoice edit can replace an output file')
-            base = self.store.get_attempt(edit['base_attempt_id'])
+            base_id = edit['base_attempt_id'] if edit else attempt['metadata'].get('reprocess_base_attempt_id')
+            if not base_id:
+                raise ValueError('Only an invoice edit or rerun can replace an output file')
+            base = self.store.get_attempt(base_id)
             if base['job_id']!=job['id'] or base['state']!='completed' or Path(base['output_path'])!=target:
-                raise ValueError('Edited output does not belong to this invoice')
+                raise ValueError('Replacement output does not belong to this invoice')
         if _digest(job['snapshot_path']) != job['source_sha256']:
             raise ValueError('Source snapshot has changed since intake')
         region = attempt['metadata'].get('region', 'BD')
@@ -218,6 +219,11 @@ class QueueWorker:
                 edit = json.loads(job['manual_edit_json'])
                 base = self.store.get_attempt(edit['base_attempt_id'])
                 value['output_dir'] = str(Path(base['output_path']).parent)
+            else:
+                base = next((a for a in reversed(self.store.attempts(job['id'])) if a['state']=='completed'),None)
+                if base:
+                    value['reprocess_base_attempt_id'] = base['id']
+                    value['output_dir'] = str(Path(base['output_path']).parent)
             return value
         attempt = self.store.claim_next(self.owner, metadata_for, job_id=job_id) if job_id is not None else self.store.claim_next(self.owner, metadata_for)
         if attempt is None:
@@ -272,16 +278,19 @@ class QueueWorker:
             if (_digest(source) != job['source_sha256'] or any(after[key] != metadata[key]
                     for key in ('template_sha256', 'rates_sha256', 'application_sha256', 'factory_profiles_sha256'))):
                 raise ValueError('Source, template, rates, factory master or application changed during conversion')
-            if metadata.get('manual_edit'):
+            if metadata.get('manual_edit') or metadata.get('reprocess_base_attempt_id'):
+                if not metadata.get('manual_edit'):
+                    base = self.store.get_attempt(metadata['reprocess_base_attempt_id'])
+                    _,previous,_ = self._read_ready(base)
                 target = Path(base['output_path'])
                 if base['job_id']!=job['id'] or target!=Path(previous['destination']):
-                    raise ValueError('Edited output does not match the original invoice')
+                    raise ValueError('Replacement output does not match the original invoice')
             else:
                 target = _output_name(Path(metadata['output_dir']), workbook.name, job['id'], attempt['id'])
             _write_json(receipt, {'job_id': job['id'], 'attempt_id': attempt['id'], 'source_sha256': job['source_sha256'], 'region':region,
                                  'workbook_name': workbook.name, 'workbook_sha256': _digest(workbook),
                                  'data_name': data_path.name, 'data_sha256': _digest(data_path), 'destination': str(target),
-                                 'replace_existing':bool(metadata.get('manual_edit'))})
+                                 'replace_existing':bool(metadata.get('manual_edit') or metadata.get('reprocess_base_attempt_id'))})
         except Exception as exc:
             self.store.finish(attempt['id'], self.owner, 'failed', error=f'{type(exc).__name__}: {exc}')
             return attempt['id']

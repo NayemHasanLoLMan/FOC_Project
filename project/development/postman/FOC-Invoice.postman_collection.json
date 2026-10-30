@@ -752,7 +752,7 @@
               ],
               "query": []
             },
-            "description": "Queue a completed PDF for another invoice; preserve earlier results. Fetch getControls first. Select current IDs. This request changes queue state. For an uncertain retry, replace {{$guid}} with the original request_id before sending again.",
+            "description": "Rerun a saved PDF with current settings and replace its current invoice file, including manual changes. Fetch getControls first. Select current IDs. This request changes queue state. For an uncertain retry, replace {{$guid}} with the original request_id before sending again.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"request_id\": \"{{$guid}}\",\n  \"attempt_id\": {{attempt_id}}\n}",

@@ -39,7 +39,7 @@ class VisionRecoveryTests(unittest.TestCase):
         self.assertEqual([e['configured_model'] for e in sent],['primary','qwen3.5:4b'])
         self.assertNotEqual(sent[0]['call_id'],sent[1]['call_id'])
         self.assertEqual(sent[0]['source_ref'],sent[1]['source_ref'])
-        self.assertEqual([call.args[1]['options']['num_predict'] for call in request.call_args_list if call.args[0]=='chat'],[4096,4096])
+        self.assertEqual([call.args[1]['options']['num_predict'] for call in request.call_args_list if call.args[0]=='chat'],[256,256])
 
     def test_wrong_unit_or_malformed_primary_is_not_silently_accepted(self):
         for first in [self.response('2 PCS'),{'done_reason':'stop','message':{'content':'{bad'}}]:
@@ -57,8 +57,9 @@ class VisionRecoveryTests(unittest.TestCase):
                 self.assertIsNone(transcribe_cell(self.image(),'primary',schema=schema)[0])
 
     def test_usable_primary_stops_recovery_and_fallback_is_not_duplicated(self):
-        for model,text,expected in [('primary','5 PCS',2),('qwen3.5:4b',None,2)]:
-            with patch('src.foc_extractor.local_vision._request',side_effect=[self.tags,self.response(text)]) as request:
+        for model,text,expected in [('primary','5 PCS',2),('qwen3.5:4b','5 PCS',2),('qwen3.5:4b',None,4)]:
+            tags={'models':self.tags['models']+[{'name':'qwen3-vl:latest','digest':'large'}]}
+            with patch('src.foc_extractor.local_vision._request',side_effect=[tags,self.response(text),tags,self.response('5 PCS')]) as request:
                 transcribe_cell(self.image(),model,accept=lambda a:_accepted_quantity('PCS',a.get('text') if a else None))
             self.assertEqual(request.call_count,expected)
 

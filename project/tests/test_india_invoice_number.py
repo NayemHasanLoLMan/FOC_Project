@@ -159,7 +159,7 @@ class IndiaInvoiceNumberTests(unittest.TestCase):
             with patch('src.foc_extractor.ocr_engine._cached_page_image',return_value=Image.new('RGB',(2400,3400))), \
                  patch('src.foc_extractor.local_vision.transcribe_cell',return_value=(answer,'test')) as model:
                 resolve_invoice_number(self.ocr(),Path('neutral.pdf'),model_name)
-            self.assertEqual(model.call_count,1)
+            self.assertEqual(model.call_count,2 if model_name=='qwen3.5:4b' else 1)
 
     def test_optional_model_missing_retains_existing_fallback(self):
         with patch('src.foc_extractor.ocr_engine._cached_page_image',return_value=Image.new('RGB',(2400,3400))), \

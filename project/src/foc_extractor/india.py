@@ -92,7 +92,7 @@ def resolve_invoice_number(ocr, pdf_path, model, cache_dir=None, *, verify_handw
                     and w.y0>=label.y0-height*.25 and w.y1<=bottom]
         if not readings and not verify_handwriting:
             continue
-        from .local_vision import transcribe_cell, SCHEMA
+        from .local_vision import transcribe_cell, SCHEMA, DEFAULT_MODEL
         from .ocr_engine import _cached_page_image
         from .processing_evidence import region
         try:
@@ -116,7 +116,11 @@ def resolve_invoice_number(ocr, pdf_path, model, cache_dir=None, *, verify_handw
                 crop = Image.fromarray(np.where(blue[:,:,None],0,255).astype(np.uint8).repeat(3,axis=2))
             readings_by_value = Counter()
             valid_readings = []
-            requests = [(reading_model,crop,bbox,False) for reading_model in dict.fromkeys((model,INVOICE_FALLBACK_MODEL))]
+            alternate=DEFAULT_MODEL if model==INVOICE_FALLBACK_MODEL else INVOICE_FALLBACK_MODEL
+            fast=corroborate and model in (DEFAULT_MODEL,INVOICE_FALLBACK_MODEL)
+            requests = [(INVOICE_FALLBACK_MODEL if fast else model,crop,bbox,False)]
+            if not fast:
+                requests.append((alternate,crop,bbox,False))
             if corroborate:
                 colour,colour_box = original_crop,bbox
                 if isolate_blue:
@@ -126,6 +130,9 @@ def resolve_invoice_number(ocr, pdf_path, model, cache_dir=None, *, verify_handw
                     colour = original_crop.crop(bounds)
                     colour_box = [bbox[0]+bounds[0]/2,bbox[1]+bounds[1]/2,bbox[0]+bounds[2]/2,bbox[1]+bounds[3]/2]
                 requests.append((INVOICE_FALLBACK_MODEL,colour,colour_box,True))
+            if fast:
+                # Two agreeing small-reader views avoid loading the large reader; conflicts still escalate.
+                requests.append((DEFAULT_MODEL,crop,bbox,False))
             unavailable = set()
             for reading_model,reading_crop,reading_box,parts in requests:
                 if reading_model in unavailable:continue
@@ -159,7 +166,7 @@ def resolve_invoice_number(ocr, pdf_path, model, cache_dir=None, *, verify_handw
                     emit('field_source',field='invoice_number',value=value,method='local_vision_invoice_header',
                          source_ref=context['source_ref'],provenance=provenance)
                     return value
-            selected = _select_invoice_reading(valid_readings,fallback,model)
+            selected = _select_invoice_reading(valid_readings,fallback,DEFAULT_MODEL if fast else model)
             if selected:
                 value = selected['value']
                 for reading in valid_readings:

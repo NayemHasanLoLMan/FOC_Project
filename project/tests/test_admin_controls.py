@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
+from dataclasses import replace
 import hashlib
 import json
 from pathlib import Path
@@ -74,18 +75,55 @@ class AdminControlTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.command('retry',job=self.job,attempt=attempt)
 
-    def test_reprocess_keeps_old_invoice_download_and_creates_version(self):
+    def test_reprocess_uses_current_settings_and_replaces_current_file(self):
         old = self.complete()
         path = Path(self.store.get_attempt(old)['output_path'])
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        original = self.client.get(f'/files/attempts/{old}/invoice').data
         response = self.client.post(f'/api/jobs/{self.job}/reprocess',headers=self.headers,
             json={'request_id':str(uuid4()),'attempt_id':old})
         self.assertEqual(response.status_code,200)
         self.assertEqual(self.client.get(f'/files/attempts/{old}/invoice').status_code,200)
-        new = self.complete()
+        def convert(source,**kwargs):
+            self.assertEqual(kwargs['local_model'],'current-reader')
+            data=fixtures.FOCData(source_file=source.name,pages_total=1,pages_processed=1,
+                                 invoice_number='S/UPDATED/26',export_date='2026-10-30',template_type='BD',
+                                 items=[fixtures.LineItem('COTTON FABRICS',5,'YDS')])
+            output=kwargs['output_dir']/'shipment.xlsx'
+            fixtures.populate_template(kwargs['template'],output,data)
+            (kwargs['output_dir']/'shipment.json').write_text(json.dumps(data.to_dict()),encoding='utf-8')
+            return output
+        with patch.object(queue_worker,'run',side_effect=convert), QueueWorker(replace(self.config,local_model='current-reader'),self.store) as worker:
+            new=worker.run_once()
         self.assertNotEqual(old,new)
-        self.assertNotEqual(str(path),self.store.get_attempt(new)['output_path'])
-        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),digest)
+        self.assertEqual(str(path),self.store.get_attempt(new)['output_path'])
+        self.assertNotEqual(hashlib.sha256(path.read_bytes()).hexdigest(),digest)
+        self.assertEqual(list(path.parent.glob('*.xlsx')),[path])
+        self.assertEqual(self.client.get(f'/files/attempts/{old}/invoice').data,original)
+        self.assertEqual(self.client.get(f'/files/attempts/{new}/invoice').data,path.read_bytes())
+        page=self.client.get(f'/jobs/{self.job}').get_data(as_text=True)
+        self.assertIn('Rerun and update invoice',page)
+        self.assertNotIn('Create another invoice',page)
+
+    def test_failed_rerun_preserves_current_file_and_retry_still_replaces_it(self):
+        old=self.complete();path=Path(self.store.get_attempt(old)['output_path'])
+        original=path.read_bytes()+b'output metadata';path.write_bytes(original)
+        self.command('reprocess',job=self.job,attempt=old)
+        with patch.object(queue_worker,'run',side_effect=RuntimeError('Conversion failed')), QueueWorker(self.config,self.store) as worker:
+            failed=worker.run_once()
+        self.assertEqual(self.store.get_attempt(failed)['state'],'failed')
+        self.assertEqual(path.read_bytes(),original)
+        self.command('retry',job=self.job,attempt=failed)
+        with patch.object(queue_worker,'run',side_effect=self.convert) as convert, QueueWorker(self.config,self.store) as worker:
+            with patch.object(queue_worker,'_publish_copy',side_effect=PermissionError('Locked')):
+                new=worker.run_once()
+            self.assertEqual(self.store.get_attempt(new)['state'],'waiting_to_save')
+            self.assertEqual(path.read_bytes(),original)
+            worker.run_once()
+            self.assertEqual(convert.call_count,1)
+        self.assertEqual(self.store.get_attempt(new)['state'],'completed')
+        self.assertEqual(self.store.get_attempt(new)['output_path'],str(path))
+        self.assertEqual(list(path.parent.glob('*.xlsx')),[path])
 
     def test_save_retry_while_paused_reuses_prepared_invoice_without_ocr(self):
         with patch.object(queue_worker,'run',side_effect=self.convert) as converter, QueueWorker(self.config,self.store) as worker:

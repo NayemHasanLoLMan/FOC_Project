@@ -1398,7 +1398,7 @@
     "/api/jobs/{job_id}/reprocess": {
       "post": {
         "operationId": "reprocessJob",
-        "summary": "Queue a completed PDF for another invoice; preserve earlier results.",
+        "summary": "Rerun a saved PDF with current settings and replace its current invoice file, including manual changes.",
         "tags": [
           "Admin controls"
         ],

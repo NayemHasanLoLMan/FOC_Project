@@ -18,6 +18,7 @@ def _address(value):
 def _name(value):
     value = unicodedata.normalize('NFKC',value).upper()
     value = re.split(r'\bHEREINAFTER\b|\bATTN\b',value,maxsplit=1)[0]
+    value = re.sub(r'\bF\s*\.\s*O\s*\.\s*C\s*\.?', 'FOC', value)
     value = re.sub(r'[^A-Z0-9]+',' ',value).strip()
     value = re.sub(r'\b(?:CO|LTD|PVT)\b',lambda m:{'CO':'COMPANY','LTD':'LIMITED','PVT':'PRIVATE'}[m[0]],value)
     value = re.sub(r'\s*(?:FOC(?:TS)?|FABRIC|GMT)(?:\s+\d+)?$','',value).strip()

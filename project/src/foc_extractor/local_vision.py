@@ -68,7 +68,9 @@ def transcribe_cell(crop, model, cache_dir=None, prompt=PROMPT, schema=SCHEMA, c
     if accept is not None:
         from .india import INVOICE_FALLBACK_MODEL
         last=(None,None);responded=False;error=None
-        models=(INVOICE_FALLBACK_MODEL,model) if prefer_fallback else (model,INVOICE_FALLBACK_MODEL)
+        alternate=DEFAULT_MODEL if model==INVOICE_FALLBACK_MODEL else INVOICE_FALLBACK_MODEL
+        fast_note=model==DEFAULT_MODEL and context.get('field')=='goods_description'
+        models=(alternate,model) if (prefer_fallback or fast_note) and model!=INVOICE_FALLBACK_MODEL else (model,alternate)
         for index,reading_model in enumerate(dict.fromkeys(models)):
             if index:
                 context.update(call_id=uuid4().hex)
@@ -82,6 +84,12 @@ def transcribe_cell(crop, model, cache_dir=None, prompt=PROMPT, schema=SCHEMA, c
         if not responded and error is not None:raise error
         return last
     output,context_tokens,timeout=_limits.get()
+    # Single-field transcription must not spend the full long-annotation budget reasoning.
+    if context.get('field') in ('invoice_number','goods_quantity','gross_weight_kg','package_count','export_date'):
+        budget=(768 if context['field']=='invoice_number' else 512) if model==DEFAULT_MODEL else 256
+        output=min(output,budget)
+    elif context.get('field')=='goods_description':
+        output=min(output,512)
     options={'temperature':0,'num_ctx':context_tokens,'num_predict':output}
     buffer=io.BytesIO();crop.convert('RGB').save(buffer,format='PNG');png=buffer.getvalue()
     started=time.monotonic()
