@@ -6,12 +6,22 @@ __pycache__/
 
 # Caches and temporary files
 .cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 *.tmp
 *.log
+# Microsoft Office owner/lock files
+~$*
 
 # Environment variables & secrets
 .env
 *.env
+.env.*
+!.env.example
 
 # Generated outputs and reports
 project/output/

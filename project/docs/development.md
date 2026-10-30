@@ -10,6 +10,24 @@ Update API narrative, OpenAPI, Postman and route tests together when contracts c
 
 Never encode shipment-specific answers or use expected invoices as production lookups. Prefer PDF-supported facts and approved valuation policies. Preserve source units, identifier leading zeros, source attribution and readable corrections. Keep unsupported fields empty; do not print intervention/validation prompts on invoices. Pause/stop safely before runtime code changes; application fingerprints require a worker restart after changes.
 
+## Git workflow
+
+Keep `main` ready to run. Start each change from an up-to-date `main` and use a short-lived branch:
+
+```powershell
+git switch main
+git pull --ff-only origin main
+git switch -c codex/describe-the-change
+```
+
+Commit or stash existing work before switching branches. Keep each commit focused and use a descriptive message such as `fix: preserve invoice number leading zeros`, `docs: clarify offline setup` or `chore: tidy Git ignore rules`; avoid messages such as `update`.
+
+Before committing, run the checks relevant to the change from the next section. Review `git status --short` and `git diff`, then stage only the intended files with `git add <path>`. Inspect `git diff --cached` and run `git diff --cached --check` before `git commit`. Confirm that new PDFs/workbooks are approved regression fixtures, not private shipment documents. Ignore rules do not remove files already tracked by Git.
+
+Publish the branch with `git push -u origin HEAD` and open a pull request into `main`. Describe the problem, changed behavior, checks run and any remaining limitations. After merging, switch to `main`, pull with `--ff-only`, and delete the local topic branch with `git branch -d <branch>` once Git confirms it is merged. Keep shared history intact; do not force-push `main` or rewrite old commits merely to rename them.
+
+The root `.gitattributes` normalizes text in Git and marks PDF/XLSX/ZIP files as binary. The `.gitignore` keeps local environments, caches, runtime data, generated output, Office lock files and environment secrets out of new commits; `.env.example` may be tracked only with placeholder values.
+
 ## Regression and analysis
 
 From the repository root:
