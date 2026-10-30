@@ -27,10 +27,11 @@ def apply_valuation(data):
     estimates = []
     for index, item in enumerate(data.items):
         quantity = _positive(item.quantity, allow_zero=True)
-        if item.unit == 'G' and re.fullmatch(r'(?:27L (?:SHANK|SNAP)|24L (?:SHANK|SNAP)|9\.5\s*MM RIVET|HIDDEN SNAP)', item.description.strip(), re.I):
+        if item.unit == 'G' and re.fullmatch(r'(?:(?:METAL )?BUTTONS?|SHANK|SNAP|27L (?:SHANK|SNAP)|24L (?:SHANK|SNAP)|9\.5\s*MM RIVET|HIDDEN SNAP)', item.description.strip(), re.I):
             item.unit = 'GROSS'
-        if item.unit_price is None and item.amount is None and quantity is not None and item.unit and item.unit.strip():
-            key = 'fabric_per_yd' if item.unit.strip().upper() in ('YD', 'YDS', 'YARD', 'YARDS') else 'other_per_unit'
+        sample_count=not item.unit and bool(re.fullmatch(r'FABRIC (?:SAMPLES|SWATCHES)',item.description.strip(),re.I))
+        if item.unit_price is None and item.amount is None and quantity is not None and (item.unit and item.unit.strip() or sample_count):
+            key = 'fabric_per_yd' if (item.unit or '').strip().upper() in ('YD', 'YDS', 'YARD', 'YARDS') else 'other_per_unit'
             item.unit_price = float(rates[key])
             estimates.append((index, quantity, rates[key]))
         price = _positive(item.unit_price, allow_zero=True)

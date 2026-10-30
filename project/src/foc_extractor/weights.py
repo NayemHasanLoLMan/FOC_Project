@@ -50,6 +50,9 @@ def _weight_regions(image, table, words=(), group_braces=True):
     left, right = weight_cells[0].bbox[0], weight_cells[0].bbox[2]
     # OCR can split a weight's leading digit/unit into a phantom narrow column.
     preceding = [c for c in table.cells if columns['quantity'] < c.column_index < weight_col]
+    quantity_right=max(c.bbox[2] for c in table.cells if c.column_index==columns['quantity'] and c.bbox)
+    if not preceding and 0<left-quantity_right<right-left:
+        left=quantity_right
     if preceding and all(not c.content.strip() or re.fullmatch(r'KGS?', c.content.strip(), re.I) for c in preceding):
         left = min(c.bbox[0] for c in preceding if c.bbox)
     header_bottom = max(c.bbox[3] for c in table.cells if c.row_index <= header and c.bbox)
@@ -57,7 +60,11 @@ def _weight_regions(image, table, words=(), group_braces=True):
     left, right = round(left), round(right)
     if not (0 <= left < right <= image.width and 0 <= top < bottom <= image.height) or right-left < 20 or bottom-top < 10:
         raise ValueError('Weight column is too small')
-    return _packing_column_regions(image,[left,top,right,bottom],table,columns,header,words,group_braces)
+    regions=_packing_column_regions(image,[left,top,right,bottom],table,columns,header,words,False)
+    declared=sum(any(w.page==table.page and box[0]<=(w.x0+w.x1)/2<box[2] and box[1]<=(w.y0+w.y1)/2<box[3]
+                     and re.fullmatch(rf'\s*{NUM}\s*KGS?\s*',w.text,re.I) for w in words) for box in regions)
+    if not group_braces or declared>1:return regions
+    return _packing_column_regions(image,[left,top,right,bottom],table,columns,header,words,True)
 
 
 def _read_weight(raw):
@@ -154,7 +161,7 @@ def packing_weight(ocr, pdf, cache_dir=None, local_model=None):
         evidence['reason'] = 'Not every source page is an established packing list'
         return evidence
     key = hashlib.sha256(Path(pdf).read_bytes()+json.dumps({
-        'version': 9, 'dpi': ocr.dpi, 'transforms': ocr.page_transforms, **vision_cache_settings(local_model),
+        'version': 11, 'dpi': ocr.dpi, 'transforms': ocr.page_transforms, **vision_cache_settings(local_model),
         'tables': [asdict(t) for t in ocr.tables], 'words': [asdict(w) for w in ocr.words]}, sort_keys=True).encode()).hexdigest()
     cache = Path(cache_dir)/'weights'/(key+'.json') if cache_dir else None
     if cache and cache.exists():
@@ -203,8 +210,22 @@ def packing_weight(ocr, pdf, cache_dir=None, local_model=None):
                         reader = _paddle_readers()[0]
                     raw = next(iter(reader.predict(np.asarray(crop.convert('RGB'))[:, :, ::-1])))
                     value = _read_weight(raw)
+                    source_words=[w for w in ocr.words if w.page==page and left<=(w.x0+w.x1)/2<right and top<=(w.y0+w.y1)/2<bottom]
+                    source_value=_read_weight({'rec_texts':[w.text for w in source_words],
+                                               'rec_scores':[w.confidence for w in source_words]})
+                    original_value=value
+                    if value is not None and source_value is not None and value!=source_value:
+                        numeral=[w for w in source_words if re.search(r'\d',w.text)]
+                        tight=image.crop((max(left+2,min(w.x0 for w in numeral)-12),max(top+2,min(w.y0 for w in numeral)-12),
+                                          min(right-2,max(w.x1 for w in numeral)+12),min(bottom-2,max(w.y1 for w in numeral)+12)))
+                        enlarged=tight.resize((tight.width*3,tight.height*3))
+                        retry=next(iter(reader.predict(np.asarray(enlarged.convert('RGB'))[:,:,::-1])))
+                        retried=_read_weight(retry)
+                        value=source_value if retried==source_value else None
+                        raw=retry
                     emit('cell_ocr', **region('gross_weight_kg',ocr,page,box), text=list(raw['rec_texts']),
                          scores=[float(v) for v in raw['rec_scores']], candidate=value, accepted=value is not None,
+                         original_crop_value=original_value, corroborating_page_value=source_value,
                          preprocessing={'blue_ink_removed':True,'inset_x':inset,'inset_y':6})
                     page_cells.append({'page': page+1, 'bbox': box,
                                        'text': list(raw['rec_texts']), 'weight_kg': value,

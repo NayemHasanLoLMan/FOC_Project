@@ -1,5 +1,5 @@
 """Approved invoice summaries, retaining source rows in processing evidence."""
-from collections import Counter, defaultdict
+from collections import defaultdict
 from dataclasses import asdict
 import re
 
@@ -23,7 +23,7 @@ def _heading(description):
         material = text[composition.start():kind.end()] if kind.start()>composition.start() else text[composition.start():]
         material = _material_heading(re.sub(r'\bSPANDE\b', 'SPANDEX', material), kind[0])
         if material:
-            wearer = re.search(r"\b(MEN'?S?|WOMEN'?S?|LADIES|LADY|KIDS?|CHILDREN)\b", text[:composition.start()])
+            wearer = re.search(r"\b(MEN'?S?|WOMEN'?S?|LADIES|LADY|KIDS?|CHILDREN|GIRLS?|BOYS?)\b", text[:composition.start()])
             wearer = wearer[0].replace("'", '') if wearer else ''
             wearer = {'MEN':"MEN'S",'MENS':"MEN'S",'WOMEN':"WOMEN'S",'WOMENS':"WOMEN'S",
                       'LADY':'LADIES','KID':'KIDS','CHILDREN':'KIDS'}.get(wearer, wearer)
@@ -34,7 +34,7 @@ def _heading(description):
         categories = [('THREAD',r'\bTHREAD\b'),('BUTTON',r'\bBUTTONS?\b'),
                       ('ELASTIC',r'\bELASTIC\b'),('LABEL',r'\bLABELS?\b'),
                       ('SEAL CORD',r'\bSEAL[ -]+CORD\b'),('HANGTAG',r'\bHANG\s*TAGS?E?\b'),
-                      ('INTERLINING',r'\bINTERLINING\b')]
+                      ('INTERLINING',r'\bINTERLINING\b'),('SHANK',r'\bSHANK\b'),('SNAP',r'\bSNAPS?\b')]
         matches = [name for name,pattern in categories if re.search(pattern,text)]
         if len(matches)==1:
             material = _material_heading(text) if composition else None
@@ -44,8 +44,20 @@ def _heading(description):
     return None
 
 
-def summarize_goods(data):
+def summarize_goods(data, ocr=None):
     before = [asdict(item) for item in data.items]
+    conditions={}
+    for index,table in enumerate(ocr.tables if ocr else [],1):
+        labels={re.sub(r'\s+',' ',c.content.strip().upper()) for c in table.cells
+                if re.fullmatch(r'(?:NON[ -])?MUTILATED(?:\s+SAMPLES)?',c.content.strip(),re.I)}
+        if len(labels)==1:
+            conditions[table.page+1,index]='NON-MUTILATED' if next(iter(labels)).startswith('NON') else 'MUTILATED'
+    for item in data.items:
+        labels={conditions.get(tuple(map(int,ref.split(':')[:2]))) for ref in item.source_refs
+                if re.fullmatch(r'\d+:\d+:\d+',ref)}-{None}
+        if len(labels)==1 and not re.search(r'\bMUTILATED\b',item.description,re.I) and re.search(
+                r'\b(?:GARMENTS?|SHIRTS?|PANTS?|SHORTS?|TOPS?|DRESS(?:ES)?|LEG\s+PANELS?)\b',item.description,re.I):
+            item.description+=' ('+next(iter(labels))+')'
     headings = [_heading(item.description) or item.description for item in data.items]
     units = defaultdict(dict)
     for item,heading in zip(data.items,headings):
@@ -59,11 +71,8 @@ def summarize_goods(data):
             item.unit = next(iter(candidates))
             recovered.append({'item':index+1,'unit':item.unit,'source_refs':list(item.source_refs),
                               'supporting_refs':list(dict.fromkeys(candidates[item.unit]))})
-    def key(item,heading):
-        return (heading,item.unit,item.hs_code,item.unit_price,item.origin_country,item.amount is not None)
-    counts = Counter(key(item,heading) for item,heading in zip(data.items,headings) if item.quantity is not None)
     for item,heading in zip(data.items,headings):
-        if item.quantity is not None and counts[key(item,heading)]>1:
+        if item.quantity is not None:
             item.description = heading
     data.items = _aggregate_items(data.items,clean=False,sum_weights=True)
     after = [asdict(item) for item in data.items]

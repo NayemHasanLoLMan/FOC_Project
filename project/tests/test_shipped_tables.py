@@ -41,7 +41,7 @@ class ShippedTableTests(unittest.TestCase):
         # Short letter strokes must not become false column rules in the cropped grid.
         for x in range(730,1100,20):draw.line((x,1772,x,1795),fill='black',width=2)
         return image,OCRResult(content='PACKING LIST',pages=['PACKING LIST'],words=words,
-                               total_pages=1,backend='paddle',table_version=5,
+                               total_pages=1,backend='paddle',table_version=6,
                                page_transforms=[{'rotation':0,'skew':0}])
 
     def test_shipped_columns_exclude_order_balance_packing_factors_and_footer(self):

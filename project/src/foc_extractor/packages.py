@@ -21,7 +21,7 @@ def _package_kind(unit):
     return 'ROLL' if unit.upper().startswith('ROLL') else 'BAG' if unit.upper().startswith('BAG') else 'PACKAGE'
 
 
-def _read_count(text):
+def _read_count(text, *, labelled=False):
     text=re.sub(r'\([^)]*\)','',text.upper())
     values=set()
     for match in COUNTS.finditer(text):
@@ -30,6 +30,9 @@ def _read_count(text):
         values.add((int(match[1]),kind))
     if values:
         return sum(n for n,_ in values)
+    if labelled and not re.search(r'\bKGS?\b|\d[.,]\d',text):
+        numbers=re.findall(r'(?m)^\s*([1-9]\d{0,3})\s*$',text)
+        if len(numbers)==1 and len(re.findall(r'\d+',text))==1:return int(numbers[0])
     return int(text) if re.fullmatch(r'[1-9]\d{0,3}',text.strip()) else None
 
 
@@ -83,7 +86,7 @@ def packing_packages(ocr, carton_range=None, pdf=None, cache_dir=None, local_mod
         return {**evidence,'reason':'Not all PDF pages were processed.'}
     cache=None
     if pdf and cache_dir:
-        key=hashlib.sha256(Path(pdf).read_bytes()+json.dumps({'version':4,'ocr':asdict(ocr),**vision_cache_settings(local_model)},sort_keys=True).encode()).hexdigest()
+        key=hashlib.sha256(Path(pdf).read_bytes()+json.dumps({'version':5,'ocr':asdict(ocr),**vision_cache_settings(local_model)},sort_keys=True).encode()).hexdigest()
         cache=Path(cache_dir)/'packages'/(key+'.json')
         if cache.exists():
             try:
@@ -122,7 +125,7 @@ def packing_packages(ocr, carton_range=None, pdf=None, cache_dir=None, local_mod
                     left,top,right,bottom=region
                     text='\n'.join(w.text for w in ocr.words if w.page==table.page
                                    and left<=(w.x0+w.x1)/2<right and top<=(w.y0+w.y1)/2<bottom)
-                    count=_read_count(text)
+                    count=_read_count(text,labelled=True)
                     method='existing OCR'
                     if count is None:
                         import numpy as np
@@ -132,7 +135,7 @@ def packing_packages(ocr, carton_range=None, pdf=None, cache_dir=None, local_mod
                         if reader is None:reader=_paddle_readers()[0]
                         raw=next(iter(reader.predict(np.asarray(crop.convert('RGB'))[:,:,::-1])))
                         candidate='\n'.join(t for t,s in zip(raw['rec_texts'],raw['rec_scores']) if float(s)>=.65)
-                        count=_read_count(candidate)
+                        count=_read_count(candidate,labelled=True)
                         emit('cell_ocr', **evidence_region('package_count',ocr,table.page,region), text=list(raw['rec_texts']),
                              scores=[float(v) for v in raw['rec_scores']], candidate=count, accepted=count is not None)
                         if candidate:text=candidate;method='local package-cell OCR'

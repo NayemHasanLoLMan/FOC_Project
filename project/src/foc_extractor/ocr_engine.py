@@ -11,6 +11,7 @@ import os
 import re
 import hashlib
 import json
+import math
 from statistics import median
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
@@ -361,26 +362,39 @@ def _cluster_into_lines(words: list[OCRWord], line_tol: float = 12.0) -> list[st
 
 def _reread_paddle_quantities(img, tables, reader):
     import numpy as np
-    from .parser import _table_fields, _quantity_text, QTY_UNIT, NUM
+    from .parser import _table_fields, _quantity_text, QTY_UNIT, NUM, _number
     from .local_vision import _accepted_quantity
     for table in tables:
         columns,header=_table_fields(table)
         if 'quantity' not in columns:continue
-        for cell in table.cells:
+        quantity_header=next((c for c in table.cells if c.row_index==header and c.column_index==columns['quantity'] and c.bbox),None)
+        missing=[]
+        if quantity_header:
+            for description in table.cells:
+                if (description.row_index<=header or description.column_index!=columns.get('description') or not description.bbox
+                        or not description.content.strip() or any(c.row_index==description.row_index and c.column_index==columns['quantity'] for c in table.cells)):
+                    continue
+                missing.append(OCRTableCell(description.row_index,columns['quantity'],'',table.page,
+                    [quantity_header.bbox[0],description.bbox[1],quantity_header.bbox[2],description.bbox[3]]))
+        for cell in [*table.cells,*missing]:
             if cell.row_index<=header or cell.column_index!=columns['quantity'] or not cell.bbox:continue
             text=_quantity_text(cell.content).strip()
             main=re.sub(r'\([^)]*\)|\[[^]]*\]','',text)
-            if not text or re.fullmatch(NUM,text) or (QTY_UNIT.search(main) and not QTY_UNIT.sub('',main).strip(' \t\n\r+&,;:.()[]')):continue
+            if re.fullmatch(NUM,text) or (QTY_UNIT.search(main) and not QTY_UNIT.sub('',main).strip(' \t\n\r+&,;:.()[]')):continue
             left,top,right,bottom=cell.bbox
             crop=img.crop((int(left)+3,int(top)+3,int(right)-3,int(bottom)-3))
             if min(crop.size)<5:continue
             crop=crop.resize((crop.width*2,crop.height*2))
             raw=next(iter(reader.predict(np.array(crop)[:,:,::-1])))
             candidate=' '.join(raw['rec_texts']).strip()
-            if _accepted_quantity(cell.content,candidate):
+            confidence=min((float(s) for s in raw['rec_scores']),default=0)
+            if not text and confidence<.8:continue
+            if _accepted_quantity(cell.content,candidate) or (not text and confidence>=.8 and re.fullmatch(NUM,candidate)
+                    and math.isfinite(_number(candidate)) and _number(candidate)>0):
                 cell.original_content=cell.content
                 cell.content=candidate
                 cell.confidence=min((float(s) for s in raw['rec_scores']),default=None)
+                if any(cell is c for c in missing):table.cells.append(cell)
 
 
 def _paddle_readers():
@@ -410,7 +424,7 @@ def _refresh_paddle_tables(result, pdf_path):
         _reread_paddle_quantities(img,rebuilt,_paddle_readers()[0])
         tables.extend(rebuilt)
     result.tables=tables
-    result.table_version=5
+    result.table_version=6
     return result
 
 
@@ -420,7 +434,7 @@ def analyze_with_paddle(pdf_path: Path, max_pages=None, page_cache_dir=None) -> 
     import pymupdf
     with pymupdf.open(pdf_path) as doc:
         total_pages=len(doc)
-    result=OCRResult(backend='paddle',total_pages=total_pages,dpi=300,table_version=5)
+    result=OCRResult(backend='paddle',total_pages=total_pages,dpi=300,table_version=6)
     for page,img in _pdf_to_images(pdf_path,dpi=300,max_pages=max_pages):
         checkpoint=page_cache_dir/f'{page}.json' if page_cache_dir else None
         saved=None
@@ -431,7 +445,7 @@ def analyze_with_paddle(pdf_path: Path, max_pages=None, page_cache_dir=None) -> 
                        [OCRTable(**{**t,'cells':[OCRTableCell(**c) for c in t['cells']]}) for t in raw['tables']],raw['transform'])
                 if not isinstance(saved[0],str) or not {'rotation','skew'}<=saved[3].keys():
                     raise ValueError('Invalid page checkpoint')
-                if raw.get('table_version')!=5:
+                if raw.get('table_version')!=6:
                     content,words,_,transform=saved
                     img=_cached_page_image(pdf_path,page,dpi=300,transform=transform)
                     tables=_grid_tables(img,words,page)
@@ -461,7 +475,7 @@ def analyze_with_paddle(pdf_path: Path, max_pages=None, page_cache_dir=None) -> 
                 checkpoint.parent.mkdir(parents=True,exist_ok=True)
                 temporary=checkpoint.with_suffix('.tmp')
                 temporary.write_text(json.dumps({'content':content,'words':[asdict(w) for w in words],
-                    'tables':[asdict(t) for t in tables],'transform':transform,'table_version':5}),encoding='utf-8')
+                    'tables':[asdict(t) for t in tables],'transform':transform,'table_version':6}),encoding='utf-8')
                 temporary.replace(checkpoint)
             print(f'  OCR {pdf_path.name}: page {page+1}, rotation {angle}, {len(words)} boxes',flush=True)
         result.pages.append(content)
@@ -496,7 +510,7 @@ def analyze_pdf(pdf_path: Path, max_pages: int | None = None, cache_dir: Path | 
         except (OSError,ValueError,KeyError,TypeError):result=None
         if result is not None:
             changed=False
-            if result.table_version!=5:
+            if result.table_version!=6:
                 result=_refresh_paddle_tables(result,pdf_path)
                 changed=True
             changed=_recover_shipped_tables(result,pdf_path) or changed

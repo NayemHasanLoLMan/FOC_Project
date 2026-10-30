@@ -238,13 +238,13 @@ def _clean_material_description(raw_desc):
         material=s[comp.start():]
         # Some garment cells put their category before the composition.
         prefix=s[:comp.start()]
-        category=re.search(r'\b(MENS?|WOMENS?|LADIES|LADY|KIDS?)\s+(WOVEN|KNIT(?:TED)?)\b',prefix)
-        garments=set(re.findall(r'\b(?:SHIRTS?|PANTS?|DRESS(?:ES)?|BLOUSES?|TOPS?|JACKETS?)\b',prefix))
+        category=re.search(r'\b(MENS?|WOMENS?|LADIES|LADY|KIDS?|GIRLS?|BOYS?)\s+(WOVEN|KNIT(?:TED)?)\b',prefix)
+        garments=set(re.findall(r'\b(?:SHIRTS?|PANTS?|SHORTS?|DRESS(?:ES)?|BLOUSES?|TOPS?|JACKETS?)\b',prefix))
         if category and len(garments)==1 and not re.search(r'\bFABRICS?\b',s):
             composition=_material_heading(material)
             if composition:
                 return f'{composition} {category[1]} {category[2]} {next(iter(garments))}'
-        end=re.search(r'\b(?:WOVEN|KNIT(?:TED)?)\s+(?:FABRICS?|SHIRTS?|PANTS?|DRESS(?:ES)?|BLOUSES?|TOPS?|JACKETS?)\b',material)
+        end=re.search(r'\b(?:WOVEN|KNIT(?:TED)?)\s+(?:FABRICS?|SHIRTS?|PANTS?|SHORTS?|DRESS(?:ES)?|BLOUSES?|TOPS?|JACKETS?)\b',material)
         percentages=[int(v) for v in re.findall(r'(\d{1,3})\s*%',material)]
         if end and sum(percentages)==100:
             prefix=s[:comp.start()]
@@ -272,7 +272,7 @@ def _material_headings(text, fabric_type=''):
     matches=list(re.finditer(rf'\d{{1,3}}\s*%\s*{fibers}(?![A-Z])',text))
     kind=re.search(r'\b(WOVEN|KNIT(?:TED)?)\b',fabric_type+' '+text.upper())
     if not matches:return []
-    if not fabric_type and not re.search(r'\bFABRICS?\b',text) and re.search(r'\b(?:SHIRTS?|PANTS?|DRESS(?:ES)?|BLOUSES?|TOPS?|JACKETS?)\b',text):return []
+    if not fabric_type and not re.search(r'\bFABRICS?\b',text) and re.search(r'\b(?:SHIRTS?|PANTS?|SHORTS?|DRESS(?:ES)?|BLOUSES?|TOPS?|JACKETS?)\b',text):return []
     if len(matches)!=len(re.findall(r'\d+(?:\.\d+)?\s*%',text)):return []
     groups=[]
     for match in matches:
@@ -284,7 +284,7 @@ def _material_headings(text, fabric_type=''):
         after=text[group[-1].end():]
         if re.match(r'[ ,/&+]*\d+(?:\.\d+)?\s*%',after):return []
         if sum(int(re.match(r'\d+',m[0])[0]) for m in group)!=100:return []
-        if re.match(r'\s*(?:(?:MENS?|WOMENS?|LADIES|LADY|KIDS?)\s+)?(?:(?:WOVEN|KNIT(?:TED)?)\s+)?(?:SHIRTS?|PANTS?|DRESS(?:ES)?|BLOUSES?|TOPS?|JACKETS?)\b',after):return []
+        if re.match(r'\s*(?:(?:MENS?|WOMENS?|LADIES|LADY|KIDS?|GIRLS?|BOYS?)\s+)?(?:(?:WOVEN|KNIT(?:TED)?)\s+)?(?:SHIRTS?|PANTS?|SHORTS?|DRESS(?:ES)?|BLOUSES?|TOPS?|JACKETS?)\b',after):return []
         composition=' '.join(re.sub(r'\s*%\s*','% ',m[0]) for m in group)
         headings.append(composition+(' '+('KNIT' if kind[1].startswith('KNIT') else 'WOVEN')+' FABRICS' if kind else ''))
     return headings
@@ -319,6 +319,10 @@ def _table_fields(table):
                                  ('weight',r'WEIGH[TIL]|WEGHT|^KGS$'),('packages',r'NO[ ._]*OF[ _]*PACK|PACKAGE[ /]|NO OF ROLL'),
                                  ('fabric_type',r'W[OQ]VEN.*KNI'),('sender',r'SENDE[RB]|SENDED')]:
                 if re.search(pattern,t):columns[name]=c.column_index
+        if columns.get('packages') is not None and columns.get('packages')==columns.get('weight'):
+            following=[c.column_index for c in table.cells if c.row_index==row and c.column_index>columns['weight']
+                       and re.search(r'\bROLLS?\b|\bPACKAGES?\b',c.content,re.I)]
+            if following:columns['packages']=min(following)
         if ('quantity' not in columns or columns.get('quantity')==columns.get('weight')) and {'description','weight'}<=columns.keys():
             candidate=columns['weight']-1
             values=[c.content for c in table.cells if c.row_index>row and c.column_index==candidate]
@@ -369,6 +373,7 @@ def _quantity_descriptions(ocr,table,row,columns,matches,source_ref):
 
 def _extract_table_data(ocr):
     items=[]; weights=[]; parsed_pages=set(); warnings=[]
+    continuation_sources={}
     category_sources={}
     for table_index,table in enumerate(ocr.tables):
         table_start=len(items)
@@ -385,13 +390,17 @@ def _extract_table_data(ocr):
             text=a.get(cols['description'],'')
             tail=b.get(cols['description'],'')
             kind=a.get(cols.get('fabric_type',-1),'')
+            joined=text+' '+tail
+            blend=re.split(r'\b(?:WOVEN|KNIT(?:TED)?)\b',joined,maxsplit=1,flags=re.I)[0]
             if ('%' in text and not _material_heading(text,kind)
                     and re.match(r'^\s*\d{1,3}\s*%',tail)
-                    and not b.get(cols['quantity'],'').strip()
                     and not b.get(cols.get('sender',-1),'').strip()
-                    and _material_heading(text+' '+tail,kind)):
-                a[cols['description']]=text+' '+tail
-                b[cols['description']]=''
+                    and (_material_heading(joined,kind) or _material_heading(blend))):
+                if b.get(cols['quantity'],'').strip() and not a.get(cols['quantity'],'').strip():
+                    b[cols['description']]=joined;a[cols['description']]=''
+                    continuation_sources[f'{table.page+1}:{table_index+1}:{second+1}']=f'{table.page+1}:{table_index+1}:{first+1}'
+                elif not b.get(cols['quantity'],'').strip():
+                    a[cols['description']]=joined;b[cols['description']]=''
         material=None
         kinds={c.content.strip().upper() for c in table.cells if c.row_index>header
                and c.column_index==cols.get('fabric_type') and c.content.strip().upper() in ('WOVEN','KNIT')}
@@ -420,6 +429,7 @@ def _extract_table_data(ocr):
             if (re.fullmatch(r'FABRIC SWATCH(?:ES)?',explicit_item,re.I)
                     and re.search(r'\bFABRIC SWATCH(?:ES)? CARD\b',raw_desc,re.I)):
                 explicit_item='FABRIC SWATCHES CARD'
+            if explicit_item.upper()=='CSI' and re.search(r'\bCSI\s+COLOU?R\s+STANDARD\b',raw_desc,re.I):explicit_item='COLOR STANDARD'
             desc=explicit_item or raw_desc
             qtext=cells.get(cols['quantity'],'').strip()
             total=QTY_UNIT.fullmatch(_quantity_text(qtext))
@@ -429,7 +439,7 @@ def _extract_table_data(ocr):
             garment_parts=[]
             if (total and _normalize_unit(total['unit'])=='PCS' and len(titles)>1 and len(titles)==len(inline)
                     and abs(sum(_number(m['qty']) for m in inline)-_number(total['qty']))<1e-6):
-                profile=re.search(r'\b(MENS?|WOMENS?|LADIES|LADY|KIDS?)\s+((?:\d+%\s+[A-Z]+\s+)+)(WOVEN|KNIT)\b',raw_desc,re.I)
+                profile=re.search(r'\b(MENS?|WOMENS?|LADIES|LADY|KIDS?|GIRLS?|BOYS?)\s+((?:\d+%\s+[A-Z]+\s+)+)(WOVEN|KNIT)\b',raw_desc,re.I)
                 prefix=' '.join(profile.groups())+' ' if profile else ''
                 garment_parts=[((prefix+title).upper(),quantity) for title,quantity in zip(titles,inline)]
                 warnings.append(f'Page {table.page+1}, row {r+1}: split numbered garments using source inline quantities; total preserved.')
@@ -543,6 +553,7 @@ def _extract_table_data(ocr):
             main_q=re.sub(r'\([^)]*\)|\[[^]]*\]','',qtext)
             if re.fullmatch(NUM,main_q.strip()):
                 unit=header_unit
+                if unit is None and sample_note:desc=sample_note
                 if unit is None and _clean_material_description(desc) in ('TRIM CARD','FABRIC CARD','FABRIC SWATCHES CARD') and _number(main_q.strip()).is_integer():
                     unit='PCS'
                     warnings.append(f'Page {table.page+1}, row {r+1}: PCS inferred from integer count of named cards; source unit not explicit.')
@@ -573,7 +584,7 @@ def _extract_table_data(ocr):
                     for index,line in enumerate(lines):
                         if '%' in line and re.search(r'\b(?:SHIRTS?|PANTS?|DRESS(?:ES)?|BLOUSES?|TOPS?)\b',line,re.I):
                             previous=lines[index-1] if index else ''
-                            gender=re.search(r'\b(MENS?|WOMENS?|LADIES|LADY|KIDS?)\s*$',previous,re.I)
+                            gender=re.search(r'\b(MENS?|WOMENS?|LADIES|LADY|KIDS?|GIRLS?|BOYS?)\s*$',previous,re.I)
                             prefix=gender[1]+' ' if gender else ('MENS ' if re.search(r"\bM['â€™]S\b",previous,re.I) else '')
                             descriptions.append(prefix+line)
                 if len(descriptions)!=len(main_matches):
@@ -594,6 +605,8 @@ def _extract_table_data(ocr):
                     parts=list(zip(descriptions,main_matches))
                 elif material:
                     parts=[(material,m) for m in main_matches]
+                elif _fabric_sample_category(raw_desc):
+                    parts=[(_fabric_sample_category(raw_desc),m) for m in main_matches]
                 elif re.search(r'\bEC\s+SAMPLE\s+LACE\b',raw_desc,re.I):
                     parts=[('EC SAMPLE LACE',m) for m in main_matches]
             if parts:
@@ -610,6 +623,8 @@ def _extract_table_data(ocr):
     for item in items:
         for ref in tuple(item.source_refs):
             note=category_sources.get(ref)
+            if note and note not in item.source_refs:item.source_refs.append(note)
+            note=continuation_sources.get(ref)
             if note and note not in item.source_refs:item.source_refs.append(note)
     return items,weights,parsed_pages,warnings
 

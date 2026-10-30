@@ -32,6 +32,8 @@ class GoodsGroupingTests(unittest.TestCase):
         self.assertEqual(len(data.items),6)
         self.assertEqual((data.items[0].description,data.items[0].quantity),('LADIES 100% COTTON KNIT (NON-MUTILATED)',8))
         self.assertEqual((data.items[1].description,data.items[1].quantity),("MEN'S 88% RECYCLED POLYESTER 12% SPANDEX KNIT (NON-MUTILATED)",5))
+        for item,description in zip(other,['LADIES 100% COTTON WOVEN',"MEN'S 100% COTTON KNIT",'LADIES 99% COTTON 1% ELASTANE KNIT','100% COTTON KNIT FABRICS']):
+            item.description=description
         self.assertEqual(data.items[2:],other)
 
     def test_trim_categories_and_evidence_backed_unit_recovery(self):
@@ -58,7 +60,10 @@ class GoodsGroupingTests(unittest.TestCase):
         items=[base]
         for field,value in [('unit','PCS'),('hs_code','00456'),('unit_price',.2),('origin_country','VIETNAM'),('quantity',None)]:
             item=deepcopy(base);setattr(item,field,value);items.append(item)
-        data=self.data(items);before=deepcopy(items);summarize_goods(data)
+        data=self.data(items);before=deepcopy(items)
+        for item in before:
+            if item.quantity is not None:item.description='THREAD'
+        summarize_goods(data)
         self.assertEqual(data.items,before)
 
     def test_ambiguous_or_unsupported_units_remain_empty(self):

@@ -103,7 +103,7 @@ def run(
     factory = track('factory_identification',identify_factory,result,selected,data.consignee)
     track('factory_defaults',apply_defaults,data,factory)
     from .goods_grouping import summarize_goods
-    track('goods_grouping',summarize_goods,data)
+    track('goods_grouping',summarize_goods,data,result)
     if selected=='INDIA':
         for field,value in (('port_of_discharge','CHENNAI, INDIA'),('shipment_terms','CPT')):
             original = getattr(data,field)
